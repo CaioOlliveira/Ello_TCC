@@ -1,0 +1,21 @@
+# Geral
+.DS_Store
+Thumbs.db
+*.log
+.env
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Flutter/Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# IDE
+.idea/
+*.iml
