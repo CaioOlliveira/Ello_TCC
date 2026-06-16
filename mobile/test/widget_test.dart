@@ -11,6 +11,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 901));
     await tester.pumpAndSettle();
 
-    expect(find.text('Entrar no Ello'), findsOneWidget);
+    expect(find.text('Entrar na conta'), findsOneWidget);
   });
 }

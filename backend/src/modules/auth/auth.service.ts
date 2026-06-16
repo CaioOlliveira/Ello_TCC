@@ -1,8 +1,135 @@
+import {
+  createHash,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual,
+} from "node:crypto";
+
+import { AppError } from "../../common/errors/app-error.js";
+import { getPool } from "../../database/pool.js";
+import type { CadastroInput, LoginInput } from "./auth.schemas.js";
+
+type UsuarioAuthRow = {
+  id: string;
+  nome: string;
+  email: string;
+  telefone?: string | null;
+  url_foto?: string | null;
+  tipo_usuario: string;
+  senha: string;
+  criado_em?: Date;
+  atualizado_em?: Date;
+};
+
+const senhaPrefixo = "scrypt";
+
+const toUsuarioPublico = (usuario: UsuarioAuthRow) => ({
+  id: usuario.id,
+  nome: usuario.nome,
+  email: usuario.email,
+  telefone: usuario.telefone,
+  urlFoto: usuario.url_foto,
+  tipoUsuario: usuario.tipo_usuario,
+  criadoEm: usuario.criado_em,
+  atualizadoEm: usuario.atualizado_em,
+});
+
+const criarHashSenha = (senha: string) => {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(senha, salt, 64).toString("hex");
+  return `${senhaPrefixo}$${salt}$${hash}`;
+};
+
+const compararSeguro = (a: string, b: string) => {
+  const bufferA = Buffer.from(a);
+  const bufferB = Buffer.from(b);
+
+  if (bufferA.length !== bufferB.length) return false;
+  return timingSafeEqual(bufferA, bufferB);
+};
+
+const senhaConfere = (senhaInformada: string, senhaArmazenada: string) => {
+  const [prefixo, salt, hash] = senhaArmazenada.split("$");
+
+  if (!salt || !hash) {
+    return senhaInformada === senhaArmazenada;
+  }
+
+  if (prefixo === senhaPrefixo) {
+    const hashInformado = scryptSync(senhaInformada, salt, 64).toString("hex");
+    return compararSeguro(hashInformado, hash);
+  }
+
+  if (prefixo === "sha256") {
+    const hashInformado = createHash("sha256")
+      .update(`${salt}:${senhaInformada}`)
+      .digest("hex");
+
+    return compararSeguro(hashInformado, hash);
+  }
+
+  return false;
+};
+
+const buscarUsuarioPorEmail = async (email: string) => {
+  const result = await getPool().query<UsuarioAuthRow>(
+    "select * from usuarios where lower(email) = lower($1) limit 1",
+    [email.trim()],
+  );
+
+  return result.rows[0];
+};
+
 export const authService = {
   status() {
     return {
-      autenticacaoReal: false,
-      mensagem: "Autenticacao real sera implementada futuramente.",
+      autenticacaoReal: true,
+      mensagem: "Autenticacao por e-mail e senha habilitada.",
+    };
+  },
+
+  async login(input: LoginInput) {
+    const usuario = await buscarUsuarioPorEmail(input.email);
+
+    if (!usuario || !senhaConfere(input.senha, usuario.senha)) {
+      throw new AppError(
+        "CREDENCIAIS_INVALIDAS",
+        "E-mail ou senha incorretos.",
+        401,
+      );
+    }
+
+    return {
+      usuario: toUsuarioPublico(usuario),
+    };
+  },
+
+  async cadastrar(input: CadastroInput) {
+    const usuarioExistente = await buscarUsuarioPorEmail(input.email);
+
+    if (usuarioExistente) {
+      throw new AppError(
+        "EMAIL_JA_CADASTRADO",
+        "Ja existe uma conta cadastrada com este e-mail.",
+        409,
+      );
+    }
+
+    const result = await getPool().query<UsuarioAuthRow>(
+      `insert into usuarios (nome, email, telefone, tipo_usuario, senha)
+       values ($1, $2, $3, $4, $5)
+       returning *`,
+      [
+        input.nome.trim(),
+        input.email.trim().toLowerCase(),
+        input.telefone?.trim() || null,
+        input.tipoUsuario,
+        criarHashSenha(input.senha),
+      ],
+    );
+
+    return {
+      usuario: toUsuarioPublico(result.rows[0]),
     };
   },
 };
