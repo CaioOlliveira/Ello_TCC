@@ -8,10 +8,9 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/validators.dart';
-import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
 
-enum AuthMode { login, cadastro }
+enum AuthView { landing, login, cadastro }
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -21,29 +20,33 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
+  final _loginFormKey = GlobalKey<FormState>();
+  final _cadastroFormKey = GlobalKey<FormState>();
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
+  final _telefoneController = TextEditingController();
   final _senhaController = TextEditingController();
+  final _confirmarSenhaController = TextEditingController();
 
-  AuthMode _mode = AuthMode.login;
+  AuthView _view = AuthView.landing;
   bool _loading = false;
+  bool _aceitouTermos = false;
   String? _errorMessage;
-
-  bool get _isCadastro => _mode == AuthMode.cadastro;
 
   @override
   void dispose() {
     _nomeController.dispose();
     _emailController.dispose();
+    _telefoneController.dispose();
     _senhaController.dispose();
+    _confirmarSenhaController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submitLogin() async {
     FocusScope.of(context).unfocus();
 
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!(_loginFormKey.currentState?.validate() ?? false)) return;
 
     setState(() {
       _loading = true;
@@ -52,19 +55,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
-
-      if (_isCadastro) {
-        await apiClient.cadastrar(
-          nome: _nomeController.text.trim(),
-          email: _emailController.text.trim(),
-          senha: _senhaController.text,
-        );
-      } else {
-        await apiClient.login(
-          email: _emailController.text.trim(),
-          senha: _senhaController.text,
-        );
-      }
+      await apiClient.login(
+        email: _emailController.text.trim(),
+        senha: _senhaController.text,
+      );
 
       if (mounted) context.go('/idosos');
     } on ApiException catch (error) {
@@ -81,57 +75,145 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  void _changeMode(AuthMode mode) {
-    if (_mode == mode) return;
+  Future<void> _submitCadastro() async {
+    FocusScope.of(context).unfocus();
+
+    if (!(_cadastroFormKey.currentState?.validate() ?? false)) return;
+
+    if (!_aceitouTermos) {
+      setState(() {
+        _errorMessage =
+            'Aceite os termos de uso e a politica de privacidade para continuar.';
+      });
+      return;
+    }
 
     setState(() {
-      _mode = mode;
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      await apiClient.cadastrar(
+        nome: _nomeController.text.trim(),
+        email: _emailController.text.trim(),
+        telefone: _telefoneController.text.trim(),
+        senha: _senhaController.text,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _view = AuthView.login;
+        _errorMessage = null;
+        _senhaController.clear();
+        _confirmarSenhaController.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Conta criada com sucesso. Agora entre com seu e-mail.'),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = error.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Nao foi possivel conectar ao servidor. Tente novamente.';
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _goTo(AuthView view) {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _view = view;
       _errorMessage = null;
     });
   }
 
+  void _showPendingProviderMessage(String provider) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Login com $provider sera liberado em breve.'),
+      ),
+    );
+  }
+
+  String? _confirmarSenhaValidator(String? value) {
+    final passwordError = Validators.password(value);
+    if (passwordError != null) return passwordError;
+
+    if (value != _senhaController.text) {
+      return 'As senhas precisam ser iguais.';
+    }
+
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  AppSizes.lg,
-                  AppSizes.lg,
-                  AppSizes.lg,
-                  AppSizes.lg + bottomInset,
-                ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _BrandHeader(theme: theme),
-                      const SizedBox(height: AppSizes.xl),
-                      _AuthCard(
-                        mode: _mode,
-                        formKey: _formKey,
-                        nomeController: _nomeController,
-                        emailController: _emailController,
-                        senhaController: _senhaController,
-                        loading: _loading,
-                        errorMessage: _errorMessage,
-                        onModeChanged: _changeMode,
-                        onSubmit: _submit,
-                      ),
-                    ],
+          child: AnimatedPadding(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.only(bottom: bottomInset),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: switch (_view) {
+                AuthView.landing => _LandingView(
+                    key: const ValueKey('landing-view'),
+                    onApplePressed: () => _showPendingProviderMessage('Apple'),
+                    onGooglePressed:
+                        () => _showPendingProviderMessage('Google'),
+                    onEmailPressed: () => _goTo(AuthView.login),
+                    onCadastroPressed: () => _goTo(AuthView.cadastro),
                   ),
-                ),
-              );
-            },
+                AuthView.login => _LoginFormView(
+                    key: const ValueKey('login-view'),
+                    formKey: _loginFormKey,
+                    emailController: _emailController,
+                    senhaController: _senhaController,
+                    loading: _loading,
+                    errorMessage: _errorMessage,
+                    onBack: () => _goTo(AuthView.landing),
+                    onSubmit: _submitLogin,
+                  ),
+                AuthView.cadastro => _CadastroFormView(
+                    key: const ValueKey('cadastro-view'),
+                    formKey: _cadastroFormKey,
+                    nomeController: _nomeController,
+                    emailController: _emailController,
+                    telefoneController: _telefoneController,
+                    senhaController: _senhaController,
+                    confirmarSenhaController: _confirmarSenhaController,
+                    loading: _loading,
+                    errorMessage: _errorMessage,
+                    aceitouTermos: _aceitouTermos,
+                    onBack: () => _goTo(AuthView.landing),
+                    onSubmit: _submitCadastro,
+                    onAceitouTermosChanged: (value) {
+                      setState(() {
+                        _aceitouTermos = value ?? false;
+                        _errorMessage = null;
+                      });
+                    },
+                    confirmarSenhaValidator: _confirmarSenhaValidator,
+                  ),
+              },
+            ),
           ),
         ),
       ),
@@ -139,190 +221,772 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
-class _BrandHeader extends StatelessWidget {
-  const _BrandHeader({required this.theme});
+class _LandingView extends StatelessWidget {
+  const _LandingView({
+    required this.onApplePressed,
+    required this.onGooglePressed,
+    required this.onEmailPressed,
+    required this.onCadastroPressed,
+    super.key,
+  });
 
-  final ThemeData theme;
+  final VoidCallback onApplePressed;
+  final VoidCallback onGooglePressed;
+  final VoidCallback onEmailPressed;
+  final VoidCallback onCadastroPressed;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       children: [
-        Container(
-          width: 84,
-          height: 84,
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.favorite_outline,
-            color: Colors.white,
-            size: 42,
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'ello',
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      color: const Color(0xFF0E6F7E),
+                      fontSize: 56,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 0,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  Text(
+                    'Transforme o cuidado em uma jornada mais leve!',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: const Color(0xFF177385),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w400,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: AppSizes.md),
-        Text(
-          'Ello',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontSize: 34,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: AppSizes.sm),
-        Text(
-          'Cuidado conectado, simples e seguro.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: AppColors.darkBlue.withValues(alpha: 0.72),
-          ),
+        _BottomChoicesPanel(
+          onApplePressed: onApplePressed,
+          onGooglePressed: onGooglePressed,
+          onEmailPressed: onEmailPressed,
+          onCadastroPressed: onCadastroPressed,
         ),
       ],
     );
   }
 }
 
-class _AuthCard extends StatelessWidget {
-  const _AuthCard({
-    required this.mode,
+class _LoginFormView extends StatelessWidget {
+  const _LoginFormView({
     required this.formKey,
-    required this.nomeController,
     required this.emailController,
     required this.senhaController,
     required this.loading,
-    required this.onModeChanged,
+    required this.onBack,
     required this.onSubmit,
     this.errorMessage,
+    super.key,
   });
 
-  final AuthMode mode;
   final GlobalKey<FormState> formKey;
-  final TextEditingController nomeController;
   final TextEditingController emailController;
   final TextEditingController senhaController;
   final bool loading;
   final String? errorMessage;
-  final ValueChanged<AuthMode> onModeChanged;
+  final VoidCallback onBack;
   final VoidCallback onSubmit;
-
-  bool get isCadastro => mode == AuthMode.cadastro;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSizes.lg),
-        child: Form(
-          key: formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSizes.md,
+            AppSizes.md,
+            AppSizes.md,
+            0,
+          ),
+          child: Row(
             children: [
-              _ModeSelector(mode: mode, onModeChanged: onModeChanged),
-              const SizedBox(height: AppSizes.lg),
+              TextButton.icon(
+                onPressed: loading ? null : onBack,
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF177385),
+                ),
+                icon: const Icon(Icons.chevron_left_rounded),
+                label: const Text('Voltar'),
+              ),
+              const Spacer(),
               Text(
-                isCadastro ? 'Criar sua conta' : 'Entrar na conta',
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSizes.sm),
-              Text(
-                isCadastro
-                    ? 'Preencha seus dados para comecar.'
-                    : 'Use seu e-mail e senha cadastrados.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.darkBlue.withValues(alpha: 0.68),
+                'ello',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: const Color(0xFF0E6F7E),
+                  fontSize: 32,
+                  fontWeight: FontWeight.w300,
                 ),
               ),
-              const SizedBox(height: AppSizes.lg),
-              if (isCadastro) ...[
-                AppTextField(
-                  label: 'Nome',
-                  controller: nomeController,
-                  validator: Validators.requiredText,
-                  textInputAction: TextInputAction.next,
-                  prefixIcon: Icons.person_outline,
-                  autofillHints: const [AutofillHints.name],
-                ),
-                const SizedBox(height: AppSizes.md),
-              ],
-              AppTextField(
-                label: 'E-mail',
-                controller: emailController,
-                validator: Validators.email,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                prefixIcon: Icons.mail_outline,
-                autofillHints: const [AutofillHints.email],
-              ),
-              const SizedBox(height: AppSizes.md),
-              AppTextField(
-                label: 'Senha',
-                controller: senhaController,
-                validator: Validators.password,
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                prefixIcon: Icons.lock_outline,
-                autofillHints: [
-                  isCadastro
-                      ? AutofillHints.newPassword
-                      : AutofillHints.password,
-                ],
-              ),
-              if (errorMessage != null) ...[
-                const SizedBox(height: AppSizes.md),
-                _ErrorBox(message: errorMessage!),
-              ],
-              const SizedBox(height: AppSizes.lg),
-              AppButton(
-                label: isCadastro ? 'Criar conta' : 'Entrar',
-                icon: isCadastro ? Icons.person_add_alt_1 : Icons.login,
-                onPressed: loading ? null : onSubmit,
-              ),
-              if (loading) ...[
-                const SizedBox(height: AppSizes.md),
-                const Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.4),
-                  ),
-                ),
-              ],
+              const Spacer(),
+              const SizedBox(width: 72),
             ],
           ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSizes.lg,
+              AppSizes.xl,
+              AppSizes.lg,
+              AppSizes.lg,
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Entre com e-mail',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: const Color(0xFF177385),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  Text(
+                    'Use seu e-mail e senha cadastrados.',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: const Color(0xFF6F8288),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.xl),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'E-mail',
+                      controller: emailController,
+                      validator: Validators.email,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icons.mail_outline,
+                      autofillHints: const [AutofillHints.email],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'Senha',
+                      controller: senhaController,
+                      validator: Validators.password,
+                      obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      prefixIcon: Icons.lock_outline,
+                      autofillHints: const [AutofillHints.password],
+                    ),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: AppSizes.md),
+                    _ErrorBox(message: errorMessage!),
+                  ],
+                  const Spacer(),
+                  SizedBox(
+                    height: 54,
+                    child: FilledButton(
+                      onPressed: loading ? null : onSubmit,
+                      style: _primaryButtonStyle(),
+                      child: loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Entrar'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CadastroFormView extends StatelessWidget {
+  const _CadastroFormView({
+    required this.formKey,
+    required this.nomeController,
+    required this.emailController,
+    required this.telefoneController,
+    required this.senhaController,
+    required this.confirmarSenhaController,
+    required this.loading,
+    required this.aceitouTermos,
+    required this.onBack,
+    required this.onSubmit,
+    required this.onAceitouTermosChanged,
+    required this.confirmarSenhaValidator,
+    this.errorMessage,
+    super.key,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final TextEditingController nomeController;
+  final TextEditingController emailController;
+  final TextEditingController telefoneController;
+  final TextEditingController senhaController;
+  final TextEditingController confirmarSenhaController;
+  final bool loading;
+  final bool aceitouTermos;
+  final String? errorMessage;
+  final VoidCallback onBack;
+  final VoidCallback onSubmit;
+  final ValueChanged<bool?> onAceitouTermosChanged;
+  final FormFieldValidator<String> confirmarSenhaValidator;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSizes.md,
+            AppSizes.md,
+            AppSizes.md,
+            0,
+          ),
+          child: Row(
+            children: [
+              TextButton.icon(
+                onPressed: loading ? null : onBack,
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF177385),
+                ),
+                icon: const Icon(Icons.chevron_left_rounded),
+                label: const Text('Voltar'),
+              ),
+              const Spacer(),
+              Text(
+                'ello',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: const Color(0xFF0E6F7E),
+                  fontSize: 32,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+              const Spacer(),
+              const SizedBox(width: 72),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSizes.lg,
+              AppSizes.lg,
+              AppSizes.lg,
+              AppSizes.xl,
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Crie sua conta',
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                color: const Color(0xFF177385),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            Text(
+                              'Cadastre-se para comecar a organizar seus cuidados',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: const Color(0xFF6F8288),
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSizes.md),
+                      const _SignupIllustration(),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.xl),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'Nome completo',
+                      controller: nomeController,
+                      validator: Validators.requiredText,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icons.person_outline,
+                      autofillHints: const [AutofillHints.name],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'E-mail',
+                      controller: emailController,
+                      validator: Validators.email,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icons.mail_outline,
+                      autofillHints: const [AutofillHints.email],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'Telefone',
+                      controller: telefoneController,
+                      validator: Validators.requiredText,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icons.phone_outlined,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        _PhoneInputFormatter(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'Senha',
+                      controller: senhaController,
+                      validator: Validators.password,
+                      obscureText: true,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icons.lock_outline,
+                      autofillHints: const [AutofillHints.newPassword],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'Confirmar senha',
+                      controller: confirmarSenhaController,
+                      validator: confirmarSenhaValidator,
+                      obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      prefixIcon: Icons.lock_outline,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  CheckboxListTile(
+                    value: aceitouTermos,
+                    onChanged: loading ? null : onAceitouTermosChanged,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    checkboxShape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    title: RichText(
+                      text: const TextSpan(
+                        style: TextStyle(
+                          color: Color(0xFF6F8288),
+                          fontSize: 12,
+                        ),
+                        children: [
+                          TextSpan(text: 'aceito os '),
+                          TextSpan(
+                            text: 'termos de uso',
+                            style: TextStyle(color: Color(0xFF177385)),
+                          ),
+                          TextSpan(text: ' e a '),
+                          TextSpan(
+                            text: 'politica de privacidade',
+                            style: TextStyle(color: Color(0xFF177385)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: AppSizes.md),
+                    _ErrorBox(message: errorMessage!),
+                  ],
+                  const SizedBox(height: AppSizes.xl),
+                  SizedBox(
+                    height: 54,
+                    child: FilledButton(
+                      onPressed: loading ? null : onSubmit,
+                      style: _primaryButtonStyle(),
+                      child: loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Criar Conta'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PhoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final truncated = digits.length > 11 ? digits.substring(0, 11) : digits;
+
+    final buffer = StringBuffer();
+    var selectionIndex = truncated.length;
+
+    for (var i = 0; i < truncated.length; i++) {
+      if (i == 0) buffer.write('(');
+      if (i == 2) buffer.write(') ');
+      if (i == 7) buffer.write('-');
+      buffer.write(truncated[i]);
+    }
+
+    final text = buffer.toString();
+
+    if (selectionIndex >= 1) selectionIndex += 1;
+    if (selectionIndex >= 3) selectionIndex += 2;
+    if (selectionIndex >= 8) selectionIndex += 1;
+
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(
+        offset: selectionIndex.clamp(0, text.length),
+      ),
+    );
+  }
+}
+
+class _BottomChoicesPanel extends StatelessWidget {
+  const _BottomChoicesPanel({
+    required this.onApplePressed,
+    required this.onGooglePressed,
+    required this.onEmailPressed,
+    required this.onCadastroPressed,
+  });
+
+  final VoidCallback onApplePressed;
+  final VoidCallback onGooglePressed;
+  final VoidCallback onEmailPressed;
+  final VoidCallback onCadastroPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        AppSizes.lg,
+        AppSizes.xl,
+        AppSizes.lg,
+        AppSizes.xl,
+      ),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0E6F7E),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(34),
+          topRight: Radius.circular(34),
+        ),
+      ),
+      child: Column(
+        children: [
+          _ProviderButton(
+            label: 'Entre com Apple',
+            icon: const _AppleBadge(),
+            onPressed: onApplePressed,
+          ),
+          const SizedBox(height: AppSizes.md),
+          _ProviderButton(
+            label: 'Fazer login com google',
+            icon: const _GoogleBadge(),
+            onPressed: onGooglePressed,
+          ),
+          const SizedBox(height: AppSizes.md),
+          _ProviderButton(
+            label: 'E-mail',
+            onPressed: onEmailPressed,
+          ),
+          const SizedBox(height: AppSizes.xl),
+          TextButton(
+            onPressed: onCadastroPressed,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.zero,
+            ),
+            child: RichText(
+              text: const TextSpan(
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w400,
+                ),
+                children: [
+                  TextSpan(text: 'Nao tem uma conta? '),
+                  TextSpan(
+                    text: 'Cadastre-se',
+                    style: TextStyle(
+                      color: Color(0xFF89E7EF),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProviderButton extends StatelessWidget {
+  const _ProviderButton({
+    required this.label,
+    required this.onPressed,
+    this.icon,
+  });
+
+  final String label;
+  final Widget? icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 44,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF0E6F7E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (icon != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(width: 34, child: Center(child: icon)),
+              ),
+            Center(child: Text(label)),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ModeSelector extends StatelessWidget {
-  const _ModeSelector({
-    required this.mode,
-    required this.onModeChanged,
-  });
+class _InputWrapper extends StatelessWidget {
+  const _InputWrapper({required this.child});
 
-  final AuthMode mode;
-  final ValueChanged<AuthMode> onModeChanged;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<AuthMode>(
-      segments: const [
-        ButtonSegment(
-          value: AuthMode.login,
-          icon: Icon(Icons.login),
-          label: Text('Entrar'),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          labelStyle: const TextStyle(color: Color(0xFF8A9AA0)),
+          prefixIconColor: const Color(0xFF5F7A82),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.md,
+            vertical: AppSizes.md,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFD7E0E3)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Color(0xFF89E7EF),
+              width: 1.4,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFFFC1C1)),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFFFC1C1)),
+          ),
         ),
-        ButtonSegment(
-          value: AuthMode.cadastro,
-          icon: Icon(Icons.person_add_alt_1),
-          label: Text('Criar conta'),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SignupIllustration extends StatelessWidget {
+  const _SignupIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 104,
+      height: 104,
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              width: 88,
+              height: 88,
+              decoration: const BoxDecoration(
+                color: Color(0xFFD6EEF2),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 6,
+            top: 18,
+            child: Container(
+              width: 46,
+              height: 56,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E6FA4),
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            top: 4,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFD0B5),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 6,
+            top: 26,
+            child: Container(
+              width: 44,
+              height: 54,
+              decoration: BoxDecoration(
+                color: const Color(0xFF9FC0F1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 16,
+            top: 12,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF4DFC8),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const Positioned(
+            right: 8,
+            top: 6,
+            child: Icon(
+              Icons.favorite,
+              color: Color(0xFF3396A8),
+              size: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoogleBadge extends StatelessWidget {
+  const _GoogleBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text(
+      'G',
+      style: TextStyle(
+        color: Color(0xFF4A80F0),
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        height: 1,
+      ),
+    );
+  }
+}
+
+class _AppleBadge extends StatelessWidget {
+  const _AppleBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'A',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
         ),
-      ],
-      selected: {mode},
-      onSelectionChanged: (selected) => onModeChanged(selected.first),
+      ),
     );
   }
 }
@@ -334,27 +998,42 @@ class _ErrorBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Container(
       padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(AppSizes.radius),
+        color: const Color(0xFFFFD9D4),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer),
+          const Icon(Icons.error_outline, color: Color(0xFFB73A2A)),
           const SizedBox(width: AppSizes.sm),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: colorScheme.onErrorContainer),
+              style: const TextStyle(
+                color: Color(0xFFB73A2A),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+ButtonStyle _primaryButtonStyle() {
+  return FilledButton.styleFrom(
+    backgroundColor: AppColors.primary,
+    foregroundColor: Colors.white,
+    textStyle: const TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+    ),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+  );
 }

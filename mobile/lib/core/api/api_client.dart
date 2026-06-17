@@ -47,6 +47,7 @@ class ApiClient {
   Future<Map<String, dynamic>> cadastrar({
     required String nome,
     required String email,
+    required String telefone,
     required String senha,
   }) async {
     try {
@@ -55,6 +56,7 @@ class ApiClient {
         data: {
           'nome': nome,
           'email': email,
+          'telefone': telefone,
           'senha': senha,
           'tipoUsuario': 'cuidador',
         },

@@ -3,6 +3,16 @@ import { ZodError } from "zod";
 
 import { AppError } from "../errors/app-error.js";
 
+const isDatabaseConnectionError = (
+  error: unknown,
+): error is { code?: string; message?: string } =>
+  Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      typeof (error as { code?: unknown }).code === "string",
+  );
+
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   if (error instanceof ZodError) {
     const campos = Object.fromEntries(
@@ -22,6 +32,18 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
       mensagem: error.mensagem,
     });
   }
+
+  if (isDatabaseConnectionError(error)) {
+    if (error.code === "28P01") {
+      return res.status(503).json({
+        codigo: "BANCO_AUTENTICACAO_INVALIDA",
+        mensagem:
+          "Falha ao autenticar no banco de dados. Revise usuario, senha e encode da DATABASE_URL no .env.",
+      });
+    }
+  }
+
+  console.error("Erro nao tratado na API:", error);
 
   return res.status(500).json({
     codigo: "ERRO_INTERNO",

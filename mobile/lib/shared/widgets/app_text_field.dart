@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTextField extends StatelessWidget {
   const AppTextField({
@@ -10,6 +11,7 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.prefixIcon,
     this.autofillHints,
+    this.inputFormatters,
     super.key,
   });
 
@@ -21,6 +23,7 @@ class AppTextField extends StatelessWidget {
   final bool obscureText;
   final IconData? prefixIcon;
   final Iterable<String>? autofillHints;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +34,7 @@ class AppTextField extends StatelessWidget {
       textInputAction: textInputAction,
       obscureText: obscureText,
       autofillHints: autofillHints,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
