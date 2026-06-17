@@ -3,6 +3,36 @@ import 'package:dio/dio.dart';
 import 'api_endpoints.dart';
 import 'api_exception.dart';
 
+class IdosoResumo {
+  const IdosoResumo({
+    required this.id,
+    required this.nome,
+    required this.idade,
+    required this.condicoes,
+    this.urlFoto,
+  });
+
+  factory IdosoResumo.fromJson(Map<String, dynamic> json) {
+    final condicoes = json['condicoes'];
+
+    return IdosoResumo(
+      id: json['id']?.toString() ?? '',
+      nome: json['nome']?.toString() ?? 'Sem nome',
+      idade: json['idade'] is num ? (json['idade'] as num).toInt() : 0,
+      urlFoto: json['urlFoto']?.toString(),
+      condicoes: condicoes is List
+          ? condicoes.map((item) => item.toString()).toList()
+          : const [],
+    );
+  }
+
+  final String id;
+  final String nome;
+  final int idade;
+  final String? urlFoto;
+  final List<String> condicoes;
+}
+
 class ApiClient {
   ApiClient({required String baseUrl})
       : _dio = Dio(
@@ -64,6 +94,98 @@ class ApiClient {
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao criar conta.');
+    }
+  }
+
+  Future<Map<String, dynamic>> atualizarUsuario({
+    required String id,
+    String? nome,
+    String? email,
+    String? telefone,
+    String? urlFoto,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.usuario(id),
+        data: {
+          if (nome != null && nome.isNotEmpty) 'nome': nome,
+          if (email != null && email.isNotEmpty) 'email': email,
+          if (telefone != null) 'telefone': telefone,
+          if (urlFoto != null && urlFoto.isNotEmpty) 'urlFoto': urlFoto,
+        },
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar usuario.');
+    }
+  }
+
+  Future<List<IdosoResumo>> listarIdosos({String? usuarioId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.idosos,
+        queryParameters: {
+          if (usuarioId != null && usuarioId.isNotEmpty) 'usuarioId': usuarioId,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(IdosoResumo.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar fichas.');
+    }
+  }
+
+  Future<Map<String, dynamic>> criarIdoso({
+    required String nomeCompleto,
+    String? criadoPorId,
+    String? dataNascimento,
+    String? urlFoto,
+    String? sexo,
+    List<String>? condicoesSaude,
+    String? alergiasRestricoes,
+    String? observacoesGerais,
+    String? contatoEmergenciaNome,
+    String? contatoEmergenciaTelefone,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.idosos,
+        data: {
+          'nomeCompleto': nomeCompleto,
+          if (dataNascimento != null && dataNascimento.isNotEmpty)
+            'dataNascimento': dataNascimento,
+          if (urlFoto != null && urlFoto.isNotEmpty) 'urlFoto': urlFoto,
+          if (criadoPorId != null && criadoPorId.isNotEmpty)
+            'criadoPorId': criadoPorId,
+          if (sexo != null && sexo.isNotEmpty) 'sexo': sexo,
+          if (condicoesSaude != null && condicoesSaude.isNotEmpty)
+            'condicoesSaude': condicoesSaude,
+          if (alergiasRestricoes != null && alergiasRestricoes.isNotEmpty)
+            'alergiasRestricoes': alergiasRestricoes,
+          if (observacoesGerais != null && observacoesGerais.isNotEmpty)
+            'observacoesGerais': observacoesGerais,
+          if ((contatoEmergenciaNome != null &&
+                  contatoEmergenciaNome.isNotEmpty) ||
+              (contatoEmergenciaTelefone != null &&
+                  contatoEmergenciaTelefone.isNotEmpty))
+            'contatoEmergencia': {
+              'nome': contatoEmergenciaNome,
+              'telefone': contatoEmergenciaTelefone,
+              'principal': true,
+            },
+        },
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao criar ficha.');
     }
   }
 

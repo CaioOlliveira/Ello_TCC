@@ -14,6 +14,7 @@ export type Idoso = {
   id: string;
   nome: string;
   idade: number;
+  urlFoto?: string | null;
   condicoes: string[];
 };
 
@@ -30,6 +31,7 @@ type IdosoRow = {
   id: string;
   nome: string;
   idade: number | null;
+  url_foto: string | null;
   observacoes_saude: string | null;
   limitacoes: string | null;
 };
@@ -38,6 +40,7 @@ const mapearIdoso = (row: IdosoRow): Idoso => ({
   id: row.id,
   nome: row.nome,
   idade: Number(row.idade ?? 0),
+  urlFoto: row.url_foto,
   condicoes: [row.observacoes_saude, row.limitacoes].filter(
     (item): item is string => Boolean(item),
   ),
@@ -60,12 +63,14 @@ const fields = {
 } as const;
 
 export const idososService = {
-  async listar(): Promise<Idoso[]> {
+  async listar(filtros: { usuarioId?: string } = {}): Promise<Idoso[]> {
     if (isDatabaseEnabled) {
-      const result = await getPool().query<IdosoRow>(`
+      const result = await getPool().query<IdosoRow>(
+        `
         select
           id,
           nome_completo as nome,
+          url_foto,
           case
             when data_nascimento is null then null
             else extract(year from age(current_date, data_nascimento))::int
@@ -74,8 +79,11 @@ export const idososService = {
           limitacoes
         from fichas_idosos
         where ativo = true
+          and ($1::uuid is null or criado_por_id = $1::uuid)
         order by nome_completo
-      `);
+      `,
+        [filtros.usuarioId ?? null],
+      );
 
       return result.rows.map(mapearIdoso);
     }
@@ -98,6 +106,7 @@ export const idososService = {
           select
             id,
             nome_completo as nome,
+            url_foto,
             case
               when data_nascimento is null then null
               else extract(year from age(current_date, data_nascimento))::int

@@ -2,12 +2,16 @@ import type { RequestHandler } from "express";
 
 import { asyncHandler } from "../../common/utils/async-handler.js";
 import { idParamSchema } from "../../common/utils/request-query.js";
-import { idosoParamsSchema } from "./idosos.schemas.js";
+import {
+  idosoParamsSchema,
+  listarIdososQuerySchema,
+} from "./idosos.schemas.js";
 import { atualizarIdosoSchema, criarIdosoSchema } from "./idosos.schemas.js";
 import { idososService } from "./idosos.service.js";
 
-export const listarIdosos: RequestHandler = asyncHandler(async (_req, res) => {
-  const dados = await idososService.listar();
+export const listarIdosos: RequestHandler = asyncHandler(async (req, res) => {
+  const { usuarioId } = listarIdososQuerySchema.parse(req.query);
+  const dados = await idososService.listar({ usuarioId });
   res.json({ dados, meta: { total: dados.length } });
 });
 

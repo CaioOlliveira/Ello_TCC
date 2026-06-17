@@ -55,10 +55,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
-      await apiClient.login(
+      final response = await apiClient.login(
         email: _emailController.text.trim(),
         senha: _senhaController.text,
       );
+      final dados = response['dados'];
+      final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
+
+      if (usuario is Map<String, dynamic>) {
+        ref.read(authSessionProvider.notifier).state =
+            UsuarioSessao.fromJson(usuario);
+      }
 
       if (mounted) context.go('/idosos');
     } on ApiException catch (error) {
@@ -111,7 +118,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Conta criada com sucesso. Agora entre com seu e-mail.'),
+          content:
+              Text('Conta criada com sucesso. Agora entre com seu e-mail.'),
         ),
       );
     } on ApiException catch (error) {
@@ -176,8 +184,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 AuthView.landing => _LandingView(
                     key: const ValueKey('landing-view'),
                     onApplePressed: () => _showPendingProviderMessage('Apple'),
-                    onGooglePressed:
-                        () => _showPendingProviderMessage('Google'),
+                    onGooglePressed: () =>
+                        _showPendingProviderMessage('Google'),
                     onEmailPressed: () => _goTo(AuthView.login),
                     onCadastroPressed: () => _goTo(AuthView.cadastro),
                   ),
