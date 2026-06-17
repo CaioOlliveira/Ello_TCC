@@ -205,8 +205,18 @@ class ApiClient {
       }
     }
 
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.connectionError) {
+      return ApiException(
+        'Nao foi possivel conectar ao servidor. Verifique se a API esta aberta e tente novamente.',
+        statusCode: error.response?.statusCode,
+      );
+    }
+
     return ApiException(
-      error.message ?? fallback,
+      fallback,
       statusCode: error.response?.statusCode,
     );
   }

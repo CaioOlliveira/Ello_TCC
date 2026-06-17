@@ -34,11 +34,24 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   }
 
   if (isDatabaseConnectionError(error)) {
-    if (error.code === "28P01") {
+    const errorCode = error.code;
+
+    if (errorCode === "28P01") {
       return res.status(503).json({
         codigo: "BANCO_AUTENTICACAO_INVALIDA",
         mensagem:
           "Falha ao autenticar no banco de dados. Revise usuario, senha e encode da DATABASE_URL no .env.",
+      });
+    }
+
+    if (
+      errorCode &&
+      ["ETIMEDOUT", "ETIMEOUT", "ECONNREFUSED", "ENOTFOUND"].includes(errorCode)
+    ) {
+      return res.status(503).json({
+        codigo: "BANCO_INDISPONIVEL",
+        mensagem:
+          "Nao foi possivel conectar ao banco de dados. Verifique a DATABASE_URL, a rede e se o Supabase esta ativo.",
       });
     }
   }

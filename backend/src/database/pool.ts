@@ -8,6 +8,8 @@ export const isDatabaseEnabled = Boolean(env.DATABASE_URL);
 const pool = env.DATABASE_URL
   ? new pg.Pool({
       connectionString: env.DATABASE_URL,
+      connectionTimeoutMillis: 5000,
+      query_timeout: 10000,
       ssl: {
         rejectUnauthorized: false,
       },
