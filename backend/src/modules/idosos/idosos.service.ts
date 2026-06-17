@@ -52,9 +52,11 @@ const fields = {
   nomeCompleto: "nome_completo",
   dataNascimento: "data_nascimento",
   urlFoto: "url_foto",
+  sexo: "sexo",
   observacoesSaude: "observacoes_saude",
   limitacoes: "limitacoes",
-  observacoesEmergencia: "observacoes_emergencia",
+  alergiasRestricoes: "alergias_restricoes",
+  observacoesGerais: "observacoes_gerais",
   criadoPorId: "criado_por_id",
   ativo: "ativo",
 } as const;
@@ -135,29 +137,107 @@ export const idososService = {
 
   async criar(input: CriarIdosoInput) {
     const criadoPorId = await resolverUsuarioRegistroId(input.criadoPorId);
-    const idoso = await insertRow<
-      Record<string, unknown>,
-      Record<string, unknown>
-    >(
-      "fichas_idosos",
-      {
-        ...input,
+    const client = await getPool().connect();
+
+    try {
+      await client.query("begin");
+
+      const fichaInput: Record<string, unknown> = {
+        nomeCompleto: input.nomeCompleto,
+        dataNascimento: input.dataNascimento,
+        urlFoto: input.urlFoto,
+        sexo: input.sexo,
+        observacoesSaude: input.observacoesSaude,
+        limitacoes: input.limitacoes,
+        alergiasRestricoes: input.alergiasRestricoes,
+        observacoesGerais: input.observacoesGerais,
         criadoPorId,
         ativo: input.ativo ?? true,
-      },
-      fields,
-    );
+      };
+      const entries = Object.entries(fields)
+        .map(([key, column]) => ({ column, value: fichaInput[key] }))
+        .filter((entry) => entry.value !== undefined);
+      const columns = entries.map((entry) => entry.column).join(", ");
+      const placeholders = entries
+        .map((_, index) => `$${index + 1}`)
+        .join(", ");
+      const values = entries.map((entry) => entry.value);
 
-    await registrarHistorico({
-      usuarioId: criadoPorId,
-      idosoId: String(idoso.id),
-      acao: "criar",
-      tipoEntidade: "fichas_idosos",
-      entidadeId: String(idoso.id),
-      dadosNovos: idoso,
-    });
+      const idosoResult = await client.query<Record<string, unknown>>(
+        `insert into fichas_idosos (${columns}) values (${placeholders}) returning *`,
+        values,
+      );
+      const idoso = idosoResult.rows[0];
+      const idosoId = String(idoso.id);
 
-    return idoso;
+      for (const condicao of input.condicoesSaude ?? []) {
+        const nome = condicao.trim();
+        if (!nome) continue;
+
+        await client.query(
+          "insert into condicoes_saude (idoso_id, nome) values ($1, $2)",
+          [idosoId, nome],
+        );
+      }
+
+      const contato = input.contatoEmergencia;
+      const contatoNome = contato?.nome?.trim();
+      const contatoTelefone = contato?.telefone?.trim();
+
+      if (contatoNome && contatoTelefone) {
+        await client.query(
+          `
+            insert into contatos_emergencia
+              (idoso_id, nome, telefone, relacao, principal)
+            values ($1, $2, $3, $4, $5)
+          `,
+          [
+            idosoId,
+            contatoNome,
+            contatoTelefone,
+            contato?.relacao?.trim() || null,
+            contato?.principal ?? true,
+          ],
+        );
+      }
+
+      await client.query(
+        `
+          insert into historico_alteracoes (
+            idoso_id,
+            usuario_id,
+            acao,
+            tipo_entidade,
+            entidade_id,
+            dados_anteriores,
+            dados_novos
+          )
+          values ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [
+          idosoId,
+          criadoPorId,
+          "criar",
+          "fichas_idosos",
+          idosoId,
+          null,
+          JSON.stringify({
+            ...idoso,
+            condicoesSaude: input.condicoesSaude,
+            contatoEmergencia: contato,
+          }),
+        ],
+      );
+
+      await client.query("commit");
+
+      return idoso;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
   },
 
   async atualizar(idosoId: string, input: AtualizarIdosoInput) {

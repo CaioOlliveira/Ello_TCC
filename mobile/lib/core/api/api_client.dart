@@ -67,6 +67,49 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> criarIdoso({
+    required String nomeCompleto,
+    String? dataNascimento,
+    String? urlFoto,
+    String? sexo,
+    List<String>? condicoesSaude,
+    String? alergiasRestricoes,
+    String? observacoesGerais,
+    String? contatoEmergenciaNome,
+    String? contatoEmergenciaTelefone,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.idosos,
+        data: {
+          'nomeCompleto': nomeCompleto,
+          if (dataNascimento != null && dataNascimento.isNotEmpty)
+            'dataNascimento': dataNascimento,
+          if (urlFoto != null && urlFoto.isNotEmpty) 'urlFoto': urlFoto,
+          if (sexo != null && sexo.isNotEmpty) 'sexo': sexo,
+          if (condicoesSaude != null && condicoesSaude.isNotEmpty)
+            'condicoesSaude': condicoesSaude,
+          if (alergiasRestricoes != null && alergiasRestricoes.isNotEmpty)
+            'alergiasRestricoes': alergiasRestricoes,
+          if (observacoesGerais != null && observacoesGerais.isNotEmpty)
+            'observacoesGerais': observacoesGerais,
+          if ((contatoEmergenciaNome != null &&
+                  contatoEmergenciaNome.isNotEmpty) ||
+              (contatoEmergenciaTelefone != null &&
+                  contatoEmergenciaTelefone.isNotEmpty))
+            'contatoEmergencia': {
+              'nome': contatoEmergenciaNome,
+              'telefone': contatoEmergenciaTelefone,
+              'principal': true,
+            },
+        },
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao criar ficha.');
+    }
+  }
+
   ApiException _toApiException(
     DioException error, {
     required String fallback,

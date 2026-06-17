@@ -7,6 +7,7 @@ import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
+import '../features/idosos/presentation/cadastro_idoso_page.dart';
 import '../features/idosos/presentation/dashboard_idoso_page.dart';
 import '../features/idosos/presentation/selecionar_idoso_page.dart';
 import '../features/insumos/presentation/insumos_page.dart';
@@ -24,6 +25,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/idosos',
         builder: (context, state) => const SelecionarIdosoPage(),
+      ),
+      GoRoute(
+        path: '/idosos/cadastro',
+        builder: (context, state) => const CadastroIdosoPage(),
       ),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
