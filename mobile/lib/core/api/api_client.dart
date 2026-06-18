@@ -10,10 +10,12 @@ class IdosoResumo {
     required this.idade,
     required this.condicoes,
     this.urlFoto,
+    this.monitoramentos = const [],
   });
 
   factory IdosoResumo.fromJson(Map<String, dynamic> json) {
     final condicoes = json['condicoes'];
+    final monitoramentos = json['monitoramentos'];
 
     return IdosoResumo(
       id: json['id']?.toString() ?? '',
@@ -23,6 +25,9 @@ class IdosoResumo {
       condicoes: condicoes is List
           ? condicoes.map((item) => item.toString()).toList()
           : const [],
+      monitoramentos: monitoramentos is List
+          ? monitoramentos.map((item) => item.toString()).toList()
+          : const [],
     );
   }
 
@@ -31,6 +36,24 @@ class IdosoResumo {
   final int idade;
   final String? urlFoto;
   final List<String> condicoes;
+  final List<String> monitoramentos;
+
+  IdosoResumo copyWith({
+    String? nome,
+    int? idade,
+    String? urlFoto,
+    List<String>? condicoes,
+    List<String>? monitoramentos,
+  }) {
+    return IdosoResumo(
+      id: id,
+      nome: nome ?? this.nome,
+      idade: idade ?? this.idade,
+      urlFoto: urlFoto ?? this.urlFoto,
+      condicoes: condicoes ?? this.condicoes,
+      monitoramentos: monitoramentos ?? this.monitoramentos,
+    );
+  }
 }
 
 class ApiClient {
@@ -150,6 +173,7 @@ class ApiClient {
     String? urlFoto,
     String? sexo,
     List<String>? condicoesSaude,
+    List<String>? monitoramentos,
     String? alergiasRestricoes,
     String? observacoesGerais,
     String? contatoEmergenciaNome,
@@ -168,6 +192,8 @@ class ApiClient {
           if (sexo != null && sexo.isNotEmpty) 'sexo': sexo,
           if (condicoesSaude != null && condicoesSaude.isNotEmpty)
             'condicoesSaude': condicoesSaude,
+          if (monitoramentos != null && monitoramentos.isNotEmpty)
+            'monitoramentos': monitoramentos,
           if (alergiasRestricoes != null && alergiasRestricoes.isNotEmpty)
             'alergiasRestricoes': alergiasRestricoes,
           if (observacoesGerais != null && observacoesGerais.isNotEmpty)
@@ -186,6 +212,26 @@ class ApiClient {
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao criar ficha.');
+    }
+  }
+
+  Future<Map<String, dynamic>> atualizarMonitoramentosIdoso({
+    required String id,
+    required List<String> monitoramentos,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.idoso(id),
+        data: {
+          'monitoramentos': monitoramentos,
+        },
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao atualizar monitoramentos.',
+      );
     }
   }
 

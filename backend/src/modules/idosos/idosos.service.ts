@@ -16,6 +16,7 @@ export type Idoso = {
   idade: number;
   urlFoto?: string | null;
   condicoes: string[];
+  monitoramentos: string[];
 };
 
 const idosos: Idoso[] = [
@@ -23,6 +24,15 @@ const idosos: Idoso[] = [
     id: "idoso-1",
     nome: "Maria Aparecida",
     idade: 78,
+    monitoramentos: [
+      "Medicacoes",
+      "Humor",
+      "Agenda",
+      "Alimentacao",
+      "Equipamentos",
+      "Insumos",
+      "Glicemia",
+    ],
     condicoes: ["Diabetes", "Hipertensão"],
   },
 ];
@@ -34,6 +44,22 @@ type IdosoRow = {
   url_foto: string | null;
   observacoes_saude: string | null;
   limitacoes: string | null;
+  monitoramentos: unknown;
+};
+
+const normalizarMonitoramentos = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).filter(Boolean);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 };
 
 const mapearIdoso = (row: IdosoRow): Idoso => ({
@@ -44,6 +70,7 @@ const mapearIdoso = (row: IdosoRow): Idoso => ({
   condicoes: [row.observacoes_saude, row.limitacoes].filter(
     (item): item is string => Boolean(item),
   ),
+  monitoramentos: normalizarMonitoramentos(row.monitoramentos),
 });
 
 const isUuid = (value: string): boolean =>
@@ -58,6 +85,7 @@ const fields = {
   observacoesSaude: "observacoes_saude",
   limitacoes: "limitacoes",
   observacoesEmergencia: "observacoes_emergencia",
+  monitoramentos: "monitoramentos",
   criadoPorId: "criado_por_id",
   ativo: "ativo",
 } as const;
@@ -76,7 +104,8 @@ export const idososService = {
             else extract(year from age(current_date, data_nascimento))::int
           end as idade,
           observacoes_saude,
-          limitacoes
+          limitacoes,
+          monitoramentos
         from fichas_idosos
         where ativo = true
           and ($1::uuid is null or criado_por_id = $1::uuid)
@@ -112,7 +141,8 @@ export const idososService = {
               else extract(year from age(current_date, data_nascimento))::int
             end as idade,
             observacoes_saude,
-            limitacoes
+            limitacoes,
+            monitoramentos
           from fichas_idosos
           where id = $1 and ativo = true
           limit 1

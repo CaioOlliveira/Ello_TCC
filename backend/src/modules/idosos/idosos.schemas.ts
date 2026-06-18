@@ -26,6 +26,7 @@ export const criarIdosoSchema = z.object({
   observacoesGerais: z.string().optional(),
   observacoesEmergencia: z.string().optional(),
   condicoesSaude: z.array(z.string().min(1)).optional(),
+  monitoramentos: z.array(z.string().min(1)).optional(),
   contatoEmergencia: contatoEmergenciaSchema.optional(),
   criadoPorId: z.string().uuid("Usuario criador invalido.").optional(),
   ativo: z.boolean().optional(),

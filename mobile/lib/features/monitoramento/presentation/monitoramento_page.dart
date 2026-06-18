@@ -1,0 +1,545 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/providers.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/api_exception.dart';
+import 'monitoramento_catalog.dart';
+
+class MonitoramentoPage extends ConsumerStatefulWidget {
+  const MonitoramentoPage({super.key});
+
+  @override
+  ConsumerState<MonitoramentoPage> createState() => _MonitoramentoPageState();
+}
+
+class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
+  bool _saving = false;
+
+  Future<void> _abrirSeletor() async {
+    final idoso = ref.read(selectedIdosoProvider);
+
+    if (idoso == null) {
+      context.go('/idosos');
+      return;
+    }
+
+    final selectedIds = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (context) {
+        return _MonitoramentoPicker(initialIds: idoso.monitoramentos);
+      },
+    );
+
+    if (selectedIds == null) return;
+    await _salvarMonitoramentos(idoso, selectedIds);
+  }
+
+  Future<void> _salvarMonitoramentos(
+    IdosoResumo idoso,
+    List<String> selectedIds,
+  ) async {
+    setState(() => _saving = true);
+
+    try {
+      await ref.read(apiClientProvider).atualizarMonitoramentosIdoso(
+            id: idoso.id,
+            monitoramentos: selectedIds,
+          );
+
+      if (!mounted) return;
+      ref.read(selectedIdosoProvider.notifier).state = idoso.copyWith(
+        monitoramentos: selectedIds,
+      );
+      ref.invalidate(idososDoUsuarioProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Monitoramentos atualizados.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível atualizar os monitoramentos.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final idoso = ref.watch(selectedIdosoProvider);
+    final options = idoso == null
+        ? const <MonitoramentoOption>[]
+        : monitoramentoOptionsByIds(idoso.monitoramentos);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'ello',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF0E6F7E),
+                        fontSize: 42,
+                        fontWeight: FontWeight.w300,
+                        letterSpacing: 0,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    const Text(
+                      'Monitoramento',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF073248),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: idoso == null
+                          ? const _MessageState(
+                              icon: Icons.person_search_rounded,
+                              title: 'Escolha uma ficha',
+                              message:
+                                  'Selecione uma ficha para ver os monitoramentos.',
+                            )
+                          : options.isEmpty
+                              ? const _MessageState(
+                                  icon: Icons.dashboard_customize_outlined,
+                                  title: 'Nenhum monitoramento',
+                                  message:
+                                      'Adicione ao menos um item para acompanhar.',
+                                )
+                              : _MonitoramentoGrid(options: options),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 38,
+                      child: OutlinedButton.icon(
+                        onPressed: _saving ? null : _abrirSeletor,
+                        icon: _saving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF1696AA),
+                                ),
+                              )
+                            : const Icon(Icons.add_rounded, size: 23),
+                        label: const Text('Adicionar registro'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF073248),
+                          side: const BorderSide(
+                            color: Color(0xFF1696AA),
+                            width: 1.4,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MonitoramentoGrid extends StatelessWidget {
+  const _MonitoramentoGrid({required this.options});
+
+  final List<MonitoramentoOption> options;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 520 ? 3 : 2;
+
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(1, 0, 1, 4),
+          itemCount: options.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            mainAxisExtent: 88,
+          ),
+          itemBuilder: (context, index) {
+            final option = options[index];
+            return _MonitoramentoTile(
+              option: option,
+              onTap: () => context.go(option.route),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _MonitoramentoTile extends StatelessWidget {
+  const _MonitoramentoTile({
+    required this.option,
+    required this.onTap,
+  });
+
+  final MonitoramentoOption option;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.22),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 10, 6, 10),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFCFEFF4),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  option.icon,
+                  color: const Color(0xFF2BA8BA),
+                  size: 27,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      option.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      option.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF8C8C8C),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF8C8C8C),
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageState extends StatelessWidget {
+  const _MessageState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF1696AA), size: 48),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF073248),
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF737373),
+              fontSize: 12.5,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonitoramentoPicker extends StatefulWidget {
+  const _MonitoramentoPicker({required this.initialIds});
+
+  final List<String> initialIds;
+
+  @override
+  State<_MonitoramentoPicker> createState() => _MonitoramentoPickerState();
+}
+
+class _MonitoramentoPickerState extends State<_MonitoramentoPicker> {
+  late final Set<String> _selectedIds;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds = widget.initialIds.toSet();
+  }
+
+  void _toggle(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+      _errorMessage = null;
+    });
+  }
+
+  void _salvar() {
+    if (_selectedIds.isEmpty) {
+      setState(() {
+        _errorMessage = 'Selecione ao menos um monitoramento.';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(_selectedIds.toList());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.78,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'O que deseja monitorar',
+                        style: TextStyle(
+                          color: Color(0xFF073248),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: GridView.builder(
+                    itemCount: monitoramentoOptions.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 11,
+                      crossAxisSpacing: 12,
+                      mainAxisExtent: 76,
+                    ),
+                    itemBuilder: (context, index) {
+                      final option = monitoramentoOptions[index];
+                      return _PickerOptionTile(
+                        option: option,
+                        selected: _selectedIds.contains(option.id),
+                        onTap: () => _toggle(option.id),
+                      );
+                    },
+                  ),
+                ),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFC0392B),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 44,
+                  child: FilledButton(
+                    onPressed: _salvar,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF3CB1C3),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                    ),
+                    child: const Text('Salvar'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PickerOptionTile extends StatelessWidget {
+  const _PickerOptionTile({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final MonitoramentoOption option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? const Color(0xFFE0F0F3) : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color:
+                  selected ? const Color(0xFF38AFC0) : const Color(0xFFE3ECEE),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: selected ? Colors.white : const Color(0xFFE9F5F7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  option.icon,
+                  color: const Color(0xFF2BA8BA),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  option.selectionLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF394B52),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.05,
+                  ),
+                ),
+              ),
+              if (selected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Color(0xFF38AFC0),
+                  size: 20,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

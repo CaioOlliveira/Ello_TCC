@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
 class CadastroIdosoPage extends ConsumerStatefulWidget {
   const CadastroIdosoPage({super.key});
@@ -32,12 +33,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   bool _loading = false;
   bool _showMonitoramentosStep = false;
   String? _errorMessage;
-  final Set<String> _monitoramentosSelecionados = {
-    'Alimentacao',
-    'Glicemia',
-    'Medicacoes',
-    'Oxigenacao',
-  };
+  final Set<String> _monitoramentosSelecionados = {...defaultMonitoramentoIds};
 
   @override
   void dispose() {
@@ -169,6 +165,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         dataNascimento: _toIsoDate(_dataNascimentoController.text.trim()),
         sexo: _sexo,
         condicoesSaude: _condicoes,
+        monitoramentos: _monitoramentosSelecionados.toList(),
         alergiasRestricoes: _limitacoesController.text.trim(),
         observacoesGerais: _observacoesController.text.trim(),
         contatoEmergenciaNome: _contatoNomeController.text.trim(),
@@ -188,6 +185,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         nome: _nomeController.text.trim(),
         idade: int.tryParse(_idadeController.text.trim()) ?? 0,
         condicoes: _condicoes,
+        monitoramentos: _monitoramentosSelecionados.toList(),
       );
       context.go('/dashboard');
     } on ApiException catch (error) {
@@ -562,61 +560,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   }
 }
 
-const _monitoramentoOptions = [
-  _MonitoramentoOption(
-    id: 'Alimentacao',
-    label: 'Alimentacao',
-    icon: Icons.restaurant_rounded,
-  ),
-  _MonitoramentoOption(
-    id: 'Glicemia',
-    label: 'Glicemia',
-    icon: Icons.water_drop_rounded,
-  ),
-  _MonitoramentoOption(
-    id: 'Medicacoes',
-    label: 'Medicacoes',
-    icon: Icons.medication_rounded,
-  ),
-  _MonitoramentoOption(
-    id: 'Agua',
-    label: 'Agua\nconsumida',
-    icon: Icons.local_drink_rounded,
-  ),
-  _MonitoramentoOption(
-    id: 'Pressao',
-    label: 'Pressao\narterial',
-    icon: Icons.favorite_rounded,
-  ),
-  _MonitoramentoOption(
-    id: 'Oxigenacao',
-    label: 'Oxigenacao',
-    icon: Icons.air_rounded,
-  ),
-  _MonitoramentoOption(
-    id: 'Sono',
-    label: 'Sono',
-    icon: Icons.bedtime_rounded,
-  ),
-  _MonitoramentoOption(
-    id: 'Equipamentos',
-    label: 'Equipamentos',
-    icon: Icons.accessible_forward_rounded,
-  ),
-];
-
-class _MonitoramentoOption {
-  const _MonitoramentoOption({
-    required this.id,
-    required this.label,
-    required this.icon,
-  });
-
-  final String id;
-  final String label;
-  final IconData icon;
-}
-
 class _MonitoramentosStep extends StatelessWidget {
   const _MonitoramentosStep({
     required this.selectedIds,
@@ -653,7 +596,7 @@ class _MonitoramentosStep extends StatelessWidget {
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 6),
-              itemCount: _monitoramentoOptions.length,
+              itemCount: monitoramentoOptions.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 11,
@@ -661,7 +604,7 @@ class _MonitoramentosStep extends StatelessWidget {
                 childAspectRatio: 1.8,
               ),
               itemBuilder: (context, index) {
-                final option = _monitoramentoOptions[index];
+                final option = monitoramentoOptions[index];
                 return _MonitoramentoCard(
                   option: option,
                   selected: selectedIds.contains(option.id),
@@ -723,7 +666,7 @@ class _MonitoramentoCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final _MonitoramentoOption option;
+  final MonitoramentoOption option;
   final bool selected;
   final VoidCallback? onTap;
 
@@ -761,7 +704,7 @@ class _MonitoramentoCard extends StatelessWidget {
                     const SizedBox(width: 9),
                     Expanded(
                       child: Text(
-                        option.label,
+                        option.selectionLabel,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

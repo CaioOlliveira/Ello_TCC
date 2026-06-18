@@ -12,6 +12,7 @@ import '../features/idosos/presentation/dashboard_idoso_page.dart';
 import '../features/idosos/presentation/selecionar_idoso_page.dart';
 import '../features/insumos/presentation/insumos_page.dart';
 import '../features/medicamentos/presentation/medicamentos_page.dart';
+import '../features/monitoramento/presentation/monitoramento_page.dart';
 import '../features/perfil/presentation/perfil_page.dart';
 import '../features/relatorios/presentation/relatorios_page.dart';
 import '../features/splash/presentation/splash_page.dart';
@@ -52,6 +53,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const GlicemiaPage(),
           ),
           GoRoute(
+            path: '/monitoramento',
+            builder: (context, state) => const MonitoramentoPage(),
+          ),
+          GoRoute(
             path: '/alimentacao',
             builder: (context, state) => const AlimentacaoPage(),
           ),
@@ -73,6 +78,31 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const RelatoriosPage(),
           ),
           GoRoute(
+            path: '/humor',
+            builder: (context, state) =>
+                const ModulePlaceholderPage(title: 'Humor'),
+          ),
+          GoRoute(
+            path: '/agua',
+            builder: (context, state) =>
+                const ModulePlaceholderPage(title: 'Agua'),
+          ),
+          GoRoute(
+            path: '/pressao',
+            builder: (context, state) =>
+                const ModulePlaceholderPage(title: 'Pressao arterial'),
+          ),
+          GoRoute(
+            path: '/oxigenacao',
+            builder: (context, state) =>
+                const ModulePlaceholderPage(title: 'Oxigenacao'),
+          ),
+          GoRoute(
+            path: '/sono',
+            builder: (context, state) =>
+                const ModulePlaceholderPage(title: 'Sono'),
+          ),
+          GoRoute(
             path: '/idoso/perfil',
             builder: (context, state) =>
                 const ModulePlaceholderPage(title: 'Perfil do idoso'),
@@ -90,11 +120,17 @@ class AppShell extends StatelessWidget {
 
   int _currentIndex(String location) {
     if (location == '/agenda') return 1;
-    if (location == '/glicemia' ||
+    if (location == '/monitoramento' ||
+        location == '/glicemia' ||
         location == '/alimentacao' ||
         location == '/medicamentos' ||
         location == '/equipamentos' ||
-        location == '/insumos') {
+        location == '/insumos' ||
+        location == '/humor' ||
+        location == '/agua' ||
+        location == '/pressao' ||
+        location == '/oxigenacao' ||
+        location == '/sono') {
       return 2;
     }
     if (location == '/relatorios') return 3;
@@ -135,10 +171,10 @@ class AppShell extends StatelessWidget {
                   onTap: () => context.go('/agenda'),
                 ),
                 _ShellNavItem(
-                  icon: Icons.auto_awesome_outlined,
-                  label: 'Registros',
+                  icon: Icons.dashboard_customize_outlined,
+                  label: 'Monitoramento',
                   selected: selectedIndex == 2,
-                  onTap: () => context.go('/glicemia'),
+                  onTap: () => context.go('/monitoramento'),
                 ),
                 _ShellNavItem(
                   icon: Icons.person_outline,
