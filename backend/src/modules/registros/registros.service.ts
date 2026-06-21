@@ -25,12 +25,12 @@ const configs = {
   humor: {
     table: "registros_humor",
     tipoEntidade: "registros_humor",
-    orderBy: "registrado_em desc",
+    orderBy: "data_humor desc, horario_regi desc",
     fields: {
       idosoId: "idoso_id",
       humor: "humor",
-      registradoEm: "registrado_em",
-      possivelMotivo: "possivel_motivo",
+      horarioRegi: "horario_regi",
+      dataHumor: "data_humor",
       observacoes: "observacoes",
       registradoPorId: "registrado_por_id",
     },

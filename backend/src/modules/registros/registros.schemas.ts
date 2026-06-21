@@ -15,8 +15,10 @@ export const hidratacaoSchema = z.object({
 export const humorSchema = z.object({
   ...comum,
   humor: z.string().min(1),
-  registradoEm: z.string().datetime().optional(),
-  possivelMotivo: z.string().optional(),
+  horarioRegi: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Horário inválido."),
+  dataHumor: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
 });
 
 export const sonoSchema = z.object({

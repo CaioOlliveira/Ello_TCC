@@ -235,6 +235,33 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> criarHumor({
+    required String idosoId,
+    required String humor,
+    required String dataHumor,
+    required String horarioRegi,
+    required String registradoPorId,
+    String? observacoes,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.humores,
+        data: {
+          'idosoId': idosoId,
+          'humor': humor,
+          'dataHumor': dataHumor,
+          'horarioRegi': horarioRegi,
+          'registradoPorId': registradoPorId,
+          if (observacoes != null && observacoes.trim().isNotEmpty)
+            'observacoes': observacoes.trim(),
+        },
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao salvar humor.');
+    }
+  }
+
   ApiException _toApiException(
     DioException error, {
     required String fallback,

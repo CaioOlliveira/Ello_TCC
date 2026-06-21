@@ -7,6 +7,7 @@ import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
+import '../features/humor/presentation/humor_page.dart';
 import '../features/idosos/presentation/cadastro_idoso_page.dart';
 import '../features/idosos/presentation/dashboard_idoso_page.dart';
 import '../features/idosos/presentation/selecionar_idoso_page.dart';
@@ -79,8 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/humor',
-            builder: (context, state) =>
-                const ModulePlaceholderPage(title: 'Humor'),
+            builder: (context, state) => const HumorPage(),
           ),
           GoRoute(
             path: '/agua',

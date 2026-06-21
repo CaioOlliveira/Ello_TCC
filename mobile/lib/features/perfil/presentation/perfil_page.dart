@@ -16,7 +16,7 @@ class PerfilPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final usuario = ref.watch(authSessionProvider);
     final from = GoRouterState.of(context).uri.queryParameters['from'];
-    final backRoute = from == 'idosos' ? '/idosos' : '/dashboard';
+    final backRoute = _routeFromOrigin(from);
     final editRoute =
         from == null ? '/perfil/editar' : '/perfil/editar?from=$from';
 
@@ -702,4 +702,21 @@ Uint8List? _dataImageBytes(String? value) {
   } catch (_) {
     return null;
   }
+}
+
+String _routeFromOrigin(String? from) {
+  return switch (from) {
+    'idosos' => '/idosos',
+    'dashboard' => '/dashboard',
+    'humor' => '/humor',
+    'monitoramento' => '/monitoramento',
+    'agenda' => '/agenda',
+    'glicemia' => '/glicemia',
+    'alimentacao' => '/alimentacao',
+    'medicamentos' => '/medicamentos',
+    'equipamentos' => '/equipamentos',
+    'insumos' => '/insumos',
+    'relatorios' => '/relatorios',
+    _ => '/dashboard',
+  };
 }
