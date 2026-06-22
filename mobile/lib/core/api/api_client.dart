@@ -262,6 +262,66 @@ class ApiClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> listarCompromissos({
+    String? idosoId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.agenda,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data.whereType<Map<String, dynamic>>().toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar compromissos.');
+    }
+  }
+
+  Future<Map<String, dynamic>> criarCompromisso({
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.agenda,
+        data: data,
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao criar compromisso.');
+    }
+  }
+
+  Future<Map<String, dynamic>> atualizarCompromisso({
+    required String id,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.compromisso(id),
+        data: data,
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar compromisso.');
+    }
+  }
+
+  Future<void> removerCompromisso({required String id}) async {
+    try {
+      await _dio.delete<void>(ApiEndpoints.compromisso(id));
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao excluir compromisso.');
+    }
+  }
+
   ApiException _toApiException(
     DioException error, {
     required String fallback,

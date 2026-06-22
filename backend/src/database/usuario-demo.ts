@@ -5,7 +5,15 @@ import { getPool } from "./pool.js";
 export const resolverUsuarioRegistroId = async (
   usuarioId?: string,
 ): Promise<string> => {
-  if (usuarioId) return usuarioId;
+  if (usuarioId) {
+    const usuario = await getPool().query<{ id: string }>(
+      "select id from usuarios where id = $1 limit 1",
+      [usuarioId],
+    );
+
+    if (usuario.rows[0]) return usuarioId;
+  }
+
   if (env.DEMO_USUARIO_ID) return env.DEMO_USUARIO_ID;
 
   const result = await getPool().query<{ id: string }>(

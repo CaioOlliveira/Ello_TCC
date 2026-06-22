@@ -1,5 +1,6 @@
 import { registrarHistorico } from "../../database/audit.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
+import { notificacoesService } from "../notificacoes/notificacoes.service.js";
 import {
   deleteRow,
   getRowById,
@@ -12,21 +13,23 @@ import type {
   CriarEventoInput,
 } from "./agenda.schemas.js";
 
-const table = "eventos_calendario";
-const notFound = ["EVENTO_NAO_ENCONTRADO", "Evento não encontrado."] as const;
+const table = "tarefas";
+const notFound = ["TAREFA_NAO_ENCONTRADA", "Tarefa nao encontrada."] as const;
 
 const fields = {
   idosoId: "idoso_id",
   titulo: "titulo",
-  tipoEvento: "tipo_evento",
-  inicioEm: "inicio_em",
-  fimEm: "fim_em",
+  tags: "tags",
+  dataCompromisso: "data_compromisso",
+  horaCompromisso: "hora_compromisso",
   local: "local",
+  atribuidoParaId: "atribuido_para_id",
   responsavelId: "responsavel_id",
-  repeticao: "repeticao",
-  lembreteMinutos: "lembrete_minutos",
-  status: "status",
+  frequencia: "frequencia",
   observacoes: "observacoes",
+  ativarLembrete: "ativar_lembrete",
+  antecedenciaLembreteMinutos: "antecedencia_lembrete_minutos",
+  status: "status",
   criadoPorId: "criado_por_id",
 } as const;
 
@@ -37,7 +40,8 @@ export const agendaService = {
       offset,
       where: idosoId ? "idoso_id = $1" : undefined,
       params: idosoId ? [idosoId] : undefined,
-      orderBy: "inicio_em asc",
+      orderBy:
+        "data_compromisso asc nulls last, hora_compromisso asc nulls last",
     });
   },
 
@@ -52,7 +56,12 @@ export const agendaService = {
       Record<string, unknown>
     >(
       table,
-      { ...input, criadoPorId, status: input.status ?? "agendado" },
+      {
+        ...input,
+        criadoPorId,
+        atribuidoParaId: input.atribuidoParaId ?? criadoPorId,
+        status: input.status ?? "agendado",
+      },
       fields,
     );
 
@@ -64,6 +73,29 @@ export const agendaService = {
       entidadeId: String(evento.id),
       dadosNovos: evento,
     });
+
+    if (
+      input.ativarLembrete &&
+      input.antecedenciaLembreteMinutos !== undefined
+    ) {
+      const programadoPara = new Date(
+        `${input.dataCompromisso}T${input.horaCompromisso}`,
+      );
+      programadoPara.setMinutes(
+        programadoPara.getMinutes() - input.antecedenciaLembreteMinutos,
+      );
+
+      await notificacoesService.criar({
+        idosoId: input.idosoId,
+        usuarioId: criadoPorId,
+        titulo: `Lembrete: ${input.titulo}`,
+        mensagem: `O compromisso "${input.titulo}" esta chegando.`,
+        tipoNotificacao: "agenda",
+        tipoEntidadeRelacionada: table,
+        entidadeRelacionadaId: String(evento.id),
+        programadoPara: programadoPara.toISOString(),
+      });
+    }
 
     return evento;
   },

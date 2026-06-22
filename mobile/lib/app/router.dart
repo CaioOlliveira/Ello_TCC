@@ -119,8 +119,8 @@ class AppShell extends StatelessWidget {
   final Widget child;
 
   int _currentIndex(String location) {
-    if (location == '/agenda') return 1;
     if (location == '/monitoramento' ||
+        location == '/agenda' ||
         location == '/glicemia' ||
         location == '/alimentacao' ||
         location == '/medicamentos' ||
@@ -131,10 +131,10 @@ class AppShell extends StatelessWidget {
         location == '/pressao' ||
         location == '/oxigenacao' ||
         location == '/sono') {
-      return 2;
+      return 1;
     }
-    if (location == '/relatorios') return 3;
-    if (location == '/idoso/perfil') return 4;
+    if (location == '/relatorios') return 2;
+    if (location == '/idoso/perfil') return 2;
     return 0;
   }
 
@@ -165,21 +165,15 @@ class AppShell extends StatelessWidget {
                   onTap: () => context.go('/dashboard'),
                 ),
                 _ShellNavItem(
-                  icon: Icons.dashboard_outlined,
-                  label: 'Agenda',
-                  selected: selectedIndex == 1,
-                  onTap: () => context.go('/agenda'),
-                ),
-                _ShellNavItem(
                   icon: Icons.dashboard_customize_outlined,
                   label: 'Monitoramento',
-                  selected: selectedIndex == 2,
+                  selected: selectedIndex == 1,
                   onTap: () => context.go('/monitoramento'),
                 ),
                 _ShellNavItem(
                   icon: Icons.person_outline,
                   label: 'Perfil',
-                  selected: selectedIndex == 4,
+                  selected: selectedIndex == 2,
                   onTap: () => context.go('/idoso/perfil'),
                 ),
               ],
