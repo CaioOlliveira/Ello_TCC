@@ -351,81 +351,97 @@ class _LoginFormView extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSizes.lg,
-              AppSizes.xl,
-              AppSizes.lg,
-              AppSizes.lg,
-            ),
-            child: Form(
-              key: formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Entre com e-mail',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: const Color(0xFF177385),
-                      fontWeight: FontWeight.w700,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSizes.lg,
+                  AppSizes.xl,
+                  AppSizes.lg,
+                  AppSizes.lg,
+                ),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight:
+                        (constraints.maxHeight - AppSizes.xl - AppSizes.lg)
+                            .clamp(0, double.infinity),
+                  ),
+                  child: IntrinsicHeight(
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Entre com e-mail',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: const Color(0xFF177385),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: AppSizes.sm),
+                          Text(
+                            'Use seu e-mail e senha cadastrados.',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: const Color(0xFF6F8288),
+                            ),
+                          ),
+                          const SizedBox(height: AppSizes.xl),
+                          _InputWrapper(
+                            child: AppTextField(
+                              label: 'E-mail',
+                              controller: emailController,
+                              validator: Validators.email,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              prefixIcon: Icons.mail_outline,
+                              autofillHints: const [AutofillHints.email],
+                            ),
+                          ),
+                          const SizedBox(height: AppSizes.md),
+                          _InputWrapper(
+                            child: AppTextField(
+                              label: 'Senha',
+                              controller: senhaController,
+                              validator: Validators.password,
+                              obscureText: true,
+                              textInputAction: TextInputAction.done,
+                              prefixIcon: Icons.lock_outline,
+                              autofillHints: const [AutofillHints.password],
+                            ),
+                          ),
+                          if (errorMessage != null) ...[
+                            const SizedBox(height: AppSizes.md),
+                            _ErrorBox(message: errorMessage!),
+                          ],
+                          const Spacer(),
+                          const SizedBox(height: AppSizes.lg),
+                          SizedBox(
+                            height: 54,
+                            child: FilledButton(
+                              onPressed: loading ? null : onSubmit,
+                              style: _primaryButtonStyle(),
+                              child: loading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.4,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Entrar'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: AppSizes.sm),
-                  Text(
-                    'Use seu e-mail e senha cadastrados.',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: const Color(0xFF6F8288),
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.xl),
-                  _InputWrapper(
-                    child: AppTextField(
-                      label: 'E-mail',
-                      controller: emailController,
-                      validator: Validators.email,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      prefixIcon: Icons.mail_outline,
-                      autofillHints: const [AutofillHints.email],
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.md),
-                  _InputWrapper(
-                    child: AppTextField(
-                      label: 'Senha',
-                      controller: senhaController,
-                      validator: Validators.password,
-                      obscureText: true,
-                      textInputAction: TextInputAction.done,
-                      prefixIcon: Icons.lock_outline,
-                      autofillHints: const [AutofillHints.password],
-                    ),
-                  ),
-                  if (errorMessage != null) ...[
-                    const SizedBox(height: AppSizes.md),
-                    _ErrorBox(message: errorMessage!),
-                  ],
-                  const Spacer(),
-                  SizedBox(
-                    height: 54,
-                    child: FilledButton(
-                      onPressed: loading ? null : onSubmit,
-                      style: _primaryButtonStyle(),
-                      child: loading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Entrar'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ],

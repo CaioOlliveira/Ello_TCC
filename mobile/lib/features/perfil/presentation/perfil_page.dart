@@ -25,85 +25,100 @@ class PerfilPage extends ConsumerWidget {
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _PerfilHeader(onBack: () => context.go(backRoute)),
-                const SizedBox(height: 12),
-                const Text(
-                  'Perfil e configurações',
-                  style: TextStyle(
-                    color: Color(0xFF238FA1),
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight:
+                        (constraints.maxHeight - 28).clamp(0, double.infinity),
                   ),
-                ),
-                const SizedBox(height: 10),
-                _UsuarioCard(
-                  usuario: usuario,
-                  onEdit: () => context.go(editRoute),
-                ),
-                const SizedBox(height: 16),
-                const _MenuCard(),
-                const SizedBox(height: 16),
-                const Text(
-                  'Preferências',
-                  style: TextStyle(
-                    color: Color(0xFF238FA1),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const _PreferenciasCard(),
-                const Spacer(),
-                SizedBox(
-                  height: 50,
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.group_add_outlined, size: 21),
-                    label: const Text('Adicionar conta'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF238FA1),
-                      side: const BorderSide(color: Color(0xFF238FA1)),
-                      textStyle: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(11),
-                      ),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _PerfilHeader(onBack: () => context.go(backRoute)),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Perfil e configurações',
+                          style: TextStyle(
+                            color: Color(0xFF238FA1),
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _UsuarioCard(
+                          usuario: usuario,
+                          onEdit: () => context.go(editRoute),
+                        ),
+                        const SizedBox(height: 16),
+                        const _MenuCard(),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Preferências',
+                          style: TextStyle(
+                            color: Color(0xFF238FA1),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const _PreferenciasCard(),
+                        const Spacer(),
+                        SizedBox(
+                          height: 50,
+                          child: OutlinedButton.icon(
+                            onPressed: () {},
+                            icon:
+                                const Icon(Icons.group_add_outlined, size: 21),
+                            label: const Text('Adicionar conta'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF238FA1),
+                              side: const BorderSide(color: Color(0xFF238FA1)),
+                              textStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 52,
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              ref.read(authSessionProvider.notifier).state =
+                                  null;
+                              ref.read(selectedIdosoProvider.notifier).state =
+                                  null;
+                              context.go('/login');
+                            },
+                            icon: const Icon(Icons.logout_rounded, size: 21),
+                            label: const Text('sair'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0B6985),
+                              foregroundColor: Colors.white,
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      ref.read(authSessionProvider.notifier).state = null;
-                      ref.read(selectedIdosoProvider.notifier).state = null;
-                      context.go('/login');
-                    },
-                    icon: const Icon(Icons.logout_rounded, size: 21),
-                    label: const Text('sair'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0B6985),
-                      foregroundColor: Colors.white,
-                      textStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
