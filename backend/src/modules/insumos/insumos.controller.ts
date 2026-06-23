@@ -10,14 +10,19 @@ import {
   criarInsumoSchema,
   criarMovimentacaoInsumoSchema,
   insumoParamsSchema,
+  listarInsumosQuerySchema,
 } from "./insumos.schemas.js";
 import { insumosService } from "./insumos.service.js";
 
 export const listarInsumos: RequestHandler = asyncHandler(async (req, res) => {
   const { limite, offset, pagina } = getPagination(req.query);
-  const idosoId =
-    typeof req.query.idosoId === "string" ? req.query.idosoId : undefined;
-  const { dados, total } = await insumosService.listar(limite, offset, idosoId);
+  const { idosoId, filtro } = listarInsumosQuerySchema.parse(req.query);
+  const { dados, total } = await insumosService.listar(
+    limite,
+    offset,
+    idosoId,
+    filtro,
+  );
   res.json({ dados, meta: { total, pagina, limite } });
 });
 

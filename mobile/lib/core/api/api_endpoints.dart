@@ -8,11 +8,14 @@ class ApiEndpoints {
   static const humores = '/registros/humores';
   static const agenda = '/agenda';
   static const equipamentos = '/equipamentos';
+  static const insumos = '/insumos';
   static const glicemias = '/glicemias';
   static const glicemiaResumo = '/glicemias/resumo';
   static const glicemiaInsulinas = '/glicemias/insulinas';
   static String compromisso(String id) => '/agenda/$id';
   static String equipamento(String id) => '/equipamentos/$id';
+  static String insumo(String id) => '/insumos/$id';
+  static String movimentacoesInsumo(String id) => '/insumos/$id/movimentacoes';
   static String manutencoesEquipamento(String id) =>
       '/equipamentos/$id/manutencoes';
   static String idoso(String id) => '/idosos/$id';
