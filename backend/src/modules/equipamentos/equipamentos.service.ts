@@ -1,4 +1,5 @@
 import { registrarHistorico } from "../../database/audit.js";
+import { getPool } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
 import {
   deleteRow,
@@ -27,9 +28,13 @@ const fields = {
   modelo: "modelo",
   numeroSerie: "numero_serie",
   dataAquisicao: "data_aquisicao",
+  validade: "validade",
+  ultimaManutencaoEm: "ultima_manutencao_em",
   localGuardado: "local_guardado",
   responsavelId: "responsavel_id",
+  criadoPorId: "criado_por_id",
   urlManual: "url_manual",
+  urlFoto: "url_foto",
   frequenciaManutencaoDias: "frequencia_manutencao_dias",
   proximaManutencaoEm: "proxima_manutencao_em",
   status: "status",
@@ -52,11 +57,22 @@ export const equipamentosService = {
   },
 
   async criar(input: CriarEquipamentoInput) {
+    const criadoPorId = await resolverUsuarioRegistroId(input.criadoPorId);
     const equipamento = await insertRow<
-      CriarEquipamentoInput,
+      Record<string, unknown>,
       Record<string, unknown>
-    >(table, { ...input, status: input.status ?? "em_uso" }, fields);
+    >(
+      table,
+      {
+        ...input,
+        criadoPorId,
+        responsavelId: input.responsavelId ?? criadoPorId,
+        status: input.status ?? "Em uso",
+      },
+      fields,
+    );
     await registrarHistorico({
+      usuarioId: criadoPorId,
       idosoId: input.idosoId,
       acao: "criar",
       tipoEntidade: table,
@@ -95,10 +111,23 @@ export const equipamentosService = {
     });
   },
 
+  async listarManutencoes(equipamentoId: string) {
+    await this.buscarPorId(equipamentoId);
+    const result = await getPool().query<Record<string, unknown>>(
+      `select * from manutencoes_equipamentos
+       where equipamento_id = $1
+       order by data_manutencao desc nulls last, criado_em desc nulls last`,
+      [equipamentoId],
+    );
+
+    return result.rows;
+  },
+
   async registrarManutencao(
     equipamentoId: string,
     input: CriarManutencaoInput,
   ) {
+    const equipamento = await this.buscarPorId(equipamentoId);
     const registradoPorId = await resolverUsuarioRegistroId(
       input.registradoPorId,
     );
@@ -113,6 +142,7 @@ export const equipamentosService = {
         dataManutencao: "data_manutencao",
         tipoManutencao: "tipo_manutencao",
         descricaoServico: "descricao_servico",
+        problemaRelatado: "problema_relatado",
         pecasTrocadas: "pecas_trocadas",
         profissionalEmpresa: "profissional_empresa",
         proximaManutencaoEm: "proxima_manutencao_em",
@@ -121,6 +151,27 @@ export const equipamentosService = {
         registradoPorId: "registrado_por_id",
       },
     );
+
+    await updateRow<Record<string, unknown>, Record<string, unknown>>(
+      table,
+      equipamentoId,
+      {
+        ultimaManutencaoEm: input.dataManutencao,
+        proximaManutencaoEm: input.proximaManutencaoEm,
+        status: "Em uso",
+      },
+      fields,
+      ...notFound,
+    );
+
+    await registrarHistorico({
+      usuarioId: registradoPorId,
+      idosoId: String(equipamento.idoso_id ?? ""),
+      acao: "criar",
+      tipoEntidade: "manutencoes_equipamentos",
+      entidadeId: String(manutencao.id),
+      dadosNovos: manutencao,
+    });
 
     return manutencao;
   },

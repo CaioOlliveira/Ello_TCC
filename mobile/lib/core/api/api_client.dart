@@ -322,6 +322,98 @@ class ApiClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> listarEquipamentos({
+    String? idosoId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.equipamentos,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data.whereType<Map<String, dynamic>>().toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar equipamentos.');
+    }
+  }
+
+  Future<Map<String, dynamic>> criarEquipamento({
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.equipamentos,
+        data: data,
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao criar equipamento.');
+    }
+  }
+
+  Future<Map<String, dynamic>> atualizarEquipamento({
+    required String id,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.equipamento(id),
+        data: data,
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar equipamento.');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> listarManutencoesEquipamento({
+    required String id,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.manutencoesEquipamento(id),
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data.whereType<Map<String, dynamic>>().toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao listar manutencoes.',
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> registrarManutencaoEquipamento({
+    required String id,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.manutencoesEquipamento(id),
+        data: data,
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao registrar manutencao.',
+      );
+    }
+  }
+
   ApiException _toApiException(
     DioException error, {
     required String fallback,

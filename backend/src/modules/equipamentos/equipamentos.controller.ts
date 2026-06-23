@@ -56,6 +56,13 @@ export const removerEquipamento: RequestHandler = asyncHandler(
   },
 );
 
+export const listarManutencoesEquipamento: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    res.json({ dados: await equipamentosService.listarManutencoes(id) });
+  },
+);
+
 export const registrarManutencaoEquipamento: RequestHandler = asyncHandler(
   async (req, res) => {
     const { id } = idParamSchema.parse(req.params);

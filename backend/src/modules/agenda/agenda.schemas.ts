@@ -32,6 +32,17 @@ const normalizarFrequencia = (value: unknown) => {
   return values[normalized] ?? value;
 };
 
+const primeiroDefinido = (
+  input: Record<string, unknown>,
+  keys: string[],
+) => {
+  for (const key of keys) {
+    if (input[key] !== undefined) return input[key];
+  }
+
+  return undefined;
+};
+
 const normalizarTarefaAgenda = (value: unknown) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return value;
@@ -53,9 +64,13 @@ const normalizarTarefaAgenda = (value: unknown) => {
     (dataHora && !Number.isNaN(dataHora.valueOf())
       ? dataHora.toISOString().slice(11, 16)
       : undefined);
-  const ativarLembrete = input.ativarLembrete ?? input.ativar_lembrete ?? false;
+  const tags = primeiroDefinido(input, ["tags", "tipoEvento", "tipo_evento"]);
+  const ativarLembrete = primeiroDefinido(input, [
+    "ativarLembrete",
+    "ativar_lembrete",
+  ]);
 
-  return {
+  const output: Record<string, unknown> = {
     ...input,
     idosoId: input.idosoId ?? input.idoso_id,
     dataCompromisso,
@@ -68,8 +83,6 @@ const normalizarTarefaAgenda = (value: unknown) => {
       input.atruido_para_id,
     responsavelId: input.responsavelId ?? input.responsavel_id,
     frequencia: normalizarFrequencia(input.frequencia ?? input.repeticao),
-    tags: normalizarTags(input.tags ?? input.tipoEvento ?? input.tipo_evento),
-    ativarLembrete,
     antecedenciaLembreteMinutos:
       input.antecedenciaLembreteMinutos ??
       input.antecedencia_lembrete_minutos ??
@@ -78,6 +91,16 @@ const normalizarTarefaAgenda = (value: unknown) => {
     observacoes: input.observacoes,
     criadoPorId: input.criadoPorId ?? input.criado_por_id,
   };
+
+  if (tags !== undefined) {
+    output.tags = normalizarTags(tags);
+  }
+
+  if (ativarLembrete !== undefined) {
+    output.ativarLembrete = ativarLembrete;
+  }
+
+  return output;
 };
 
 const tarefaAgendaSchema = z.object({
