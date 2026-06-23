@@ -17,8 +17,9 @@ class _BackButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.chevron_left_rounded, color: Color(0xFF1696AA)),
-              Text('Voltar', style: TextStyle(fontSize: 12)),
+              Icon(Icons.chevron_left_rounded,
+                  color: Color(0xFF1696AA), size: 28),
+              Text('Voltar', style: TextStyle(fontSize: 14)),
             ],
           ),
         ),
@@ -57,10 +58,10 @@ class _LegendItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.circle, color: color, size: 8),
-        const SizedBox(width: 3),
+        Icon(Icons.circle, color: color, size: 10),
+        const SizedBox(width: 4),
         Text(label,
-            style: const TextStyle(color: Color(0xFF777777), fontSize: 8)),
+            style: const TextStyle(color: Color(0xFF777777), fontSize: 10)),
       ],
     );
   }
@@ -79,8 +80,8 @@ class _DetailsHeader extends StatelessWidget {
       decoration: _cardDecoration(),
       child: Row(
         children: [
-          _EquipmentPicture(equipamento: equipamento, size: 80),
-          const SizedBox(width: 10),
+          _EquipmentPicture(equipamento: equipamento, size: 88),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +91,7 @@ class _DetailsHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 21,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFF222222),
                   ),
@@ -120,13 +121,13 @@ class _DetailsHeader extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(status.icon, color: status.color, size: 12),
-                        const SizedBox(width: 4),
+                        Icon(status.icon, color: status.color, size: 15),
+                        const SizedBox(width: 5),
                         Text(
                           status.label,
                           style: TextStyle(
                             color: status.color,
-                            fontSize: 9,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -162,13 +163,13 @@ class _InfoTile extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 40,
+            height: 40,
             decoration: const BoxDecoration(
               color: Color(0xFFA9D9E1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: const Color(0xFF1696AA), size: 20),
+            child: Icon(icon, color: const Color(0xFF1696AA), size: 24),
           ),
           const SizedBox(width: 7),
           Expanded(
@@ -182,7 +183,7 @@ class _InfoTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF111111),
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -209,8 +210,8 @@ class _MaintenanceEntry extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 40,
+            height: 40,
             decoration: const BoxDecoration(
               color: Color(0xFFA9D9E1),
               shape: BoxShape.circle,
@@ -218,7 +219,7 @@ class _MaintenanceEntry extends StatelessWidget {
             child: const Icon(
               Icons.build_rounded,
               color: Color(0xFF1696AA),
-              size: 19,
+              size: 23,
             ),
           ),
           const SizedBox(width: 8),
@@ -230,7 +231,7 @@ class _MaintenanceEntry extends StatelessWidget {
                   '${formatDate(manutencao.dataManutencao)} - ${manutencao.tipoManutencao}',
                   style: const TextStyle(
                     color: Color(0xFF1696AA),
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -275,14 +276,14 @@ class _MiniLine extends StatelessWidget {
       padding: const EdgeInsets.only(top: 2),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFF1696AA), size: 12),
-          const SizedBox(width: 4),
+          Icon(icon, color: const Color(0xFF1696AA), size: 15),
+          const SizedBox(width: 5),
           Expanded(
             child: Text(
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF111111), fontSize: 10),
+              style: const TextStyle(color: Color(0xFF111111), fontSize: 12),
             ),
           ),
         ],
@@ -366,13 +367,14 @@ class _LabeledField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF333333))),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF333333))),
           SizedBox(
-            height: maxLines == 1 ? 34 : null,
+            height: maxLines == 1 ? 40 : null,
             child: TextField(
               controller: controller,
               keyboardType: keyboardType,
               maxLines: maxLines,
+              style: const TextStyle(fontSize: 15),
               decoration: _inputDecoration(suffix: suffix),
             ),
           ),
@@ -401,15 +403,16 @@ class _DateField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF333333))),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF333333))),
           SizedBox(
-            height: 34,
+            height: 40,
             child: TextField(
               controller: controller,
               readOnly: true,
               onTap: onTap,
+              style: const TextStyle(fontSize: 15),
               decoration: _inputDecoration(
-                suffix: const Icon(Icons.calendar_month_rounded, size: 17),
+                suffix: const Icon(Icons.calendar_month_rounded, size: 20),
               ),
             ),
           ),
@@ -436,7 +439,7 @@ class _TypeChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        height: 36,
+        height: 42,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFE1F3F6) : Colors.white,
@@ -451,14 +454,14 @@ class _TypeChip extends StatelessWidget {
                   ? Icons.check_circle_outline
                   : Icons.radio_button_unchecked,
               color: const Color(0xFF1696AA),
-              size: 15,
+              size: 18,
             ),
             const SizedBox(width: 5),
             Text(
               label,
               style: const TextStyle(
                 color: Color(0xFF073248),
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -486,14 +489,14 @@ class _MessageState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: const Color(0xFF38AFC0), size: 44),
+          Icon(icon, color: const Color(0xFF38AFC0), size: 50),
           const SizedBox(height: 10),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Color(0xFF073248),
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -501,7 +504,7 @@ class _MessageState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF777777), fontSize: 12),
+            style: const TextStyle(color: Color(0xFF777777), fontSize: 14),
           ),
         ],
       ),
@@ -533,7 +536,7 @@ ButtonStyle _primaryButtonStyle() {
     backgroundColor: const Color(0xFF3CA7B8),
     foregroundColor: Colors.white,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+    textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
   );
 }
 
@@ -552,11 +555,11 @@ BoxDecoration _cardDecoration() {
 }
 
 TextStyle _mutedStyle() {
-  return const TextStyle(color: Color(0xFF8C8C8C), fontSize: 10, height: 1.22);
+  return const TextStyle(color: Color(0xFF8C8C8C), fontSize: 12, height: 1.22);
 }
 
 TextStyle _detailStyle() {
-  return const TextStyle(color: Color(0xFF222222), fontSize: 10.5, height: 1.2);
+  return const TextStyle(color: Color(0xFF222222), fontSize: 12.5, height: 1.2);
 }
 
 DateTime? parseDate(dynamic value) {

@@ -8,6 +8,9 @@ class ApiEndpoints {
   static const humores = '/registros/humores';
   static const agenda = '/agenda';
   static const equipamentos = '/equipamentos';
+  static const glicemias = '/glicemias';
+  static const glicemiaResumo = '/glicemias/resumo';
+  static const glicemiaInsulinas = '/glicemias/insulinas';
   static String compromisso(String id) => '/agenda/$id';
   static String equipamento(String id) => '/equipamentos/$id';
   static String manutencoesEquipamento(String id) =>

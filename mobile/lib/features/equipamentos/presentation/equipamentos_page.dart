@@ -296,7 +296,7 @@ class _EquipamentosList extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Color(0xFF073248),
-            fontSize: 18,
+            fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -328,10 +328,10 @@ class _EquipamentosList extends StatelessWidget {
                     ),
         ),
         SizedBox(
-          height: 42,
+          height: 48,
           child: FilledButton.icon(
             onPressed: onAdd,
-            icon: const Icon(Icons.add_circle_rounded, size: 18),
+            icon: const Icon(Icons.add_circle_rounded, size: 22),
             label: const Text('Adicionar Equipamento'),
             style: _primaryButtonStyle(),
           ),
@@ -376,8 +376,8 @@ class _EquipamentoCard extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(10, 11, 4, 11),
                   child: Row(
                     children: [
-                      _EquipmentPicture(equipamento: equipamento, size: 64),
-                      const SizedBox(width: 10),
+                      _EquipmentPicture(equipamento: equipamento, size: 72),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,7 +387,7 @@ class _EquipamentoCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF222222),
                               ),
@@ -408,8 +408,8 @@ class _EquipamentoCard extends StatelessWidget {
                             Row(
                               children: [
                                 Icon(status.icon,
-                                    color: status.color, size: 13),
-                                const SizedBox(width: 3),
+                                    color: status.color, size: 16),
+                                const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     'Status: ${status.label}',
@@ -417,7 +417,7 @@ class _EquipamentoCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: status.color,
-                                      fontSize: 10,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),

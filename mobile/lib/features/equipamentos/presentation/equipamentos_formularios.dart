@@ -52,7 +52,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
   ) async {
     final now = DateTime.now();
     final selected = await showDatePicker(
-      context: context,
+      context: Navigator.of(context, rootNavigator: true).context,
       firstDate: DateTime(now.year - 20),
       lastDate: DateTime(now.year + 20),
       initialDate: now,
@@ -91,7 +91,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Color(0xFF073248),
-            fontSize: 18,
+            fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -147,7 +147,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {},
-                icon: const Icon(Icons.attach_file_rounded, size: 20),
+                icon: const Icon(Icons.attach_file_rounded, size: 22),
                 label: const Text('Anexar manual'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF178FA1),
@@ -161,7 +161,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
             const SizedBox(width: 8),
             Expanded(
               child: Container(
-                height: 42,
+                height: 46,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: const Color(0xFFA9D9E1),
@@ -187,14 +187,14 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 42,
+          height: 48,
           child: FilledButton(
             onPressed: widget.saving ? null : _submit,
             style: _primaryButtonStyle(),
             child: widget.saving
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Colors.white,
@@ -232,14 +232,14 @@ class _EquipamentoDetails extends StatelessWidget {
           'Detalhes do equipamento',
           style: TextStyle(
             color: Color(0xFF073248),
-            fontSize: 21,
+            fontSize: 24,
             fontWeight: FontWeight.w900,
             height: 0.9,
           ),
         ),
         const Text(
           'Acompanhe informacoes, historico e ocorrencias',
-          style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 10),
+          style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
         ),
         const SizedBox(height: 9),
         _DetailsHeader(equipamento: equipamento),
@@ -268,7 +268,7 @@ class _EquipamentoDetails extends StatelessWidget {
           'Historico de manutencoes',
           style: TextStyle(
             color: Color(0xFF073248),
-            fontSize: 15,
+            fontSize: 18,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -290,20 +290,20 @@ class _EquipamentoDetails extends StatelessWidget {
                 ),
         ),
         SizedBox(
-          height: 42,
+          height: 48,
           child: FilledButton.icon(
             onPressed: saving ? null : onRegister,
-            icon: const Icon(Icons.build_rounded, size: 18),
+            icon: const Icon(Icons.build_rounded, size: 22),
             label: const Text('Registrar manutencao'),
             style: _primaryButtonStyle(),
           ),
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 42,
+          height: 48,
           child: FilledButton.icon(
             onPressed: saving ? null : onOutOfUse,
-            icon: const Icon(Icons.block_rounded, size: 18),
+            icon: const Icon(Icons.block_rounded, size: 22),
             label: const Text('Marcar como fora de uso'),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF003B4F),
@@ -316,10 +316,10 @@ class _EquipamentoDetails extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 42,
+          height: 48,
           child: FilledButton.icon(
             onPressed: null,
-            icon: const Icon(Icons.edit_rounded, size: 18),
+            icon: const Icon(Icons.edit_rounded, size: 22),
             label: const Text('Editar'),
             style: FilledButton.styleFrom(
               disabledBackgroundColor: const Color(0xFFC7C7C7),
@@ -384,7 +384,7 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final selected = await showDatePicker(
-      context: context,
+      context: Navigator.of(context, rootNavigator: true).context,
       firstDate: DateTime(now.year - 5),
       lastDate: DateTime(now.year + 5),
       initialDate: _dataValue ?? now,
@@ -426,21 +426,21 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Color(0xFF111111),
-            fontSize: 19,
+            fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 18),
-        const Text('Equipamento', style: TextStyle(fontSize: 10)),
+        const Text('Equipamento', style: TextStyle(fontSize: 13)),
         Row(
           children: [
-            _EquipmentPicture(equipamento: widget.equipamento, size: 34),
-            const SizedBox(width: 7),
+            _EquipmentPicture(equipamento: widget.equipamento, size: 42),
+            const SizedBox(width: 9),
             Expanded(
               child: Text(
                 widget.equipamento.nome,
                 style: const TextStyle(
-                  fontSize: 17,
+                  fontSize: 19,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -449,7 +449,7 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
         ),
         _DateField(
             label: 'Data da manutencao', controller: _data, onTap: _pickDate),
-        const Text('Tipo de manutencao', style: TextStyle(fontSize: 10)),
+        const Text('Tipo de manutencao', style: TextStyle(fontSize: 13)),
         Row(
           children: [
             Expanded(
@@ -483,14 +483,14 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
         ),
         const SizedBox(height: 28),
         SizedBox(
-          height: 42,
+          height: 48,
           child: FilledButton(
             onPressed: widget.saving ? null : _submit,
             style: _primaryButtonStyle(),
             child: widget.saving
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Colors.white,
@@ -501,7 +501,7 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 42,
+          height: 48,
           child: OutlinedButton(
             onPressed: widget.saving ? null : widget.onCancel,
             style: OutlinedButton.styleFrom(

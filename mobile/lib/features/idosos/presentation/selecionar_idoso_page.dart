@@ -111,62 +111,76 @@ class ConviteIdosoPage extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 26),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: IconButton(
-                            onPressed: () => context.go('/idosos'),
-                            icon: const Icon(
-                              Icons.chevron_left_rounded,
-                              color: Color(0xFF238FA1),
-                              size: 32,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 26),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: (constraints.maxHeight - 36)
+                            .clamp(0, double.infinity),
+                      ),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: IconButton(
+                                    onPressed: () => context.go('/idosos'),
+                                    icon: const Icon(
+                                      Icons.chevron_left_rounded,
+                                      color: Color(0xFF238FA1),
+                                      size: 32,
+                                    ),
+                                  ),
+                                ),
+                                const Text(
+                                  'ello',
+                                  style: TextStyle(
+                                    color: Color(0xFF0E6F7E),
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.w300,
+                                    letterSpacing: 0,
+                                    height: 1,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Entrar com convite',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 23,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Use o codigo enviado por outro cuidador\npara acessar uma ficha compartilhada',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Color(0xFF4C4C4C),
+                                fontSize: 11,
+                                height: 1.25,
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            const _InviteCard(),
+                            const Spacer(),
+                          ],
                         ),
-                        const Text(
-                          'ello',
-                          style: TextStyle(
-                            color: Color(0xFF0E6F7E),
-                            fontSize: 34,
-                            fontWeight: FontWeight.w300,
-                            letterSpacing: 0,
-                            height: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Entrar com convite',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Use o codigo enviado por outro cuidador\npara acessar uma ficha compartilhada',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF4C4C4C),
-                        fontSize: 11,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    const _InviteCard(),
-                    const Spacer(),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ),

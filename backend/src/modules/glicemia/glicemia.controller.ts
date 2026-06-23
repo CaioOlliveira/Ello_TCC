@@ -7,7 +7,9 @@ import {
 } from "../../common/utils/request-query.js";
 import {
   atualizarGlicemiaSchema,
+  criarInsulinaSchema,
   criarGlicemiaSchema,
+  resumoGlicemiaQuerySchema,
 } from "./glicemia.schemas.js";
 import { glicemiaService } from "./glicemia.service.js";
 
@@ -30,9 +32,39 @@ export const buscarGlicemia: RequestHandler = asyncHandler(async (req, res) => {
   res.json({ dados: await glicemiaService.buscarPorId(id) });
 });
 
+export const obterResumoGlicemia: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { idosoId, dataReferencia, periodo } = resumoGlicemiaQuerySchema.parse(
+      req.query,
+    );
+    res.json({
+      dados: await glicemiaService.resumo(idosoId, dataReferencia, periodo),
+    });
+  },
+);
+
 export const criarGlicemia: RequestHandler = asyncHandler(async (req, res) => {
   const input = criarGlicemiaSchema.parse(req.body);
   res.status(201).json({ dados: await glicemiaService.criar(input) });
+});
+
+export const listarInsulinas: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { limite, offset, pagina } = getPagination(req.query);
+    const idosoId =
+      typeof req.query.idosoId === "string" ? req.query.idosoId : undefined;
+    const { dados, total } = await glicemiaService.listarInsulinas(
+      limite,
+      offset,
+      idosoId,
+    );
+    res.json({ dados, meta: { total, pagina, limite } });
+  },
+);
+
+export const criarInsulina: RequestHandler = asyncHandler(async (req, res) => {
+  const input = criarInsulinaSchema.parse(req.body);
+  res.status(201).json({ dados: await glicemiaService.criarInsulina(input) });
 });
 
 export const atualizarGlicemia: RequestHandler = asyncHandler(
