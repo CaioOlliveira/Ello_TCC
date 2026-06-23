@@ -5,6 +5,16 @@ class ApiEndpoints {
   static const login = '/auth/login';
   static const cadastro = '/auth/cadastro';
   static const idosos = '/idosos';
+  static const humores = '/registros/humores';
+  static const agenda = '/agenda';
+  static const equipamentos = '/equipamentos';
+  static const glicemias = '/glicemias';
+  static const glicemiaResumo = '/glicemias/resumo';
+  static const glicemiaInsulinas = '/glicemias/insulinas';
+  static String compromisso(String id) => '/agenda/$id';
+  static String equipamento(String id) => '/equipamentos/$id';
+  static String manutencoesEquipamento(String id) =>
+      '/equipamentos/$id/manutencoes';
   static String idoso(String id) => '/idosos/$id';
   static String usuario(String id) => '/usuarios/$id';
 }

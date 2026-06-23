@@ -1,0 +1,671 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/providers.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/api_exception.dart';
+
+class HumorPage extends ConsumerStatefulWidget {
+  const HumorPage({super.key});
+
+  @override
+  ConsumerState<HumorPage> createState() => _HumorPageState();
+}
+
+class _HumorPageState extends ConsumerState<HumorPage> {
+  final _observacoesController = TextEditingController();
+  final _dataController = TextEditingController();
+  final _horaController = TextEditingController();
+
+  String _selectedMood = 'Feliz';
+  bool _saving = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _dataController.text = _formatBrazilianDate(now);
+    _horaController.text = _formatTime(TimeOfDay.fromDateTime(now));
+  }
+
+  @override
+  void dispose() {
+    _observacoesController.dispose();
+    _dataController.dispose();
+    _horaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      locale: const Locale('pt', 'BR'),
+      initialDate: _parseBrazilianDate(_dataController.text) ?? now,
+      firstDate: DateTime(now.year - 2),
+      lastDate: now,
+    );
+
+    if (selected == null) return;
+    setState(() => _dataController.text = _formatBrazilianDate(selected));
+  }
+
+  Future<void> _selectTime() async {
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: _parseTime(_horaController.text) ?? TimeOfDay.now(),
+    );
+
+    if (selected == null) return;
+    setState(() => _horaController.text = _formatTime(selected));
+  }
+
+  Future<void> _save() async {
+    FocusScope.of(context).unfocus();
+
+    final idoso = ref.read(selectedIdosoProvider);
+    final usuario = ref.read(authSessionProvider);
+
+    if (idoso == null) {
+      context.go('/idosos');
+      return;
+    }
+
+    if (usuario == null || usuario.id.isEmpty) {
+      setState(() => _errorMessage = 'Entre novamente para salvar o registro.');
+      return;
+    }
+
+    final dataHumor = _toIsoDate(_dataController.text);
+    final horarioRegi = _normalizeTime(_horaController.text);
+
+    if (dataHumor == null || horarioRegi == null) {
+      setState(() => _errorMessage = 'Informe uma data e um horario validos.');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await ref.read(apiClientProvider).criarHumor(
+            idosoId: idoso.id,
+            humor: _selectedMood,
+            dataHumor: dataHumor,
+            horarioRegi: horarioRegi,
+            registradoPorId: usuario.id,
+            observacoes: _observacoesController.text,
+          );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Humor registrado com sucesso.')),
+      );
+      context.go('/monitoramento');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = error.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Nao foi possivel salvar o registro de humor.';
+      });
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final idoso = ref.watch(selectedIdosoProvider);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 26),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Header(
+                      onBack: () => context.go('/monitoramento'),
+                      onProfile: () => context.go('/perfil?from=humor'),
+                    ),
+                    const SizedBox(height: 10),
+                    _IdosoCard(idoso: idoso),
+                    const SizedBox(height: 19),
+                    Text(
+                      'Como ${_firstName(idoso?.nome ?? 'o idoso')} esta hoje?',
+                      style: const TextStyle(
+                        color: Color(0xFF242424),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _MoodSelector(
+                      selectedMood: _selectedMood,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedMood = value;
+                          _errorMessage = null;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    _ObservationBox(controller: _observacoesController),
+                    const SizedBox(height: 23),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _SmallField(
+                            label: 'Data',
+                            controller: _dataController,
+                            icon: Icons.calendar_month_rounded,
+                            onTap: _selectDate,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _SmallField(
+                            label: 'Hora',
+                            controller: _horaController,
+                            icon: Icons.access_time_rounded,
+                            onTap: _selectTime,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFC0392B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 36),
+                    Center(
+                      child: SizedBox(
+                        width: 286,
+                        height: 46,
+                        child: FilledButton(
+                          onPressed: _saving ? null : _save,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF003B4F),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFF7BA3AD),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          child: _saving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('Salvar Registro'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({required this.onBack, required this.onProfile});
+
+  final VoidCallback onBack;
+  final VoidCallback onProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onBack,
+          icon: const Icon(
+            Icons.chevron_left_rounded,
+            color: Color(0xFF238FA1),
+            size: 34,
+          ),
+        ),
+        const Expanded(
+          child: Text(
+            'Registros de humor',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF238FA1),
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: onProfile,
+          icon: Container(
+            width: 25,
+            height: 25,
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFF8BD2DC)),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              color: Color(0xFF238FA1),
+              size: 19,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IdosoCard extends StatelessWidget {
+  const _IdosoCard({required this.idoso});
+
+  final IdosoResumo? idoso;
+
+  @override
+  Widget build(BuildContext context) {
+    final bytes = _dataImageBytes(idoso?.urlFoto);
+
+    return Container(
+      height: 129,
+      padding: const EdgeInsets.fromLTRB(13, 13, 17, 13),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3CAAB6),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 48,
+            backgroundColor: const Color(0xFFD1F2F6),
+            backgroundImage: bytes != null
+                ? MemoryImage(bytes)
+                : idoso?.urlFoto != null && idoso!.urlFoto!.startsWith('http')
+                    ? NetworkImage(idoso!.urlFoto!) as ImageProvider
+                    : null,
+            child: bytes == null &&
+                    (idoso?.urlFoto == null ||
+                        !idoso!.urlFoto!.startsWith('http'))
+                ? const Icon(
+                    Icons.person_outline_rounded,
+                    color: Color(0xFF238FA1),
+                    size: 58,
+                  )
+                : null,
+          ),
+          const SizedBox(width: 22),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _firstName(idoso?.nome ?? 'Selecione'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Container(width: 94, height: 1.4, color: Colors.white),
+                const SizedBox(height: 9),
+                if (idoso != null)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.cake_outlined,
+                        color: Colors.white,
+                        size: 17,
+                      ),
+                      const SizedBox(width: 9),
+                      Text(
+                        '${idoso!.idade} anos',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoodSelector extends StatelessWidget {
+  const _MoodSelector({
+    required this.selectedMood,
+    required this.onChanged,
+  });
+
+  final String selectedMood;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(7),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.28),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 11, 18, 12),
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _moods.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 10,
+            mainAxisExtent: 63,
+          ),
+          itemBuilder: (context, index) {
+            final mood = _moods[index];
+            return _MoodButton(
+              mood: mood,
+              selected: selectedMood == mood.label,
+              onTap: () => onChanged(mood.label),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _MoodButton extends StatelessWidget {
+  const _MoodButton({
+    required this.mood,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _Mood mood;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? const Color(0xFF2FAD9F) : const Color(0xFF2A9CAF);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFE0F4F1) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(mood.icon, color: color, size: 38),
+            const SizedBox(height: 3),
+            Text(
+              mood.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected
+                    ? const Color(0xFF19796F)
+                    : const Color(0xFF666666),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ObservationBox extends StatelessWidget {
+  const _ObservationBox({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(7, 0, 7, 7),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: const Color(0xFF38AFC0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(left: 1, bottom: 2),
+            child: Text(
+              'Observacoes:',
+              style: TextStyle(
+                color: Color(0xFF38AFC0),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          TextField(
+            controller: controller,
+            minLines: 4,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              hintText: 'Conte como foi o dia.',
+              hintStyle: const TextStyle(
+                color: Color(0xFF8A8A8A),
+                fontSize: 14,
+              ),
+              contentPadding: const EdgeInsets.all(10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(color: Color(0xFF38AFC0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(color: Color(0xFF38AFC0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(
+                  color: Color(0xFF2FAD9F),
+                  width: 1.4,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallField extends StatelessWidget {
+  const _SmallField({
+    required this.label,
+    required this.controller,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 4),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF555555),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 32,
+          child: TextField(
+            controller: controller,
+            readOnly: true,
+            onTap: onTap,
+            style: const TextStyle(color: Color(0xFF17324D), fontSize: 13),
+            decoration: InputDecoration(
+              suffixIcon: Icon(icon, color: const Color(0xFF2A9CAF), size: 17),
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 27,
+                minHeight: 27,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(color: Color(0xFF38AFC0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(color: Color(0xFF38AFC0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(color: Color(0xFF2FAD9F)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Mood {
+  const _Mood(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
+}
+
+const _moods = [
+  _Mood('Feliz', Icons.sentiment_satisfied_alt_rounded),
+  _Mood('Calma', Icons.spa_rounded),
+  _Mood('Triste', Icons.sentiment_dissatisfied_rounded),
+  _Mood('Chorona', Icons.sentiment_very_dissatisfied_rounded),
+  _Mood('Irritada', Icons.mood_bad_rounded),
+  _Mood('Sonolenta', Icons.nights_stay_rounded),
+];
+
+String _firstName(String nome) {
+  final trimmed = nome.trim();
+  if (trimmed.isEmpty) return 'Idoso';
+  return trimmed.split(RegExp(r'\s+')).first;
+}
+
+Uint8List? _dataImageBytes(String? value) {
+  if (value == null || !value.startsWith('data:image')) return null;
+  final commaIndex = value.indexOf(',');
+  if (commaIndex == -1) return null;
+  try {
+    return base64Decode(value.substring(commaIndex + 1));
+  } catch (_) {
+    return null;
+  }
+}
+
+String _formatBrazilianDate(DateTime date) {
+  return '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/'
+      '${date.year.toString().padLeft(4, '0')}';
+}
+
+DateTime? _parseBrazilianDate(String value) {
+  final pieces = value.split('/');
+  if (pieces.length != 3) return null;
+  final day = int.tryParse(pieces[0]);
+  final month = int.tryParse(pieces[1]);
+  final year = int.tryParse(pieces[2]);
+  if (day == null || month == null || year == null) return null;
+  return DateTime(year, month, day);
+}
+
+String? _toIsoDate(String value) {
+  final date = _parseBrazilianDate(value);
+  if (date == null) return null;
+  return '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+}
+
+String _formatTime(TimeOfDay time) {
+  return '${time.hour.toString().padLeft(2, '0')}:'
+      '${time.minute.toString().padLeft(2, '0')}';
+}
+
+TimeOfDay? _parseTime(String value) {
+  final pieces = value.split(':');
+  if (pieces.length != 2) return null;
+  final hour = int.tryParse(pieces[0]);
+  final minute = int.tryParse(pieces[1]);
+  if (hour == null || minute == null) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return TimeOfDay(hour: hour, minute: minute);
+}
+
+String? _normalizeTime(String value) {
+  final time = _parseTime(value);
+  if (time == null) return null;
+  return _formatTime(time);
+}
