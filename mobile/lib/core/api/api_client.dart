@@ -262,6 +262,101 @@ class GlicemiaResumo {
   final int totalInsulinas;
 }
 
+class InsumoResumo {
+  const InsumoResumo({
+    required this.id,
+    required this.idosoId,
+    required this.nome,
+    required this.tipoUnidade,
+    required this.quantidadeUnidades,
+    this.quantidadePorUnidade,
+    this.alertaMinimoUnidades,
+    this.consumoMedioDiario,
+    this.dataValidade,
+    this.diasAlertaValidade = 7,
+    this.fotoUrl,
+    this.localArmazenamento,
+    this.frequenciaUso,
+    this.observacoes,
+  });
+
+  factory InsumoResumo.fromJson(Map<String, dynamic> json) {
+    return InsumoResumo(
+      id: json['id']?.toString() ?? '',
+      idosoId:
+          json['idosoId']?.toString() ?? json['idoso_id']?.toString() ?? '',
+      nome: json['nome']?.toString() ?? 'Insumo',
+      tipoUnidade: json['tipoUnidade']?.toString() ??
+          json['tipo_unidade']?.toString() ??
+          '',
+      quantidadePorUnidade: _numOrNull(
+        json['quantidadePorUnidade'] ?? json['quantidade_por_unidade'],
+      ),
+      quantidadeUnidades: _numOrNull(
+            json['quantidadeUnidades'] ?? json['quantidade_unidades'],
+          ) ??
+          0,
+      alertaMinimoUnidades: _numOrNull(
+        json['alertaMinimoUnidades'] ?? json['alerta_minimo_unidades'],
+      ),
+      consumoMedioDiario: _numOrNull(
+        json['consumoMedioDiario'] ?? json['consumo_medio_diario'],
+      ),
+      dataValidade: _dateOnlyOrNull(
+        json['dataValidade'] ?? json['data_validade'],
+      ),
+      diasAlertaValidade: _intOrNull(
+            json['diasAlertaValidade'] ?? json['dias_alerta_validade'],
+          ) ??
+          7,
+      fotoUrl: json['fotoUrl']?.toString() ?? json['foto_url']?.toString(),
+      localArmazenamento: json['localArmazenamento']?.toString() ??
+          json['local_armazenamento']?.toString(),
+      frequenciaUso: json['frequenciaUso']?.toString() ??
+          json['frequencia_uso']?.toString(),
+      observacoes: json['observacoes']?.toString(),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final String nome;
+  final String tipoUnidade;
+  final double? quantidadePorUnidade;
+  final double quantidadeUnidades;
+  final double? alertaMinimoUnidades;
+  final double? consumoMedioDiario;
+  final DateTime? dataValidade;
+  final int diasAlertaValidade;
+  final String? fotoUrl;
+  final String? localArmazenamento;
+  final String? frequenciaUso;
+  final String? observacoes;
+
+  InsumoResumo copyWith({
+    double? quantidadeUnidades,
+    String? fotoUrl,
+    DateTime? dataValidade,
+  }) {
+    return InsumoResumo(
+      id: id,
+      idosoId: idosoId,
+      nome: nome,
+      tipoUnidade: tipoUnidade,
+      quantidadePorUnidade: quantidadePorUnidade,
+      quantidadeUnidades: quantidadeUnidades ?? this.quantidadeUnidades,
+      alertaMinimoUnidades: alertaMinimoUnidades,
+      consumoMedioDiario: consumoMedioDiario,
+      dataValidade: dataValidade ?? this.dataValidade,
+      diasAlertaValidade: diasAlertaValidade,
+      fotoUrl: fotoUrl ?? this.fotoUrl,
+      localArmazenamento: localArmazenamento,
+      frequenciaUso: frequenciaUso,
+      observacoes: observacoes,
+    );
+  }
+}
+
 class ApiClient {
   ApiClient({required String baseUrl})
       : _dio = Dio(
@@ -438,6 +533,98 @@ class ApiClient {
         error,
         fallback: 'Erro ao atualizar monitoramentos.',
       );
+    }
+  }
+
+  Future<List<InsumoResumo>> listarInsumos({
+    String? idosoId,
+    String filtro = 'todos',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.insumos,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'filtro': filtro,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(InsumoResumo.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar insumos.');
+    }
+  }
+
+  Future<InsumoResumo> criarInsumo({
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.insumos,
+        data: data,
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) return InsumoResumo.fromJson(dados);
+      return InsumoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao criar insumo.');
+    }
+  }
+
+  Future<InsumoResumo> atualizarInsumo({
+    required String id,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.insumo(id),
+        data: data,
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) return InsumoResumo.fromJson(dados);
+      return InsumoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar insumo.');
+    }
+  }
+
+  Future<InsumoResumo> movimentarInsumo({
+    required String id,
+    required String tipo,
+    required double quantidade,
+    required String motivo,
+    String? usuarioId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.movimentacoesInsumo(id),
+        data: {
+          'tipo': tipo,
+          'quantidade': quantidade,
+          'motivo': motivo,
+          if (usuarioId != null && usuarioId.isNotEmpty) 'usuarioId': usuarioId,
+        },
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return InsumoResumo.fromJson({
+          ...dados,
+          'id': id,
+          'quantidadeUnidades': dados['quantidadeAtual'],
+        });
+      }
+      return InsumoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar estoque.');
     }
   }
 
@@ -766,4 +953,21 @@ String _toIsoDateOnly(DateTime date) {
   return '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
+}
+
+double? _numOrNull(Object? value) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '');
+}
+
+int? _intOrNull(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '');
+}
+
+DateTime? _dateOnlyOrNull(Object? value) {
+  final text = value?.toString();
+  if (text == null || text.isEmpty) return null;
+  return DateTime.tryParse(text.length > 10 ? text.substring(0, 10) : text);
 }
