@@ -102,6 +102,7 @@ class EquipamentoFormData {
     required this.frequenciaManutencaoDias,
     required this.localGuardado,
     required this.urlManual,
+    required this.urlFoto,
     required this.observacoesSeguranca,
   });
 
@@ -114,6 +115,7 @@ class EquipamentoFormData {
   final int? frequenciaManutencaoDias;
   final String localGuardado;
   final String urlManual;
+  final String? urlFoto;
   final String observacoesSeguranca;
 
   Map<String, dynamic> toPayload({
@@ -139,6 +141,7 @@ class EquipamentoFormData {
         ),
       if (localGuardado.isNotEmpty) 'localGuardado': localGuardado,
       if (urlManual.isNotEmpty) 'urlManual': urlManual,
+      if (urlFoto != null && urlFoto!.isNotEmpty) 'urlFoto': urlFoto,
       if (observacoesSeguranca.isNotEmpty)
         'observacoesSeguranca': observacoesSeguranca,
       'status': 'Em uso',

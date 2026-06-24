@@ -26,10 +26,12 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
   final _local = TextEditingController();
   final _manual = TextEditingController(text: 'manual.pdf');
   final _observacoes = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   DateTime? _dataCompraValue;
   DateTime? _validadeValue;
   DateTime? _ultimaValue;
+  String? _urlFoto;
 
   @override
   void dispose() {
@@ -62,6 +64,21 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     onPicked(selected);
   }
 
+  Future<void> _pickImage() async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 700,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
+    final extension = _equipmentImageExtension(picked.name);
+    setState(() {
+      _urlFoto = 'data:image/$extension;base64,${base64Encode(bytes)}';
+    });
+  }
+
   void _submit() {
     if (_nome.text.trim().isEmpty) return;
     final frequencia = int.tryParse(_frequencia.text.trim());
@@ -76,6 +93,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
         frequenciaManutencaoDias: frequencia,
         localGuardado: _local.text.trim(),
         urlManual: _manual.text.trim(),
+        urlFoto: _urlFoto,
         observacoesSeguranca: _observacoes.text.trim(),
       ),
     );
@@ -142,6 +160,46 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
         ),
         _LabeledField(label: 'Local onde e guardado', controller: _local),
         const SizedBox(height: 6),
+        const Text(
+          'Foto do equipamento (opcional)',
+          style: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+        ),
+        const SizedBox(height: 4),
+        InkWell(
+          onTap: widget.saving ? null : _pickImage,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            height: 58,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFF38AFC0)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.attach_file_rounded,
+                  color: Color(0xFF178FA1),
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _urlFoto == null ? 'Anexar imagem' : 'Imagem anexada',
+                    style: const TextStyle(
+                      color: Color(0xFF073248),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (_urlFoto != null)
+                  _EquipmentImagePreview(value: _urlFoto!, size: 42),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(

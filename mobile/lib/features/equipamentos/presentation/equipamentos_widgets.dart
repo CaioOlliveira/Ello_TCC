@@ -310,10 +310,10 @@ class _EquipmentPicture extends StatelessWidget {
       child: equipamento.urlFoto.isNotEmpty
           ? ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                equipamento.urlFoto,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _EquipmentIcon(
+              child: _EquipmentImagePreview(
+                value: equipamento.urlFoto,
+                size: size,
+                fallback: _EquipmentIcon(
                   nome: equipamento.nome,
                   size: size,
                 ),
@@ -322,6 +322,59 @@ class _EquipmentPicture extends StatelessWidget {
           : _EquipmentIcon(nome: equipamento.nome, size: size),
     );
   }
+}
+
+class _EquipmentImagePreview extends StatelessWidget {
+  const _EquipmentImagePreview({
+    required this.value,
+    required this.size,
+    this.fallback,
+  });
+
+  final String value;
+  final double size;
+  final Widget? fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallbackWidget = fallback ??
+        const Icon(
+          Icons.broken_image_outlined,
+          color: Color(0xFF1696AA),
+        );
+
+    if (value.startsWith('data:image')) {
+      final comma = value.indexOf(',');
+      if (comma == -1) return fallbackWidget;
+
+      try {
+        return Image.memory(
+          base64Decode(value.substring(comma + 1)),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => fallbackWidget,
+        );
+      } catch (_) {
+        return fallbackWidget;
+      }
+    }
+
+    return Image.network(
+      value,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => fallbackWidget,
+    );
+  }
+}
+
+String _equipmentImageExtension(String fileName) {
+  final lower = fileName.toLowerCase();
+  if (lower.endsWith('.png')) return 'png';
+  if (lower.endsWith('.webp')) return 'webp';
+  return 'jpeg';
 }
 
 class _EquipmentIcon extends StatelessWidget {
