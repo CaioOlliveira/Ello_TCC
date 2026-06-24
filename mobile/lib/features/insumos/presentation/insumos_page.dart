@@ -146,6 +146,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
                     loading: _loading,
                     error: _error,
                     onRetry: _load,
+                    onBack: () => context.go('/monitoramento'),
                     onAdd: _showCadastro,
                     onOpen: _showDetalhe,
                     selectedFilter: _selectedFilter,
@@ -182,6 +183,7 @@ class _InsumosListView extends StatelessWidget {
     required this.insumos,
     required this.loading,
     required this.onRetry,
+    required this.onBack,
     required this.onAdd,
     required this.onOpen,
     required this.selectedFilter,
@@ -193,6 +195,7 @@ class _InsumosListView extends StatelessWidget {
   final bool loading;
   final String? error;
   final VoidCallback onRetry;
+  final VoidCallback onBack;
   final VoidCallback onAdd;
   final ValueChanged<InsumoResumo> onOpen;
   final String selectedFilter;
@@ -205,20 +208,37 @@ class _InsumosListView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 12),
-          const Text(
-            'Insumos',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              height: 1,
-            ),
+          Row(
+            children: [
+              IconButton(
+                onPressed: onBack,
+                tooltip: 'Voltar',
+                icon: const Icon(
+                  Icons.chevron_left_rounded,
+                  color: Color(0xFF2CA0B4),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 2),
+              const Expanded(
+                child: Text(
+                  'Insumos',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          const Text(
-            'Controle de estoque dos produtos usados no cuidado',
-            style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 10.5),
+          const Padding(
+            padding: EdgeInsets.only(left: 50),
+            child: Text(
+              'Controle de estoque dos produtos usados no cuidado',
+              style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 10.5),
+            ),
           ),
           const SizedBox(height: 7),
           _StatusFilters(
