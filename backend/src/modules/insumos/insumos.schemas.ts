@@ -4,16 +4,28 @@ export const insumoParamsSchema = z.object({
   insumoId: z.string().min(1, "Insumo e obrigatorio."),
 });
 
+export const listarInsumosQuerySchema = z.object({
+  idosoId: z.string().uuid().optional(),
+  filtro: z.enum(["todos", "acabando", "vencendo", "vencidos"]).default("todos"),
+});
+
 export const criarInsumoSchema = z.object({
   idosoId: z.string().uuid("Idoso inválido."),
   nome: z.string().min(1, "Nome é obrigatório."),
   tipoUnidade: z.string().min(1, "Tipo de unidade é obrigatório."),
-  quantidadePorUnidade: z.number().positive().optional(),
+  quantidadePorUnidade: z.number().positive().nullable().optional(),
   quantidadeUnidades: z.number().nonnegative(),
-  alertaMinimoUnidades: z.number().nonnegative().optional(),
-  consumoMedioDiario: z.number().nonnegative().optional(),
-  dataValidade: z.string().date().optional(),
-  observacoes: z.string().optional(),
+  alertaMinimoUnidades: z.number().nonnegative().nullable().optional(),
+  consumoMedioDiario: z.number().nonnegative().nullable().optional(),
+  dataValidade: z.string().date().nullable().optional(),
+  diasAlertaValidade: z.number().int().nonnegative().max(3650).optional(),
+  fotoUrl: z.string().nullable().optional(),
+  localArmazenamento: z.string().nullable().optional(),
+  frequenciaUso: z
+    .enum(["Diario", "Semanal", "Mensal"])
+    .nullable()
+    .optional(),
+  observacoes: z.string().nullable().optional(),
 });
 
 export const atualizarInsumoSchema = criarInsumoSchema.partial();

@@ -15,6 +15,7 @@ import type {
 } from "./insumos.schemas.js";
 
 const table = "insumos";
+type FiltroInsumos = "todos" | "acabando" | "vencendo" | "vencidos";
 const notFound = ["INSUMO_NAO_ENCONTRADO", "Insumo não encontrado."] as const;
 
 const fields = {
@@ -26,16 +27,49 @@ const fields = {
   alertaMinimoUnidades: "alerta_minimo_unidades",
   consumoMedioDiario: "consumo_medio_diario",
   dataValidade: "data_validade",
+  diasAlertaValidade: "dias_alerta_validade",
+  fotoUrl: "foto_url",
+  localArmazenamento: "local_armazenamento",
+  frequenciaUso: "frequencia_uso",
   observacoes: "observacoes",
 } as const;
 
 export const insumosService = {
-  async listar(limit: number, offset: number, idosoId?: string) {
+  async listar(
+    limit: number,
+    offset: number,
+    idosoId?: string,
+    filtro: FiltroInsumos = "todos",
+  ) {
+    if (isDatabaseEnabled) {
+      await aplicarConsumoAutomatico(idosoId);
+    }
+
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+
+    if (idosoId) {
+      params.push(idosoId);
+      clauses.push(`idoso_id = $${params.length}`);
+    }
+
+    if (filtro === "acabando") {
+      clauses.push(
+        "alerta_minimo_unidades is not null and quantidade_unidades <= alerta_minimo_unidades",
+      );
+    } else if (filtro === "vencidos") {
+      clauses.push("data_validade is not null and data_validade < current_date");
+    } else if (filtro === "vencendo") {
+      clauses.push(
+        "data_validade is not null and data_validade >= current_date and data_validade <= current_date + dias_alerta_validade",
+      );
+    }
+
     return listRows<Record<string, unknown>>(table, {
       limit,
       offset,
-      where: idosoId ? "idoso_id = $1" : undefined,
-      params: idosoId ? [idosoId] : undefined,
+      where: clauses.length > 0 ? clauses.join(" and ") : undefined,
+      params,
       orderBy: "nome asc",
     });
   },
@@ -66,6 +100,16 @@ export const insumosService = {
       AtualizarInsumoInput,
       Record<string, unknown>
     >(table, id, input, fields, ...notFound);
+    if (
+      isDatabaseEnabled &&
+      (input.frequenciaUso !== undefined ||
+        input.consumoMedioDiario !== undefined)
+    ) {
+      await getPool().query(
+        "update insumos set ultimo_consumo_em = now() where id = $1",
+        [id],
+      );
+    }
     await registrarHistorico({
       idosoId: String(atualizado.idoso_id ?? ""),
       acao: "atualizar",
@@ -139,6 +183,14 @@ export const insumosService = {
               ? quantidadeAtual - input.quantidade
               : input.quantidade;
 
+        if (novaQuantidade < 0) {
+          throw new AppError(
+            "ESTOQUE_INSUFICIENTE",
+            "A movimentacao nao pode deixar o estoque negativo.",
+            400,
+          );
+        }
+
         const atualizadoResult = await client.query(
           `
             update insumos
@@ -195,3 +247,64 @@ export const insumosService = {
     };
   },
 };
+
+async function aplicarConsumoAutomatico(idosoId?: string) {
+  const params: unknown[] = idosoId ? [idosoId] : [];
+  const idosoClause = idosoId ? "and idoso_id = $1" : "";
+
+  await getPool().query(
+    `
+      update insumos as i
+      set
+        quantidade_unidades = greatest(
+          0,
+          i.quantidade_unidades -
+            (
+              i.consumo_medio_diario *
+              floor(
+                extract(epoch from (now() - i.ultimo_consumo_em)) /
+                (
+                  case
+                    when i.frequencia_uso = 'Semanal' then 7
+                    when i.frequencia_uso = 'Mensal' then 30
+                    else 1
+                  end * 86400
+                )
+              )
+            )
+        ),
+        ultimo_consumo_em =
+          i.ultimo_consumo_em +
+          (
+            floor(
+              extract(epoch from (now() - i.ultimo_consumo_em)) /
+              (
+                case
+                  when i.frequencia_uso = 'Semanal' then 7
+                  when i.frequencia_uso = 'Mensal' then 30
+                  else 1
+                end * 86400
+              )
+            ) *
+            case
+              when i.frequencia_uso = 'Semanal' then 7
+              when i.frequencia_uso = 'Mensal' then 30
+              else 1
+            end
+          ) * interval '1 day'
+      where i.consumo_medio_diario is not null
+        and i.consumo_medio_diario > 0
+        and i.frequencia_uso is not null
+        and now() - i.ultimo_consumo_em >=
+          (
+            case
+              when i.frequencia_uso = 'Semanal' then 7
+              when i.frequencia_uso = 'Mensal' then 30
+              else 1
+            end
+          ) * interval '1 day'
+        ${idosoClause}
+    `,
+    params,
+  );
+}
