@@ -11,6 +11,7 @@ import '../features/glicemia/presentation/glicemia_page.dart';
 import '../features/humor/presentation/humor_page.dart';
 import '../features/idosos/presentation/cadastro_idoso_page.dart';
 import '../features/idosos/presentation/dashboard_idoso_page.dart';
+import '../features/idosos/presentation/perfil_idoso_page.dart';
 import '../features/idosos/presentation/selecionar_idoso_page.dart';
 import '../features/insumos/presentation/insumos_page.dart';
 import '../features/medicamentos/presentation/medicamentos_page.dart';
@@ -40,7 +41,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/idosos/editar',
-        builder: (context, state) => const CadastroIdosoPage(edicao: true),
+        builder: (context, state) => CadastroIdosoPage(
+          edicao: true,
+          from: state.uri.queryParameters['from'],
+        ),
       ),
       GoRoute(path: '/perfil', builder: (context, state) => const PerfilPage()),
       GoRoute(
@@ -113,8 +117,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/idoso/perfil',
-            builder: (context, state) =>
-                const ModulePlaceholderPage(title: 'Perfil do idoso'),
+            builder: (context, state) => const PerfilIdosoPage(),
+          ),
+          GoRoute(
+            path: '/idoso/acessos',
+            builder: (context, state) => const AcessosIdosoPage(),
           ),
         ],
       ),

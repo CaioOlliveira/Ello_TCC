@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,7 +18,7 @@ class AlimentacaoPage extends ConsumerStatefulWidget {
 class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
   _AlimentacaoView _view = _AlimentacaoView.lista;
   List<RefeicaoResumo> _refeicoes = const [];
-  String _dica = 'Refeicoes nutritivas fazem toda a diferenca.';
+  List<HidratacaoRegistro> _hidratacoes = const [];
   RefeicaoResumo? _editing;
   bool _loading = true;
   String? _error;
@@ -46,12 +45,12 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
       final api = ref.read(apiClientProvider);
       final results = await Future.wait([
         api.listarRefeicoes(idosoId: idoso.id),
-        api.buscarDicaAlimentacao(),
+        api.listarHidratacoes(idosoId: idoso.id),
       ]);
       if (!mounted) return;
       setState(() {
         _refeicoes = results[0] as List<RefeicaoResumo>;
-        _dica = results[1] as String;
+        _hidratacoes = results[1] as List<HidratacaoRegistro>;
       });
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -75,6 +74,70 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
         const SnackBar(content: Text('Refeicao concluida.')),
       );
       _load();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
+
+  Future<void> _saveWeight(double pesoKg) async {
+    final idoso = ref.read(selectedIdosoProvider);
+    if (idoso == null) return;
+
+    try {
+      await ref.read(apiClientProvider).atualizarIdoso(
+        id: idoso.id,
+        data: {'pesoKg': pesoKg},
+      );
+      ref.read(selectedIdosoProvider.notifier).state =
+          idoso.copyWith(pesoKg: pesoKg);
+      if (!mounted) return;
+      setState(() {});
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
+
+  Future<void> _addWater() async {
+    final idoso = ref.read(selectedIdosoProvider);
+    if (idoso == null) return;
+
+    final now = DateTime.now();
+    final last30 = _hidratacoes
+        .where((item) =>
+            now.difference(item.registradoEm.toLocal()).inMinutes <= 30)
+        .fold<double>(0, (sum, item) => sum + item.quantidadeMl);
+
+    if (last30 + 200 > 600) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Atenção'),
+          content: const Text(
+            'Tomar muita água de uma vez pode ser prejudicial ao idoso. Continue adicionando apenas se esse consumo realmente aconteceu.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Entendi'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    try {
+      await ref.read(apiClientProvider).criarHidratacao(
+            idosoId: idoso.id,
+            quantidadeMl: 200,
+            registradoPorId: ref.read(authSessionProvider)?.id,
+          );
+      await _load();
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -166,11 +229,14 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
             child: switch (_view) {
               _AlimentacaoView.lista => _AlimentacaoListView(
                   refeicoes: _refeicoes,
-                  dica: _dica,
+                  idoso: idoso,
+                  hidratacoes: _hidratacoes,
                   loading: _loading,
                   error: _error,
                   onBack: () => context.go('/monitoramento'),
                   onRetry: _load,
+                  onSaveWeight: _saveWeight,
+                  onAddWater: _addWater,
                   onAdd: () => setState(() {
                     _editing = null;
                     _view = _AlimentacaoView.form;
@@ -211,10 +277,13 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
 class _AlimentacaoListView extends StatelessWidget {
   const _AlimentacaoListView({
     required this.refeicoes,
-    required this.dica,
+    required this.idoso,
+    required this.hidratacoes,
     required this.loading,
     required this.onBack,
     required this.onRetry,
+    required this.onSaveWeight,
+    required this.onAddWater,
     required this.onAdd,
     required this.onDetails,
     required this.onEdit,
@@ -223,11 +292,14 @@ class _AlimentacaoListView extends StatelessWidget {
   });
 
   final List<RefeicaoResumo> refeicoes;
-  final String dica;
+  final IdosoResumo? idoso;
+  final List<HidratacaoRegistro> hidratacoes;
   final bool loading;
   final String? error;
   final VoidCallback onBack;
   final VoidCallback onRetry;
+  final ValueChanged<double> onSaveWeight;
+  final VoidCallback onAddWater;
   final VoidCallback onAdd;
   final ValueChanged<RefeicaoResumo> onDetails;
   final ValueChanged<RefeicaoResumo> onEdit;
@@ -236,9 +308,6 @@ class _AlimentacaoListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final todayMeals = refeicoes.where(_isTodayMeal).toList();
-    final last = _lastMeal(refeicoes);
-    final accepted = todayMeals.where((item) => item.concluida).length;
-    final acceptance = last == null ? '' : _acceptanceCardLabel(last.aceitacao);
 
     return Column(
       children: [
@@ -275,38 +344,11 @@ class _AlimentacaoListView extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(22, 8, 22, 20),
               children: [
-                GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 1.8,
-                  children: [
-                    _SummaryCard(
-                      selected: last != null,
-                      icon: Icons.soup_kitchen_outlined,
-                      title: 'Ultima refeicao',
-                      value: last?.tipoRefeicao ?? '',
-                    ),
-                    _SummaryCard(
-                      icon: Icons.sentiment_satisfied_alt_rounded,
-                      title: 'Aceitacao alimentar',
-                      value: acceptance,
-                    ),
-                    _SummaryCard(
-                      icon: Icons.fact_check_outlined,
-                      title: 'Refeicoes registradas',
-                      value: '$accepted de ${todayMeals.length}',
-                    ),
-                    _SummaryCard(
-                      filled: true,
-                      icon: Icons.lightbulb_outline_rounded,
-                      title: 'Dica do dia',
-                      value: dica,
-                      compactValue: true,
-                    ),
-                  ],
+                _WaterCard(
+                  idoso: idoso,
+                  hidratacoes: hidratacoes,
+                  onSaveWeight: onSaveWeight,
+                  onAddWater: onAddWater,
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -370,70 +412,209 @@ class _AlimentacaoListView extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    this.selected = false,
-    this.filled = false,
-    this.compactValue = false,
+class _WaterCard extends StatefulWidget {
+  const _WaterCard({
+    required this.idoso,
+    required this.hidratacoes,
+    required this.onSaveWeight,
+    required this.onAddWater,
   });
 
-  final IconData icon;
-  final String title;
-  final String value;
-  final bool selected;
-  final bool filled;
-  final bool compactValue;
+  final IdosoResumo? idoso;
+  final List<HidratacaoRegistro> hidratacoes;
+  final ValueChanged<double> onSaveWeight;
+  final VoidCallback onAddWater;
+
+  @override
+  State<_WaterCard> createState() => _WaterCardState();
+}
+
+class _WaterCardState extends State<_WaterCard> {
+  final _pesoController = TextEditingController();
+
+  @override
+  void dispose() {
+    _pesoController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: filled ? const Color(0xFFCBE5EA) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: selected
-            ? Border.all(color: const Color(0xFF049CE8), width: 2)
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF098CA1), size: 32),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final peso = widget.idoso?.pesoKg;
+    final todayTotal = widget.hidratacoes
+        .where((item) => _isToday(item.registradoEm.toLocal()))
+        .fold<double>(0, (sum, item) => sum + item.quantidadeMl);
+
+    if (peso == null || peso <= 0) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
+        decoration: _softCardDecoration(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Peso do idoso',
+              style: TextStyle(
+                color: Color(0xFF073248),
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Informe o peso para calcular a meta diaria de agua.',
+              style: TextStyle(color: Color(0xFF6E7C83), fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            Row(
               children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style:
-                      const TextStyle(color: Color(0xFF777777), fontSize: 11),
-                ),
-                if (value.isNotEmpty)
-                  Text(
-                    value,
-                    maxLines: compactValue ? 3 : 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: const Color(0xFF073248),
-                      fontSize: compactValue ? 11.5 : 18,
-                      height: compactValue ? 1.15 : 1.1,
-                      fontWeight: FontWeight.w800,
+                Expanded(
+                  child: TextField(
+                    controller: _pesoController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: 'Ex: 67',
+                      suffixText: 'kg',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: const BorderSide(color: Color(0xFF2BA8BA)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: const BorderSide(color: Color(0xFF2BA8BA)),
+                      ),
                     ),
                   ),
+                ),
+                const SizedBox(width: 10),
+                FilledButton(
+                  onPressed: () {
+                    final value = double.tryParse(
+                      _pesoController.text.trim().replaceAll(',', '.'),
+                    );
+                    if (value == null || value <= 0) return;
+                    widget.onSaveWeight(value);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF37A3B4),
+                  ),
+                  child: const Text('Salvar'),
+                ),
               ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    final target = (peso * 30).roundToDouble();
+    final progress = target <= 0 ? 0.0 : (todayTotal / target).clamp(0.0, 1.0);
+    final cupCount = (target / 200).ceil().clamp(1, 14);
+    final filledCups = (todayTotal / 200).floor().clamp(0, cupCount);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      decoration: _softCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Agua consumida',
+            style: TextStyle(
+              color: Color(0xFF073248),
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(
+                Icons.local_drink_outlined,
+                color: Color(0xFF2BA8BA),
+                size: 34,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${todayTotal.toInt()}ml / ${target.toInt()}ml',
+                      style: const TextStyle(
+                        color: Color(0xFF073248),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 10,
+                        value: progress,
+                        backgroundColor: const Color(0xFFE0E0E0),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF003B4F),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Adicionar agua',
+                  style: TextStyle(color: Color(0xFF777777), fontSize: 11),
+                ),
+              ),
+              SizedBox(
+                height: 34,
+                width: 34,
+                child: IconButton.filled(
+                  onPressed: widget.onAddWater,
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFF37A3B4),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.zero,
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 24),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Wrap(
+            spacing: 9,
+            runSpacing: 9,
+            children: [
+              for (var i = 0; i < cupCount; i++)
+                InkWell(
+                  onTap: widget.onAddWater,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Icon(
+                    i < filledCups
+                        ? Icons.local_drink_rounded
+                        : Icons.local_drink_outlined,
+                    color: const Color(0xFF098CA1),
+                    size: 32,
+                  ),
+                ),
+            ],
+          ),
+          const Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Copo: 200ml',
+              style: TextStyle(color: Color(0xFF777777), fontSize: 10),
             ),
           ),
         ],
@@ -662,6 +843,41 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
     return DateTime(date.year, date.month, date.day, time.$1, time.$2);
   }
 
+  Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final current = _parseDate(_dataController.text) ?? now;
+    final selected = await showDatePicker(
+      context: context,
+      locale: const Locale('pt', 'BR'),
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 1),
+      initialDate: current.isBefore(DateTime(now.year, now.month, now.day))
+          ? now
+          : current,
+    );
+    if (selected == null) return;
+    _dataController.text = _formatDate(selected);
+  }
+
+  Future<void> _selectTime() async {
+    final parsed = _parseTime(_horaController.text);
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: parsed == null
+          ? TimeOfDay.now()
+          : TimeOfDay(hour: parsed.$1, minute: parsed.$2),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    );
+    if (selected == null) return;
+    _horaController.text =
+        '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _save() async {
     FocusScope.of(context).unfocus();
     final scheduled = _scheduledDateTime();
@@ -669,7 +885,15 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
       setState(() => _error = 'Informe data e hora validas.');
       return;
     }
-    if (scheduled.isBefore(DateTime.now())) {
+    final now = DateTime.now();
+    final currentMinute = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+    );
+    if (scheduled.isBefore(currentMinute)) {
       setState(
           () => _error = 'A data e hora nao podem ser anteriores a agora.');
       return;
@@ -768,11 +992,8 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
                   label: 'Data',
                   controller: _dataController,
                   suffixIcon: Icons.calendar_month,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    _DateMaskFormatter(),
-                  ],
+                  readOnly: true,
+                  onTap: _selectDate,
                 ),
               ),
               const SizedBox(width: 8),
@@ -781,11 +1002,8 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
                   label: 'Hora',
                   controller: _horaController,
                   suffixIcon: Icons.access_time_rounded,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    _TimeMaskFormatter(),
-                  ],
+                  readOnly: true,
+                  onTap: _selectTime,
                 ),
               ),
             ],
@@ -1023,15 +1241,15 @@ class _LabeledField extends StatelessWidget {
     required this.label,
     required this.controller,
     this.suffixIcon,
-    this.keyboardType,
-    this.inputFormatters,
+    this.readOnly = false,
+    this.onTap,
   });
 
   final String label;
   final TextEditingController controller;
   final IconData? suffixIcon;
-  final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1042,8 +1260,8 @@ class _LabeledField extends StatelessWidget {
         const SizedBox(height: 3),
         TextField(
           controller: controller,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
+          readOnly: readOnly,
+          onTap: onTap,
           decoration: _inputDecoration(suffixIcon: suffixIcon),
         ),
       ],
@@ -1123,51 +1341,31 @@ class _ErrorBox extends StatelessWidget {
   }
 }
 
-class _DateMaskFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final buffer = StringBuffer();
-    for (var i = 0; i < digits.length && i < 8; i++) {
-      if (i == 2 || i == 4) buffer.write('/');
-      buffer.write(digits[i]);
-    }
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: buffer.length),
-    );
-  }
-}
-
-class _TimeMaskFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final buffer = StringBuffer();
-    for (var i = 0; i < digits.length && i < 4; i++) {
-      if (i == 2) buffer.write(':');
-      buffer.write(digits[i]);
-    }
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: buffer.length),
-    );
-  }
-}
-
 bool _isTodayMeal(RefeicaoResumo refeicao) {
   final date = refeicao.dataConsumo;
   if (date == null) return false;
+  return _isToday(date);
+}
+
+bool _isToday(DateTime date) {
   final now = DateTime.now();
   return date.year == now.year &&
       date.month == now.month &&
       date.day == now.day;
+}
+
+BoxDecoration _softCardDecoration() {
+  return BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(8),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.16),
+        blurRadius: 5,
+        offset: const Offset(0, 3),
+      ),
+    ],
+  );
 }
 
 RefeicaoResumo? _lastMeal(List<RefeicaoResumo> refeicoes) {
@@ -1190,16 +1388,6 @@ DateTime? _mealDateTime(RefeicaoResumo refeicao) {
   final time = _parseTime(refeicao.horaConsumo ?? '');
   if (date == null || time == null) return null;
   return DateTime(date.year, date.month, date.day, time.$1, time.$2);
-}
-
-String _acceptanceCardLabel(String value) {
-  return switch (value) {
-    'comeu_tudo' || 'comeu_bem' => 'Boa',
-    'comeu_metade' => 'Mediana',
-    'comeu_pouco' => 'Ruim',
-    'nao_comeu' => 'Nao comeu',
-    _ => 'Nao informada',
-  };
 }
 
 String _acceptanceLabel(String value) {

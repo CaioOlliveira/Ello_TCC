@@ -12,9 +12,10 @@ import '../../../core/api/api_exception.dart';
 import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
 class CadastroIdosoPage extends ConsumerStatefulWidget {
-  const CadastroIdosoPage({super.key, this.edicao = false});
+  const CadastroIdosoPage({super.key, this.edicao = false, this.from});
 
   final bool edicao;
+  final String? from;
 
   @override
   ConsumerState<CadastroIdosoPage> createState() => _CadastroIdosoPageState();
@@ -27,6 +28,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   final _idadeController = TextEditingController();
   final _tipoSanguineoController = TextEditingController();
   final _limitacoesController = TextEditingController();
+  final _alergiasController = TextEditingController();
   final _telefoneController = TextEditingController();
   final _contatoNomeController = TextEditingController();
   final _contatoParentescoController = TextEditingController();
@@ -43,6 +45,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   final Set<String> _monitoramentosSelecionados = {...defaultMonitoramentoIds};
 
   bool get _isEditing => widget.edicao;
+  String get _backRoute =>
+      widget.from == 'idoso-perfil' ? '/idoso/perfil' : '/dashboard';
 
   @override
   void initState() {
@@ -63,6 +67,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     _sexo = idoso.sexo;
     _tipoSanguineoController.text = idoso.tipoSanguineo ?? '';
     _limitacoesController.text = idoso.limitacoes ?? '';
+    _alergiasController.text = idoso.alergiasRestricoes ?? '';
     _observacoesController.text = idoso.observacoesGerais ?? '';
     _telefoneController.text = idoso.contatoEmergenciaTelefone ?? '';
     _contatoNomeController.text = idoso.contatoEmergenciaNome ?? '';
@@ -105,6 +110,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     _idadeController.dispose();
     _tipoSanguineoController.dispose();
     _limitacoesController.dispose();
+    _alergiasController.dispose();
     _telefoneController.dispose();
     _contatoNomeController.dispose();
     _contatoParentescoController.dispose();
@@ -197,7 +203,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       return;
     }
 
-    context.go(_isEditing ? '/dashboard' : '/idosos');
+    context.go(_isEditing ? _backRoute : '/idosos');
   }
 
   void _toggleMonitoramento(String id) {
@@ -249,7 +255,9 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                 'condicoesSaude': _condicoes,
                 'monitoramentos': _monitoramentosSelecionados.toList(),
                 if (_limitacoesController.text.trim().isNotEmpty)
-                  'alergiasRestricoes': _limitacoesController.text.trim(),
+                  'limitacoes': _limitacoesController.text.trim(),
+                if (_alergiasController.text.trim().isNotEmpty)
+                  'alergiasRestricoes': _alergiasController.text.trim(),
                 if (_observacoesController.text.trim().isNotEmpty)
                   'observacoesGerais': _observacoesController.text.trim(),
                 if (_contatoNomeController.text.trim().isNotEmpty)
@@ -270,7 +278,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
               tipoSanguineo: _tipoSanguineoController.text.trim(),
               condicoesSaude: _condicoes,
               monitoramentos: _monitoramentosSelecionados.toList(),
-              alergiasRestricoes: _limitacoesController.text.trim(),
+              limitacoes: _limitacoesController.text.trim(),
+              alergiasRestricoes: _alergiasController.text.trim(),
               observacoesGerais: _observacoesController.text.trim(),
               contatoEmergenciaNome: _contatoNomeController.text.trim(),
               contatoEmergenciaTelefone: _telefoneController.text.trim(),
@@ -306,6 +315,9 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         limitacoes: _limitacoesController.text.trim().isEmpty
             ? null
             : _limitacoesController.text.trim(),
+        alergiasRestricoes: _alergiasController.text.trim().isEmpty
+            ? null
+            : _alergiasController.text.trim(),
         observacoesGerais: _observacoesController.text.trim().isEmpty
             ? null
             : _observacoesController.text.trim(),
@@ -322,7 +334,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         condicoes: _condicoes,
         monitoramentos: _monitoramentosSelecionados.toList(),
       );
-      context.go('/dashboard');
+      context.go(_isEditing ? _backRoute : '/dashboard');
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _errorMessage = error.message);
@@ -592,6 +604,12 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                                         hintText: 'Ex:Penicilina',
                                       ),
                                       const SizedBox(height: 10),
+                                      const _FieldLabel('Alergias'),
+                                      _InputBox(
+                                        controller: _alergiasController,
+                                        hintText: 'Ex: lactose, poeira',
+                                      ),
+                                      const SizedBox(height: 10),
                                       const _FieldLabel(
                                           'Contato de emergência'),
                                       const SizedBox(height: 4),
@@ -646,6 +664,45 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                                             _contatoParentescoController,
                                         hintText: 'Ex: filha, vizinho',
                                       ),
+                                      if (_isEditing) ...[
+                                        const SizedBox(height: 10),
+                                        InkWell(
+                                          onTap: () =>
+                                              context.go('/idoso/acessos'),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 10,
+                                            ),
+                                            child: const Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.link_rounded,
+                                                  color: Color(0xFF2BA8BA),
+                                                  size: 22,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Acessos',
+                                                    style: TextStyle(
+                                                      color: Color(0xFF073248),
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Icon(
+                                                  Icons.chevron_right_rounded,
+                                                  color: Color(0xFF6E7C83),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                       const SizedBox(height: 10),
                                       const _FieldLabel('Observacoes'),
                                       _InputBox(

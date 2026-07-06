@@ -15,11 +15,13 @@ export type Idoso = {
   nome: string;
   idade: number;
   urlFoto?: string | null;
+  pesoKg?: number | null;
   tipoSanguineo?: string | null;
   dataNascimento?: string | null;
   sexo?: string | null;
   limitacoes?: string | null;
   observacoesGerais?: string | null;
+  alergiasRestricoes?: string | null;
   contatoEmergenciaNome?: string | null;
   contatoEmergenciaTelefone?: string | null;
   contatoEmergenciaParentesco?: string | null;
@@ -50,11 +52,14 @@ type IdosoRow = {
   nome: string;
   idade: number | null;
   url_foto: string | null;
+  peso_kg: string | number | null;
   tipo_sanguineo: string | null;
   data_nascimento: string | null;
   sexo: string | null;
   observacoes_saude: string | null;
+  observacoes_gerais: string | null;
   limitacoes: string | null;
+  alergias_restricoes: string | null;
   contato_emergencia_nome: string | null;
   contato_emergencia_telefone: string | null;
   contato_emergencia_parentesco: string | null;
@@ -81,17 +86,23 @@ const mapearIdoso = (row: IdosoRow): Idoso => ({
   nome: row.nome,
   idade: Number(row.idade ?? 0),
   urlFoto: row.url_foto,
+  pesoKg: row.peso_kg == null ? null : Number(row.peso_kg),
   tipoSanguineo: row.tipo_sanguineo,
   dataNascimento: row.data_nascimento,
   sexo: row.sexo,
   limitacoes: row.limitacoes,
-  observacoesGerais: row.observacoes_saude,
+  observacoesGerais: row.observacoes_gerais,
+  alergiasRestricoes: row.alergias_restricoes,
   contatoEmergenciaNome: row.contato_emergencia_nome,
   contatoEmergenciaTelefone: row.contato_emergencia_telefone,
   contatoEmergenciaParentesco: row.contato_emergencia_parentesco,
-  condicoes: [row.observacoes_saude, row.limitacoes].filter(
-    (item): item is string => Boolean(item),
-  ),
+  condicoes:
+    typeof row.observacoes_saude === "string" && row.observacoes_saude.trim()
+      ? row.observacoes_saude
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : [],
   monitoramentos: normalizarMonitoramentos(row.monitoramentos),
 });
 
@@ -105,23 +116,43 @@ const prepararInput = <T extends AtualizarIdosoInput | CriarIdosoInput>(
 ): Record<string, unknown> => ({
   ...input,
   observacoesSaude:
-    input.observacoesSaude ??
-    input.observacoesGerais ??
-    input.condicoesSaude?.join(", "),
-  limitacoes: input.limitacoes ?? input.alergiasRestricoes,
+    input.observacoesSaude ?? input.condicoesSaude?.join(", "),
+  limitacoes: input.limitacoes,
+  alergiasRestricoes: input.alergiasRestricoes,
 });
+
+const salvarObservacaoGeral = async (
+  idosoId: string,
+  conteudo: string | undefined,
+  usuarioId: string | undefined,
+) => {
+  const texto = conteudo?.trim();
+  if (!texto || !usuarioId) return;
+
+  await getPool().query(
+    `
+      insert into observacoes_gerais (
+        idoso_id,
+        tipo_observacao,
+        conteudo,
+        registrado_por_id
+      )
+      values ($1, 'ficha_idoso', $2, $3)
+    `,
+    [idosoId, texto, usuarioId],
+  );
+};
 
 const fields = {
   nomeCompleto: "nome_completo",
   dataNascimento: "data_nascimento",
   urlFoto: "url_foto",
+  pesoKg: "peso_kg",
   sexo: "sexo",
   tipoSanguineo: "tipo_sanguineo",
   observacoesSaude: "observacoes_saude",
-  observacoesGerais: "observacoes_saude",
   limitacoes: "limitacoes",
-  alergiasRestricoes: "limitacoes",
-  observacoesEmergencia: "observacoes_emergencia",
+  alergiasRestricoes: "alergias_restricoes",
   contatoEmergenciaNome: "contato_emergencia_nome",
   contatoEmergenciaTelefone: "contato_emergencia_telefone",
   contatoEmergenciaParentesco: "contato_emergencia_parentesco",
@@ -139,6 +170,7 @@ export const idososService = {
           id,
           nome_completo as nome,
           url_foto,
+          peso_kg,
           tipo_sanguineo,
           data_nascimento,
           sexo,
@@ -147,7 +179,15 @@ export const idososService = {
             else extract(year from age(current_date, data_nascimento))::int
           end as idade,
           observacoes_saude,
+          (
+            select conteudo
+            from observacoes_gerais og
+            where og.idoso_id = fichas_idosos.id
+            order by registrado_em desc
+            limit 1
+          ) as observacoes_gerais,
           limitacoes,
+          alergias_restricoes,
           contato_emergencia_nome,
           contato_emergencia_telefone,
           contato_emergencia_parentesco,
@@ -182,6 +222,7 @@ export const idososService = {
             id,
             nome_completo as nome,
             url_foto,
+            peso_kg,
             tipo_sanguineo,
             data_nascimento,
             sexo,
@@ -190,7 +231,15 @@ export const idososService = {
               else extract(year from age(current_date, data_nascimento))::int
             end as idade,
             observacoes_saude,
+            (
+              select conteudo
+              from observacoes_gerais og
+              where og.idoso_id = fichas_idosos.id
+              order by registrado_em desc
+              limit 1
+            ) as observacoes_gerais,
             limitacoes,
+            alergias_restricoes,
             contato_emergencia_nome,
             contato_emergencia_telefone,
             contato_emergencia_parentesco,
@@ -239,6 +288,12 @@ export const idososService = {
       fields,
     );
 
+    await salvarObservacaoGeral(
+      String(idoso.id),
+      input.observacoesGerais,
+      criadoPorId,
+    );
+
     await registrarHistorico({
       usuarioId: criadoPorId,
       idosoId: String(idoso.id),
@@ -268,6 +323,12 @@ export const idososService = {
       fields,
       "IDOSO_NAO_ENCONTRADO",
       "Idoso não encontrado.",
+    );
+
+    await salvarObservacaoGeral(
+      idosoId,
+      input.observacoesGerais,
+      input.criadoPorId,
     );
 
     await registrarHistorico({

@@ -10,11 +10,13 @@ class IdosoResumo {
     required this.idade,
     required this.condicoes,
     this.urlFoto,
+    this.pesoKg,
     this.tipoSanguineo,
     this.dataNascimento,
     this.sexo,
     this.limitacoes,
     this.observacoesGerais,
+    this.alergiasRestricoes,
     this.contatoEmergenciaNome,
     this.contatoEmergenciaTelefone,
     this.contatoEmergenciaParentesco,
@@ -30,6 +32,7 @@ class IdosoResumo {
       nome: json['nome']?.toString() ?? 'Sem nome',
       idade: json['idade'] is num ? (json['idade'] as num).toInt() : 0,
       urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
+      pesoKg: _numOrNull(json['pesoKg'] ?? json['peso_kg']),
       tipoSanguineo: json['tipoSanguineo']?.toString() ??
           json['tipo_sanguineo']?.toString(),
       dataNascimento: json['dataNascimento']?.toString() ??
@@ -38,6 +41,8 @@ class IdosoResumo {
       limitacoes: json['limitacoes']?.toString(),
       observacoesGerais: json['observacoesGerais']?.toString() ??
           json['observacoes_saude']?.toString(),
+      alergiasRestricoes: json['alergiasRestricoes']?.toString() ??
+          json['alergias_restricoes']?.toString(),
       contatoEmergenciaNome: json['contatoEmergenciaNome']?.toString() ??
           json['contato_emergencia_nome']?.toString(),
       contatoEmergenciaTelefone:
@@ -59,11 +64,13 @@ class IdosoResumo {
   final String nome;
   final int idade;
   final String? urlFoto;
+  final double? pesoKg;
   final String? tipoSanguineo;
   final String? dataNascimento;
   final String? sexo;
   final String? limitacoes;
   final String? observacoesGerais;
+  final String? alergiasRestricoes;
   final String? contatoEmergenciaNome;
   final String? contatoEmergenciaTelefone;
   final String? contatoEmergenciaParentesco;
@@ -74,11 +81,13 @@ class IdosoResumo {
     String? nome,
     int? idade,
     String? urlFoto,
+    double? pesoKg,
     String? tipoSanguineo,
     String? dataNascimento,
     String? sexo,
     String? limitacoes,
     String? observacoesGerais,
+    String? alergiasRestricoes,
     String? contatoEmergenciaNome,
     String? contatoEmergenciaTelefone,
     String? contatoEmergenciaParentesco,
@@ -90,11 +99,13 @@ class IdosoResumo {
       nome: nome ?? this.nome,
       idade: idade ?? this.idade,
       urlFoto: urlFoto ?? this.urlFoto,
+      pesoKg: pesoKg ?? this.pesoKg,
       tipoSanguineo: tipoSanguineo ?? this.tipoSanguineo,
       dataNascimento: dataNascimento ?? this.dataNascimento,
       sexo: sexo ?? this.sexo,
       limitacoes: limitacoes ?? this.limitacoes,
       observacoesGerais: observacoesGerais ?? this.observacoesGerais,
+      alergiasRestricoes: alergiasRestricoes ?? this.alergiasRestricoes,
       contatoEmergenciaNome:
           contatoEmergenciaNome ?? this.contatoEmergenciaNome,
       contatoEmergenciaTelefone:
@@ -495,6 +506,36 @@ class RefeicaoResumo {
   bool get concluida => concluidaEm != null;
 }
 
+class HidratacaoRegistro {
+  const HidratacaoRegistro({
+    required this.id,
+    required this.idosoId,
+    required this.quantidadeMl,
+    required this.registradoEm,
+  });
+
+  factory HidratacaoRegistro.fromJson(Map<String, dynamic> json) {
+    return HidratacaoRegistro(
+      id: json['id']?.toString() ?? '',
+      idosoId:
+          json['idosoId']?.toString() ?? json['idoso_id']?.toString() ?? '',
+      quantidadeMl:
+          _numOrNull(json['quantidadeMl'] ?? json['quantidade_ml']) ?? 0,
+      registradoEm: DateTime.tryParse(
+            json['registradoEm']?.toString() ??
+                json['registrado_em']?.toString() ??
+                '',
+          ) ??
+          DateTime.now(),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final double quantidadeMl;
+  final DateTime registradoEm;
+}
+
 class ApiClient {
   ApiClient({required String baseUrl})
       : _dio = Dio(
@@ -614,6 +655,7 @@ class ApiClient {
     String? tipoSanguineo,
     List<String>? condicoesSaude,
     List<String>? monitoramentos,
+    String? limitacoes,
     String? alergiasRestricoes,
     String? observacoesGerais,
     String? contatoEmergenciaNome,
@@ -637,6 +679,8 @@ class ApiClient {
             'condicoesSaude': condicoesSaude,
           if (monitoramentos != null && monitoramentos.isNotEmpty)
             'monitoramentos': monitoramentos,
+          if (limitacoes != null && limitacoes.isNotEmpty)
+            'limitacoes': limitacoes,
           if (alergiasRestricoes != null && alergiasRestricoes.isNotEmpty)
             'alergiasRestricoes': alergiasRestricoes,
           if (observacoesGerais != null && observacoesGerais.isNotEmpty)
@@ -779,6 +823,49 @@ class ApiClient {
       return RefeicaoResumo.fromJson(const <String, dynamic>{});
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao concluir refeicao.');
+    }
+  }
+
+  Future<List<HidratacaoRegistro>> listarHidratacoes({String? idosoId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.hidratacoes,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(HidratacaoRegistro.fromJson)
+            .toList();
+      }
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar hidratacoes.');
+    }
+  }
+
+  Future<void> criarHidratacao({
+    required String idosoId,
+    required double quantidadeMl,
+    String? registradoPorId,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.hidratacoes,
+        data: {
+          'idosoId': idosoId,
+          'quantidadeMl': quantidadeMl,
+          'registradoEm': DateTime.now().toUtc().toIso8601String(),
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao registrar agua.');
     }
   }
 

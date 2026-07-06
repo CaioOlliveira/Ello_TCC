@@ -18,7 +18,8 @@ export const contatoEmergenciaSchema = z.object({
 export const criarIdosoSchema = z.object({
   nomeCompleto: z.string().min(1, "Nome completo e obrigatorio."),
   dataNascimento: z.string().date("Data de nascimento invalida.").optional(),
-  urlFoto: z.string().url("URL da foto invalida.").optional(),
+  urlFoto: z.string().optional(),
+  pesoKg: z.number().positive().optional(),
   sexo: z.string().optional(),
   tipoSanguineo: z
     .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
@@ -27,7 +28,6 @@ export const criarIdosoSchema = z.object({
   limitacoes: z.string().optional(),
   alergiasRestricoes: z.string().optional(),
   observacoesGerais: z.string().optional(),
-  observacoesEmergencia: z.string().optional(),
   contatoEmergenciaNome: z.string().optional(),
   contatoEmergenciaTelefone: z.string().optional(),
   contatoEmergenciaParentesco: z.string().optional(),

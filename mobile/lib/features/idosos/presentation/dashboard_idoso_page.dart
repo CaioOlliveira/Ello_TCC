@@ -62,8 +62,9 @@ class DashboardIdosoPage extends ConsumerWidget {
                 nome: idoso?.nome ?? 'Selecione uma ficha',
                 idade: idoso?.idade,
                 foto: idoso?.urlFoto,
-                onEdit:
-                    idoso == null ? null : () => context.go('/idosos/editar'),
+                onEdit: idoso == null
+                    ? null
+                    : () => context.go('/idosos/editar?from=dashboard'),
               ),
               const Spacer(),
             ],

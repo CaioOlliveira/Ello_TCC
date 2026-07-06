@@ -4,5 +4,4 @@
 alter table public.fichas_idosos
 add column if not exists contato_emergencia_nome text,
 add column if not exists contato_emergencia_telefone text,
-add column if not exists contato_emergencia_parentesco text,
-add column if not exists observacoes_emergencia text;
+add column if not exists contato_emergencia_parentesco text;

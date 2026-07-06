@@ -6,6 +6,7 @@ class ApiEndpoints {
   static const cadastro = '/auth/cadastro';
   static const idosos = '/idosos';
   static const humores = '/registros/humores';
+  static const hidratacoes = '/registros/hidratacoes';
   static const agenda = '/agenda';
   static const equipamentos = '/equipamentos';
   static const insumos = '/insumos';
