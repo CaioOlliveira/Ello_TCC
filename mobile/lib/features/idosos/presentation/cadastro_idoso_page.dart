@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +12,9 @@ import '../../../core/api/api_exception.dart';
 import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
 class CadastroIdosoPage extends ConsumerStatefulWidget {
-  const CadastroIdosoPage({super.key});
+  const CadastroIdosoPage({super.key, this.edicao = false});
+
+  final bool edicao;
 
   @override
   ConsumerState<CadastroIdosoPage> createState() => _CadastroIdosoPageState();
@@ -21,28 +25,89 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   final _nomeController = TextEditingController();
   final _dataNascimentoController = TextEditingController();
   final _idadeController = TextEditingController();
+  final _tipoSanguineoController = TextEditingController();
   final _limitacoesController = TextEditingController();
   final _telefoneController = TextEditingController();
   final _contatoNomeController = TextEditingController();
+  final _contatoParentescoController = TextEditingController();
   final _observacoesController = TextEditingController();
   final _picker = ImagePicker();
 
   final List<String> _condicoes = [];
   String? _sexo;
   Uint8List? _fotoBytes;
+  String? _fotoUrl;
   bool _loading = false;
   bool _showMonitoramentosStep = false;
   String? _errorMessage;
   final Set<String> _monitoramentosSelecionados = {...defaultMonitoramentoIds};
+
+  bool get _isEditing => widget.edicao;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_isEditing) return;
+
+    final idoso = ref.read(selectedIdosoProvider);
+    if (idoso == null) return;
+
+    _nomeController.text = idoso.nome;
+    if (idoso.idade > 0) _idadeController.text = idoso.idade.toString();
+    if (idoso.dataNascimento != null && idoso.dataNascimento!.length >= 10) {
+      final parsed = DateTime.tryParse(idoso.dataNascimento!.substring(0, 10));
+      if (parsed != null) {
+        _dataNascimentoController.text = _formatBrazilianDate(parsed);
+      }
+    }
+    _sexo = idoso.sexo;
+    _tipoSanguineoController.text = idoso.tipoSanguineo ?? '';
+    _limitacoesController.text = idoso.limitacoes ?? '';
+    _observacoesController.text = idoso.observacoesGerais ?? '';
+    _telefoneController.text = idoso.contatoEmergenciaTelefone ?? '';
+    _contatoNomeController.text = idoso.contatoEmergenciaNome ?? '';
+    _contatoParentescoController.text = idoso.contatoEmergenciaParentesco ?? '';
+    _fotoUrl = idoso.urlFoto;
+    _condicoes
+      ..clear()
+      ..addAll(idoso.condicoes);
+    _monitoramentosSelecionados
+      ..clear()
+      ..addAll(
+        idoso.monitoramentos.isEmpty
+            ? defaultMonitoramentoIds
+            : idoso.monitoramentos,
+      );
+  }
+
+  ImageProvider? get _profileImageProvider {
+    if (_fotoBytes != null) return MemoryImage(_fotoBytes!);
+    final url = _fotoUrl;
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('data:image')) {
+      final commaIndex = url.indexOf(',');
+      if (commaIndex == -1) return null;
+      try {
+        final bytes = base64Decode(url.substring(commaIndex + 1));
+        return MemoryImage(bytes);
+      } catch (_) {
+        return null;
+      }
+    }
+    if (url.startsWith('http')) return NetworkImage(url);
+    return null;
+  }
 
   @override
   void dispose() {
     _nomeController.dispose();
     _dataNascimentoController.dispose();
     _idadeController.dispose();
+    _tipoSanguineoController.dispose();
     _limitacoesController.dispose();
     _telefoneController.dispose();
     _contatoNomeController.dispose();
+    _contatoParentescoController.dispose();
     _observacoesController.dispose();
     super.dispose();
   }
@@ -110,6 +175,11 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    if (_isEditing) {
+      _submit();
+      return;
+    }
+
     setState(() {
       _showMonitoramentosStep = true;
       _errorMessage = null;
@@ -127,7 +197,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       return;
     }
 
-    context.go('/idosos');
+    context.go(_isEditing ? '/dashboard' : '/idosos');
   }
 
   void _toggleMonitoramento(String id) {
@@ -159,31 +229,96 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     try {
       final apiClient = ref.read(apiClientProvider);
       final usuarioId = ref.read(authSessionProvider)?.id;
-      final response = await apiClient.criarIdoso(
-        nomeCompleto: _nomeController.text.trim(),
-        criadoPorId: usuarioId,
-        dataNascimento: _toIsoDate(_dataNascimentoController.text.trim()),
-        sexo: _sexo,
-        condicoesSaude: _condicoes,
-        monitoramentos: _monitoramentosSelecionados.toList(),
-        alergiasRestricoes: _limitacoesController.text.trim(),
-        observacoesGerais: _observacoesController.text.trim(),
-        contatoEmergenciaNome: _contatoNomeController.text.trim(),
-        contatoEmergenciaTelefone: _telefoneController.text.trim(),
-      );
+      final fotoUrl = _fotoBytes == null
+          ? _fotoUrl
+          : 'data:image/jpeg;base64,${base64Encode(_fotoBytes!)}';
+      final dataNascimento = _toIsoDate(_dataNascimentoController.text.trim());
+      final selectedIdoso = ref.read(selectedIdosoProvider);
+      final response = _isEditing && selectedIdoso != null
+          ? await apiClient.atualizarIdoso(
+              id: selectedIdoso.id,
+              data: {
+                'nomeCompleto': _nomeController.text.trim(),
+                if (usuarioId != null && usuarioId.isNotEmpty)
+                  'criadoPorId': usuarioId,
+                if (dataNascimento != null) 'dataNascimento': dataNascimento,
+                if (fotoUrl != null && fotoUrl.isNotEmpty) 'urlFoto': fotoUrl,
+                if (_sexo != null && _sexo!.isNotEmpty) 'sexo': _sexo,
+                if (_tipoSanguineoController.text.trim().isNotEmpty)
+                  'tipoSanguineo': _tipoSanguineoController.text.trim(),
+                'condicoesSaude': _condicoes,
+                'monitoramentos': _monitoramentosSelecionados.toList(),
+                if (_limitacoesController.text.trim().isNotEmpty)
+                  'alergiasRestricoes': _limitacoesController.text.trim(),
+                if (_observacoesController.text.trim().isNotEmpty)
+                  'observacoesGerais': _observacoesController.text.trim(),
+                if (_contatoNomeController.text.trim().isNotEmpty)
+                  'contatoEmergenciaNome': _contatoNomeController.text.trim(),
+                if (_telefoneController.text.trim().isNotEmpty)
+                  'contatoEmergenciaTelefone': _telefoneController.text.trim(),
+                if (_contatoParentescoController.text.trim().isNotEmpty)
+                  'contatoEmergenciaParentesco':
+                      _contatoParentescoController.text.trim(),
+              },
+            )
+          : await apiClient.criarIdoso(
+              nomeCompleto: _nomeController.text.trim(),
+              criadoPorId: usuarioId,
+              dataNascimento: dataNascimento,
+              urlFoto: fotoUrl,
+              sexo: _sexo,
+              tipoSanguineo: _tipoSanguineoController.text.trim(),
+              condicoesSaude: _condicoes,
+              monitoramentos: _monitoramentosSelecionados.toList(),
+              alergiasRestricoes: _limitacoesController.text.trim(),
+              observacoesGerais: _observacoesController.text.trim(),
+              contatoEmergenciaNome: _contatoNomeController.text.trim(),
+              contatoEmergenciaTelefone: _telefoneController.text.trim(),
+              contatoEmergenciaParentesco:
+                  _contatoParentescoController.text.trim(),
+            );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ficha criada com sucesso.')),
+        SnackBar(
+          content: Text(
+            _isEditing
+                ? 'Ficha atualizada com sucesso.'
+                : 'Ficha criada com sucesso.',
+          ),
+        ),
       );
       ref.invalidate(idososDoUsuarioProvider);
       final dados = response['dados'];
-      final idosoId =
-          dados is Map<String, dynamic> ? dados['id']?.toString() ?? '' : '';
+      final idosoId = dados is Map<String, dynamic>
+          ? dados['id']?.toString() ?? selectedIdoso?.id ?? ''
+          : selectedIdoso?.id ?? '';
       ref.read(selectedIdosoProvider.notifier).state = IdosoResumo(
         id: idosoId,
         nome: _nomeController.text.trim(),
         idade: int.tryParse(_idadeController.text.trim()) ?? 0,
+        urlFoto: fotoUrl,
+        dataNascimento: dataNascimento,
+        sexo: _sexo,
+        tipoSanguineo: _tipoSanguineoController.text.trim().isEmpty
+            ? null
+            : _tipoSanguineoController.text.trim(),
+        limitacoes: _limitacoesController.text.trim().isEmpty
+            ? null
+            : _limitacoesController.text.trim(),
+        observacoesGerais: _observacoesController.text.trim().isEmpty
+            ? null
+            : _observacoesController.text.trim(),
+        contatoEmergenciaNome: _contatoNomeController.text.trim().isEmpty
+            ? null
+            : _contatoNomeController.text.trim(),
+        contatoEmergenciaTelefone: _telefoneController.text.trim().isEmpty
+            ? null
+            : _telefoneController.text.trim(),
+        contatoEmergenciaParentesco:
+            _contatoParentescoController.text.trim().isEmpty
+                ? null
+                : _contatoParentescoController.text.trim(),
         condicoes: _condicoes,
         monitoramentos: _monitoramentosSelecionados.toList(),
       );
@@ -194,8 +329,9 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage =
-            'Não foi possível criar a ficha. Confira sua conexão e tente novamente.';
+        _errorMessage = _isEditing
+            ? 'Nao foi possivel atualizar a ficha. Confira sua conexao e tente novamente.'
+            : 'Nao foi possivel criar a ficha. Confira sua conexao e tente novamente.';
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -204,355 +340,373 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(
-          child: AnimatedPadding(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.only(bottom: bottomInset),
-            child: Column(
-              children: [
-                _CadastroHeader(
-                  onBack: _handleBack,
-                  currentStep: _showMonitoramentosStep ? 2 : 1,
-                ),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    child: _showMonitoramentosStep
-                        ? _MonitoramentosStep(
-                            key: const ValueKey('monitoramentos-step'),
-                            selectedIds: _monitoramentosSelecionados,
-                            loading: _loading,
-                            errorMessage: _errorMessage,
-                            onToggle: _toggleMonitoramento,
-                            onSubmit: _submit,
-                          )
-                        : SingleChildScrollView(
-                            key: const ValueKey('dados-idoso-step'),
-                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 34),
-                            child: Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  const SizedBox(height: 1),
-                                  const Text(
-                                    'Registre os principais dados',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Color(0xFF17324D),
-                                      fontSize: 21,
-                                      fontWeight: FontWeight.w700,
-                                      height: 1,
-                                    ),
+          child: Column(
+            children: [
+              _CadastroHeader(
+                onBack: _handleBack,
+                currentStep: _showMonitoramentosStep ? 2 : 1,
+                editing: _isEditing,
+              ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: _showMonitoramentosStep
+                      ? _MonitoramentosStep(
+                          key: const ValueKey('monitoramentos-step'),
+                          selectedIds: _monitoramentosSelecionados,
+                          loading: _loading,
+                          errorMessage: _errorMessage,
+                          onToggle: _toggleMonitoramento,
+                          onSubmit: _submit,
+                        )
+                      : SingleChildScrollView(
+                          key: const ValueKey('dados-idoso-step'),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: EdgeInsets.fromLTRB(
+                            14,
+                            0,
+                            14,
+                            34 + MediaQuery.viewInsetsOf(context).bottom,
+                          ),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const SizedBox(height: 1),
+                                Text(
+                                  _isEditing
+                                      ? 'Edite os dados do idoso'
+                                      : 'Registre os principais dados',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Color(0xFF17324D),
+                                    fontSize: 21,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1,
                                   ),
-                                  const SizedBox(height: 3),
-                                  const Text(
-                                    'Comece registrando os principais dados',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Color(0xFF8A8A8A),
-                                      fontSize: 12,
-                                    ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  _isEditing
+                                      ? 'Ajuste as informacoes cadastradas'
+                                      : 'Comece registrando os principais dados',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Color(0xFF8A8A8A),
+                                    fontSize: 12,
                                   ),
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        12, 18, 12, 14),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(17),
-                                      border: Border.all(
-                                        color: const Color(0xFF8BD2DC),
-                                        width: 1.2,
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(12, 18, 12, 14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(17),
+                                    border: Border.all(
+                                      color: const Color(0xFF8BD2DC),
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x22000000),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 3),
                                       ),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0x22000000),
-                                          blurRadius: 4,
-                                          offset: Offset(0, 3),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            InkWell(
-                                              onTap: _selecionarFoto,
-                                              borderRadius:
-                                                  BorderRadius.circular(50),
-                                              child: Container(
-                                                width: 66,
-                                                height: 66,
-                                                decoration: BoxDecoration(
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          InkWell(
+                                            onTap: _selecionarFoto,
+                                            borderRadius:
+                                                BorderRadius.circular(50),
+                                            child: Container(
+                                              width: 66,
+                                              height: 66,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFD3F0F3),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
                                                   color:
-                                                      const Color(0xFFD3F0F3),
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color:
-                                                        const Color(0xFF2799AD),
-                                                    style: BorderStyle.solid,
-                                                  ),
-                                                  image: _fotoBytes == null
-                                                      ? null
-                                                      : DecorationImage(
-                                                          image: MemoryImage(
-                                                              _fotoBytes!),
-                                                          fit: BoxFit.cover,
-                                                        ),
+                                                      const Color(0xFF2799AD),
+                                                  style: BorderStyle.solid,
                                                 ),
-                                                child: _fotoBytes == null
-                                                    ? const Icon(
-                                                        Icons.add_rounded,
-                                                        color:
-                                                            Color(0xFF2697AA),
-                                                        size: 38,
-                                                      )
-                                                    : null,
+                                                image: _profileImageProvider ==
+                                                        null
+                                                    ? null
+                                                    : DecorationImage(
+                                                        image:
+                                                            _profileImageProvider!,
+                                                        fit: BoxFit.cover,
+                                                      ),
                                               ),
+                                              child: _profileImageProvider ==
+                                                      null
+                                                  ? const Icon(
+                                                      Icons.add_rounded,
+                                                      color: Color(0xFF2697AA),
+                                                      size: 38,
+                                                    )
+                                                  : null,
                                             ),
-                                            const SizedBox(width: 16),
-                                            const Column(
+                                          ),
+                                          const SizedBox(width: 16),
+                                          const Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Foto do Idoso',
+                                                style: TextStyle(
+                                                  color: Color(0xFF249CB0),
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              SizedBox(height: 1),
+                                              Text(
+                                                'toque para adicionar',
+                                                style: TextStyle(
+                                                  color: Color(0xFF9B9B9B),
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 18),
+                                      const _FieldLabel('Nome completo'),
+                                      _InputBox(
+                                        controller: _nomeController,
+                                        hintText:
+                                            'Ex: Mônica aparecida da silva',
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().isEmpty) {
+                                            return 'Informe o nome completo.';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                Text(
-                                                  'Foto do Idoso',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF249CB0),
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
+                                                const _FieldLabel(
+                                                  'Data de nascimento',
                                                 ),
-                                                SizedBox(height: 1),
-                                                Text(
-                                                  'toque para adicionar',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF9B9B9B),
-                                                    fontSize: 11,
-                                                  ),
+                                                _InputBox(
+                                                  controller:
+                                                      _dataNascimentoController,
+                                                  hintText: 'dd/mm/aaaa',
+                                                  readOnly: true,
+                                                  suffixIcon: Icons
+                                                      .calendar_month_outlined,
+                                                  onTap: _selecionarData,
+                                                  inputFormatters: [
+                                                    FilteringTextInputFormatter
+                                                        .digitsOnly,
+                                                    _DateInputFormatter(),
+                                                  ],
                                                 ),
                                               ],
                                             ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 18),
-                                        const _FieldLabel('Nome completo'),
-                                        _InputBox(
-                                          controller: _nomeController,
-                                          hintText:
-                                              'Ex: Mônica aparecida da silva',
-                                          validator: (value) {
-                                            if (value == null ||
-                                                value.trim().isEmpty) {
-                                              return 'Informe o nome completo.';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  const _FieldLabel(
-                                                    'Data de nascimento',
-                                                  ),
-                                                  _InputBox(
-                                                    controller:
-                                                        _dataNascimentoController,
-                                                    hintText: 'dd/mm/aaaa',
-                                                    readOnly: true,
-                                                    suffixIcon: Icons
-                                                        .calendar_month_outlined,
-                                                    onTap: _selecionarData,
-                                                    inputFormatters: [
-                                                      FilteringTextInputFormatter
-                                                          .digitsOnly,
-                                                      _DateInputFormatter(),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
+                                          ),
+                                          const SizedBox(width: 24),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                const _FieldLabel('Idade'),
+                                                _InputBox(
+                                                  controller: _idadeController,
+                                                  hintText: 'Ex:63',
+                                                  keyboardType:
+                                                      TextInputType.number,
+                                                ),
+                                              ],
                                             ),
-                                            const SizedBox(width: 24),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  const _FieldLabel('Idade'),
-                                                  _InputBox(
-                                                    controller:
-                                                        _idadeController,
-                                                    hintText: 'Ex:63',
-                                                    keyboardType:
-                                                        TextInputType.number,
-                                                  ),
-                                                ],
-                                              ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      const _FieldLabel('Sexo'),
+                                      _SelectBox(
+                                        value: _sexo,
+                                        onChanged: (value) {
+                                          setState(() => _sexo = value);
+                                        },
+                                      ),
+                                      const SizedBox(height: 10),
+                                      const _FieldLabel('Tipo sanguineo'),
+                                      _BloodTypeField(
+                                        controller: _tipoSanguineoController,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      const _FieldLabel('Condições de saúde'),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        children: [
+                                          for (final condicao in _condicoes)
+                                            _ConditionChip(
+                                              label: condicao,
+                                              onDeleted: () {
+                                                setState(
+                                                  () => _condicoes
+                                                      .remove(condicao),
+                                                );
+                                              },
                                             ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const _FieldLabel('Sexo'),
-                                        _SelectBox(
-                                          value: _sexo,
-                                          onChanged: (value) {
-                                            setState(() => _sexo = value);
-                                          },
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const _FieldLabel('Condições de saúde'),
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 8,
-                                          crossAxisAlignment:
-                                              WrapCrossAlignment.center,
-                                          children: [
-                                            for (final condicao in _condicoes)
-                                              _ConditionChip(
-                                                label: condicao,
-                                                onDeleted: () {
-                                                  setState(
-                                                    () => _condicoes
-                                                        .remove(condicao),
-                                                  );
-                                                },
-                                              ),
-                                            _AddConditionButton(
-                                              onPressed: _adicionarCondicao,
+                                          _AddConditionButton(
+                                            onPressed: _adicionarCondicao,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      const _FieldLabel('Limitações'),
+                                      _InputBox(
+                                        controller: _limitacoesController,
+                                        hintText: 'Ex:Penicilina',
+                                      ),
+                                      const SizedBox(height: 10),
+                                      const _FieldLabel(
+                                          'Contato de emergência'),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                const _FieldLabel('Telefone'),
+                                                _InputBox(
+                                                  controller:
+                                                      _telefoneController,
+                                                  hintText: '(00) 00000-0000',
+                                                  keyboardType:
+                                                      TextInputType.phone,
+                                                  inputFormatters: [
+                                                    FilteringTextInputFormatter
+                                                        .digitsOnly,
+                                                    _PhoneInputFormatter(),
+                                                  ],
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const _FieldLabel('Limitações'),
-                                        _InputBox(
-                                          controller: _limitacoesController,
-                                          hintText: 'Ex:Penicilina',
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const _FieldLabel(
-                                            'Contato de emergência'),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  const _FieldLabel('Telefone'),
-                                                  _InputBox(
-                                                    controller:
-                                                        _telefoneController,
-                                                    hintText: '(00) 00000-0000',
-                                                    keyboardType:
-                                                        TextInputType.phone,
-                                                    inputFormatters: [
-                                                      FilteringTextInputFormatter
-                                                          .digitsOnly,
-                                                      _PhoneInputFormatter(),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                const _FieldLabel('Nome'),
+                                                _InputBox(
+                                                  controller:
+                                                      _contatoNomeController,
+                                                  hintText: 'Nome',
+                                                ),
+                                              ],
                                             ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  const _FieldLabel('Nome'),
-                                                  _InputBox(
-                                                    controller:
-                                                        _contatoNomeController,
-                                                    hintText: 'Nome',
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        const _FieldLabel('Observações'),
-                                        _InputBox(
-                                          controller: _observacoesController,
-                                          hintText:
-                                              'Observações sobre a rotina de cuidado',
-                                          minLines: 2,
-                                          maxLines: 3,
-                                        ),
-                                      ],
-                                    ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      const _FieldLabel(
+                                        'Parentesco ou observacao',
+                                      ),
+                                      _InputBox(
+                                        controller:
+                                            _contatoParentescoController,
+                                        hintText: 'Ex: filha, vizinho',
+                                      ),
+                                      const SizedBox(height: 10),
+                                      const _FieldLabel('Observacoes'),
+                                      _InputBox(
+                                        controller: _observacoesController,
+                                        hintText:
+                                            'Observações sobre a rotina de cuidado',
+                                        minLines: 2,
+                                        maxLines: 3,
+                                      ),
+                                    ],
                                   ),
-                                  if (_errorMessage != null) ...[
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      _errorMessage!,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Color(0xFFC0392B),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 25),
-                                  SizedBox(
-                                    height: 44,
-                                    child: FilledButton(
-                                      onPressed: _goToMonitoramentosStep,
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF3CB1C3),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(17),
-                                        ),
-                                        textStyle: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      child: _loading
-                                          ? const SizedBox(
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: Colors.white,
-                                              ),
-                                            )
-                                          : const Text('Continuar'),
+                                ),
+                                if (_errorMessage != null) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _errorMessage!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFFC0392B),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
-                              ),
+                                const SizedBox(height: 25),
+                                SizedBox(
+                                  height: 44,
+                                  child: FilledButton(
+                                    onPressed: _goToMonitoramentosStep,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFF3CB1C3),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(17),
+                                      ),
+                                      textStyle: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    child: _loading
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(
+                                            _isEditing ? 'Salvar' : 'Continuar',
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                  ),
+                        ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -778,10 +932,15 @@ class _SelectedBadge extends StatelessWidget {
 }
 
 class _CadastroHeader extends StatelessWidget {
-  const _CadastroHeader({required this.onBack, required this.currentStep});
+  const _CadastroHeader({
+    required this.onBack,
+    required this.currentStep,
+    required this.editing,
+  });
 
   final VoidCallback onBack;
   final int currentStep;
+  final bool editing;
 
   @override
   Widget build(BuildContext context) {
@@ -805,9 +964,9 @@ class _CadastroHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              const Text(
-                'Cadastro do idoso',
-                style: TextStyle(
+              Text(
+                editing ? 'Editar idoso' : 'Cadastro do idoso',
+                style: const TextStyle(
                   color: Color(0xFF249CB0),
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -815,30 +974,32 @@ class _CadastroHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          Padding(
-            padding: const EdgeInsets.only(left: 22),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                minHeight: 14,
-                value: currentStep / 2,
-                backgroundColor: const Color(0xFFE7EEF0),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFF3BA7B8),
+          if (!editing) ...[
+            const SizedBox(height: 2),
+            Padding(
+              padding: const EdgeInsets.only(left: 22),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  minHeight: 14,
+                  value: currentStep / 2,
+                  backgroundColor: const Color(0xFFE7EEF0),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF3BA7B8),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            '$currentStep/2',
-            style: const TextStyle(
-              color: Color(0xFF8A8A8A),
-              fontSize: 13,
-              height: 1,
+            const SizedBox(height: 5),
+            Text(
+              '$currentStep/2',
+              style: const TextStyle(
+                color: Color(0xFF8A8A8A),
+                fontSize: 13,
+                height: 1,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -981,6 +1142,129 @@ class _SelectBox extends StatelessWidget {
           DropdownMenuItem(value: 'Outro', child: Text('Outro')),
         ],
       ),
+    );
+  }
+}
+
+class _BloodTypeField extends StatefulWidget {
+  const _BloodTypeField({required this.controller});
+
+  static const _options = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+  final TextEditingController controller;
+
+  @override
+  State<_BloodTypeField> createState() => _BloodTypeFieldState();
+}
+
+class _BloodTypeFieldState extends State<_BloodTypeField> {
+  final _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RawAutocomplete<String>(
+      textEditingController: widget.controller,
+      focusNode: _focusNode,
+      optionsBuilder: (value) {
+        final query = value.text.trim().toUpperCase();
+        if (query.isEmpty) return _BloodTypeField._options;
+        return _BloodTypeField._options.where((option) {
+          return option.startsWith(query);
+        });
+      },
+      onSelected: (value) => widget.controller.text = value,
+      fieldViewBuilder: (
+        context,
+        fieldController,
+        focusNode,
+        onFieldSubmitted,
+      ) {
+        return ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 46),
+          child: TextFormField(
+            controller: fieldController,
+            focusNode: focusNode,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp('[ABOabo+-]')),
+              TextInputFormatter.withFunction((oldValue, newValue) {
+                return newValue.copyWith(text: newValue.text.toUpperCase());
+              }),
+            ],
+            validator: (value) {
+              final text = value?.trim();
+              if (text == null || text.isEmpty) return null;
+              if (!_BloodTypeField._options.contains(text)) {
+                return 'Selecione um tipo sanguineo valido.';
+              }
+              return null;
+            },
+            style: const TextStyle(fontSize: 14, color: Color(0xFF17324D)),
+            decoration: InputDecoration(
+              hintText: 'Ex: O+',
+              hintStyle:
+                  const TextStyle(color: Color(0xFF9D9D9D), fontSize: 14),
+              suffixIcon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Color(0xFF2697AA),
+                size: 19,
+              ),
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 26,
+                minHeight: 26,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 13,
+              ),
+              errorStyle: const TextStyle(fontSize: 9, height: 0.8),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(color: Color(0xFF8BD2DC)),
+              ),
+            ),
+          ),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 180, maxWidth: 160),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

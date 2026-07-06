@@ -20,11 +20,17 @@ export const criarIdosoSchema = z.object({
   dataNascimento: z.string().date("Data de nascimento invalida.").optional(),
   urlFoto: z.string().url("URL da foto invalida.").optional(),
   sexo: z.string().optional(),
+  tipoSanguineo: z
+    .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
+    .optional(),
   observacoesSaude: z.string().optional(),
   limitacoes: z.string().optional(),
   alergiasRestricoes: z.string().optional(),
   observacoesGerais: z.string().optional(),
   observacoesEmergencia: z.string().optional(),
+  contatoEmergenciaNome: z.string().optional(),
+  contatoEmergenciaTelefone: z.string().optional(),
+  contatoEmergenciaParentesco: z.string().optional(),
   condicoesSaude: z.array(z.string().min(1)).optional(),
   monitoramentos: z.array(z.string().min(1)).optional(),
   contatoEmergencia: contatoEmergenciaSchema.optional(),

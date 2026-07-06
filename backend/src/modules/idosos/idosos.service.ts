@@ -15,6 +15,14 @@ export type Idoso = {
   nome: string;
   idade: number;
   urlFoto?: string | null;
+  tipoSanguineo?: string | null;
+  dataNascimento?: string | null;
+  sexo?: string | null;
+  limitacoes?: string | null;
+  observacoesGerais?: string | null;
+  contatoEmergenciaNome?: string | null;
+  contatoEmergenciaTelefone?: string | null;
+  contatoEmergenciaParentesco?: string | null;
   condicoes: string[];
   monitoramentos: string[];
 };
@@ -42,8 +50,14 @@ type IdosoRow = {
   nome: string;
   idade: number | null;
   url_foto: string | null;
+  tipo_sanguineo: string | null;
+  data_nascimento: string | null;
+  sexo: string | null;
   observacoes_saude: string | null;
   limitacoes: string | null;
+  contato_emergencia_nome: string | null;
+  contato_emergencia_telefone: string | null;
+  contato_emergencia_parentesco: string | null;
   monitoramentos: unknown;
 };
 
@@ -67,6 +81,14 @@ const mapearIdoso = (row: IdosoRow): Idoso => ({
   nome: row.nome,
   idade: Number(row.idade ?? 0),
   urlFoto: row.url_foto,
+  tipoSanguineo: row.tipo_sanguineo,
+  dataNascimento: row.data_nascimento,
+  sexo: row.sexo,
+  limitacoes: row.limitacoes,
+  observacoesGerais: row.observacoes_saude,
+  contatoEmergenciaNome: row.contato_emergencia_nome,
+  contatoEmergenciaTelefone: row.contato_emergencia_telefone,
+  contatoEmergenciaParentesco: row.contato_emergencia_parentesco,
   condicoes: [row.observacoes_saude, row.limitacoes].filter(
     (item): item is string => Boolean(item),
   ),
@@ -78,13 +100,31 @@ const isUuid = (value: string): boolean =>
     value,
   );
 
+const prepararInput = <T extends AtualizarIdosoInput | CriarIdosoInput>(
+  input: T,
+): Record<string, unknown> => ({
+  ...input,
+  observacoesSaude:
+    input.observacoesSaude ??
+    input.observacoesGerais ??
+    input.condicoesSaude?.join(", "),
+  limitacoes: input.limitacoes ?? input.alergiasRestricoes,
+});
+
 const fields = {
   nomeCompleto: "nome_completo",
   dataNascimento: "data_nascimento",
   urlFoto: "url_foto",
+  sexo: "sexo",
+  tipoSanguineo: "tipo_sanguineo",
   observacoesSaude: "observacoes_saude",
+  observacoesGerais: "observacoes_saude",
   limitacoes: "limitacoes",
+  alergiasRestricoes: "limitacoes",
   observacoesEmergencia: "observacoes_emergencia",
+  contatoEmergenciaNome: "contato_emergencia_nome",
+  contatoEmergenciaTelefone: "contato_emergencia_telefone",
+  contatoEmergenciaParentesco: "contato_emergencia_parentesco",
   monitoramentos: "monitoramentos",
   criadoPorId: "criado_por_id",
   ativo: "ativo",
@@ -99,12 +139,18 @@ export const idososService = {
           id,
           nome_completo as nome,
           url_foto,
+          tipo_sanguineo,
+          data_nascimento,
+          sexo,
           case
             when data_nascimento is null then null
             else extract(year from age(current_date, data_nascimento))::int
           end as idade,
           observacoes_saude,
           limitacoes,
+          contato_emergencia_nome,
+          contato_emergencia_telefone,
+          contato_emergencia_parentesco,
           monitoramentos
         from fichas_idosos
         where ativo = true
@@ -136,12 +182,18 @@ export const idososService = {
             id,
             nome_completo as nome,
             url_foto,
+            tipo_sanguineo,
+            data_nascimento,
+            sexo,
             case
               when data_nascimento is null then null
               else extract(year from age(current_date, data_nascimento))::int
             end as idade,
             observacoes_saude,
             limitacoes,
+            contato_emergencia_nome,
+            contato_emergencia_telefone,
+            contato_emergencia_parentesco,
             monitoramentos
           from fichas_idosos
           where id = $1 and ativo = true
@@ -180,7 +232,7 @@ export const idososService = {
     >(
       "fichas_idosos",
       {
-        ...input,
+        ...prepararInput(input),
         criadoPorId,
         ativo: input.ativo ?? true,
       },
@@ -212,7 +264,7 @@ export const idososService = {
     >(
       "fichas_idosos",
       idosoId,
-      input,
+      prepararInput(input),
       fields,
       "IDOSO_NAO_ENCONTRADO",
       "Idoso não encontrado.",

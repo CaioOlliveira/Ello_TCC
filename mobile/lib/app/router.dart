@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/agenda/presentation/agenda_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
+import '../features/coraia/presentation/coraia_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
 import '../features/humor/presentation/humor_page.dart';
@@ -36,6 +37,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/idosos/cadastro',
         builder: (context, state) => const CadastroIdosoPage(),
+      ),
+      GoRoute(
+        path: '/idosos/editar',
+        builder: (context, state) => const CadastroIdosoPage(edicao: true),
       ),
       GoRoute(path: '/perfil', builder: (context, state) => const PerfilPage()),
       GoRoute(
@@ -81,6 +86,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/humor',
             builder: (context, state) => const HumorPage(),
+          ),
+          GoRoute(
+            path: '/coraia',
+            builder: (context, state) => const CoraIAPage(),
           ),
           GoRoute(
             path: '/agua',
@@ -135,6 +144,7 @@ class AppShell extends StatelessWidget {
     }
     if (location == '/relatorios') return 2;
     if (location == '/idoso/perfil') return 2;
+    if (location == '/coraia') return 3;
     return 0;
   }
 
@@ -169,6 +179,12 @@ class AppShell extends StatelessWidget {
                   label: 'Monitoramento',
                   selected: selectedIndex == 1,
                   onTap: () => context.go('/monitoramento'),
+                ),
+                _ShellNavItem(
+                  icon: Icons.auto_awesome_rounded,
+                  label: 'CoraIA',
+                  selected: selectedIndex == 3,
+                  onTap: () => context.go('/coraia'),
                 ),
                 _ShellNavItem(
                   icon: Icons.person_outline,

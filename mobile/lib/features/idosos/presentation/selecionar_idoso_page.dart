@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -284,6 +286,8 @@ class _IdosoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final image = _avatarImage(idoso.urlFoto);
+
     return _FichaTile(
       onTap: onTap,
       child: Stack(
@@ -304,8 +308,8 @@ class _IdosoCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 35,
                   backgroundColor: const Color(0xFFD1F2F6),
-                  backgroundImage: _avatarImage(idoso.urlFoto),
-                  child: idoso.urlFoto == null || idoso.urlFoto!.isEmpty
+                  backgroundImage: image,
+                  child: image == null
                       ? const Icon(
                           Icons.person_outline_rounded,
                           color: Color(0xFF238FA1),
@@ -565,6 +569,15 @@ class _ErrorState extends StatelessWidget {
 
 ImageProvider? _avatarImage(String? url) {
   if (url == null || url.isEmpty) return null;
+  if (url.startsWith('data:image')) {
+    final commaIndex = url.indexOf(',');
+    if (commaIndex == -1) return null;
+    try {
+      return MemoryImage(base64Decode(url.substring(commaIndex + 1)));
+    } catch (_) {
+      return null;
+    }
+  }
   final uri = Uri.tryParse(url);
   if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
   return NetworkImage(url);

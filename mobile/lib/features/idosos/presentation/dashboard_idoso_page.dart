@@ -62,6 +62,8 @@ class DashboardIdosoPage extends ConsumerWidget {
                 nome: idoso?.nome ?? 'Selecione uma ficha',
                 idade: idoso?.idade,
                 foto: idoso?.urlFoto,
+                onEdit:
+                    idoso == null ? null : () => context.go('/idosos/editar'),
               ),
               const Spacer(),
             ],
@@ -77,11 +79,13 @@ class _IdosoHeroCard extends StatelessWidget {
     required this.nome,
     this.idade,
     this.foto,
+    this.onEdit,
   });
 
   final String nome;
   final int? idade;
   final String? foto;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -103,13 +107,17 @@ class _IdosoHeroCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned(
+          Positioned(
             right: 0,
             top: 0,
-            child: Icon(
-              Icons.edit_outlined,
-              color: Colors.white,
-              size: 22,
+            child: IconButton(
+              onPressed: onEdit,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
           ),
           Row(

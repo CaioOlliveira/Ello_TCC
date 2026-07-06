@@ -5,11 +5,13 @@ class _InsumoDetailView extends StatelessWidget {
     required this.insumo,
     required this.onBack,
     required this.onAtualizar,
+    required this.onDelete,
   });
 
   final InsumoResumo? insumo;
   final VoidCallback onBack;
   final VoidCallback onAtualizar;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +84,26 @@ class _InsumoDetailView extends StatelessWidget {
               icon: const Icon(Icons.change_circle_rounded, size: 20),
               label: const Text('Atualizar estoque'),
               style: _primaryButtonStyle(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline_rounded, size: 20),
+              label: const Text('Excluir insumo'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFC0392B),
+                side: const BorderSide(color: Color(0xFFC0392B)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ),
         ],

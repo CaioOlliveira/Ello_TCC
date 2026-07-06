@@ -183,10 +183,10 @@ export const insumosService = {
               ? quantidadeAtual - input.quantidade
               : input.quantidade;
 
-        if (novaQuantidade < 0) {
+        if (novaQuantidade <= 0) {
           throw new AppError(
             "ESTOQUE_INSUFICIENTE",
-            "A movimentacao nao pode deixar o estoque negativo.",
+            "A movimentacao precisa deixar estoque acima de zero.",
             400,
           );
         }
