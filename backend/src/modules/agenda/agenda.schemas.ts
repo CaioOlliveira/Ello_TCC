@@ -25,8 +25,8 @@ const normalizarFrequencia = (value: unknown) => {
     mensalmente: "Mensalmente",
     anual: "Anualmente",
     anualmente: "Anualmente",
-    "nao repetir": "Não repetir",
-    "não repetir": "Não repetir",
+    "nao repetir": "Nao repetir",
+    "n\u00e3o repetir": "Nao repetir",
   };
 
   return values[normalized] ?? value;
@@ -130,5 +130,15 @@ export const atualizarEventoSchema = z.preprocess(
   tarefaAgendaSchema.partial(),
 );
 
+export const atualizarOcorrenciaEventoSchema = z.object({
+  dataOcorrencia: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data da ocorrencia invalida."),
+  status: z.string().min(1, "Status e obrigatorio."),
+});
+
 export type CriarEventoInput = z.infer<typeof criarEventoSchema>;
 export type AtualizarEventoInput = z.infer<typeof atualizarEventoSchema>;
+export type AtualizarOcorrenciaEventoInput = z.infer<
+  typeof atualizarOcorrenciaEventoSchema
+>;

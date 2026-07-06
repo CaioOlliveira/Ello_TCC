@@ -35,8 +35,8 @@ class _StatusLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Wrap(
       alignment: WrapAlignment.center,
-      spacing: 8,
-      runSpacing: 4,
+      spacing: 6,
+      runSpacing: 6,
       children: [
         _LegendItem(color: Color(0xFF36C76B), label: 'Em uso'),
         _LegendItem(color: Color(0xFFFFC400), label: 'Revisao proxima'),
@@ -55,14 +55,27 @@ class _LegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.circle, color: color, size: 10),
-        const SizedBox(width: 4),
-        Text(label,
-            style: const TextStyle(color: Color(0xFF777777), fontSize: 10)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, color: color, size: 10),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF4D4D4D),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -80,8 +93,8 @@ class _DetailsHeader extends StatelessWidget {
       decoration: _cardDecoration(),
       child: Row(
         children: [
-          _EquipmentPicture(equipamento: equipamento, size: 88),
-          const SizedBox(width: 12),
+          _EquipmentPicture(equipamento: equipamento, size: 96),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +104,7 @@ class _DetailsHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 21,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFF222222),
                   ),
@@ -111,8 +124,8 @@ class _DetailsHeader extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
+                      horizontal: 10,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: status.color.withValues(alpha: 0.18),
@@ -121,13 +134,13 @@ class _DetailsHeader extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(status.icon, color: status.color, size: 15),
+                        Icon(status.icon, color: status.color, size: 17),
                         const SizedBox(width: 5),
                         Text(
                           status.label,
                           style: TextStyle(
                             color: status.color,
-                            fontSize: 11,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -158,7 +171,7 @@ class _InfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 9, 8, 9),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
       decoration: _cardDecoration(),
       child: Row(
         children: [
@@ -183,7 +196,7 @@ class _InfoTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF111111),
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -589,7 +602,8 @@ ButtonStyle _primaryButtonStyle() {
     backgroundColor: const Color(0xFF3CA7B8),
     foregroundColor: Colors.white,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+    minimumSize: const Size.fromHeight(52),
+    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
   );
 }
 
@@ -608,7 +622,8 @@ BoxDecoration _cardDecoration() {
 }
 
 TextStyle _mutedStyle() {
-  return const TextStyle(color: Color(0xFF8C8C8C), fontSize: 12, height: 1.22);
+  return const TextStyle(
+      color: Color(0xFF767676), fontSize: 12.5, height: 1.25);
 }
 
 TextStyle _detailStyle() {

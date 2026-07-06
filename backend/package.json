@@ -13,8 +13,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@google/genai": "^2.10.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "morgan": "^1.10.0",

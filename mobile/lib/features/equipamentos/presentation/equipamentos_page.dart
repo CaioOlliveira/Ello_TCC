@@ -13,7 +13,7 @@ part 'equipamentos_formularios.dart';
 part 'equipamentos_modelos.dart';
 part 'equipamentos_widgets.dart';
 
-enum _EquipamentosView { lista, cadastro, detalhes, manutencao }
+enum _EquipamentosView { lista, cadastro, edicao, detalhes, manutencao }
 
 class EquipamentosPage extends ConsumerStatefulWidget {
   const EquipamentosPage({super.key});
@@ -121,6 +121,40 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     }
   }
 
+  Future<void> _updateEquipamento(EquipamentoFormData data) async {
+    final selected = _selected;
+    final idoso = ref.read(selectedIdosoProvider);
+    if (selected == null || idoso == null) return;
+
+    setState(() => _saving = true);
+    try {
+      final payload = data.toPayload(
+        idosoId: idoso.id,
+        includeDefaultStatus: false,
+      );
+      final response = await ref.read(apiClientProvider).atualizarEquipamento(
+            id: selected.id,
+            data: payload,
+          );
+      final updated = Equipamento.fromJson(response['dados'] ?? response);
+      if (!mounted) return;
+      setState(() {
+        _selected = updated;
+        _equipamentos = [
+          for (final item in _equipamentos)
+            item.id == updated.id ? updated : item,
+        ]..sort(_compare);
+        _view = _EquipamentosView.detalhes;
+      });
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } catch (_) {
+      if (mounted) _showMessage('Nao foi possivel editar equipamento.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _saveManutencao(ManutencaoFormData data) async {
     final selected = _selected;
     final usuario = ref.read(authSessionProvider);
@@ -151,7 +185,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     }
   }
 
-  Future<void> _markForaDeUso() async {
+  Future<void> _setStatus(String status) async {
     final selected = _selected;
     if (selected == null) return;
 
@@ -159,7 +193,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     try {
       final response = await ref.read(apiClientProvider).atualizarEquipamento(
         id: selected.id,
-        data: {'status': 'Fora de uso'},
+        data: {'status': status},
       );
       final updated = Equipamento.fromJson(response['dados'] ?? response);
       if (!mounted) return;
@@ -192,7 +226,8 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
       context.go('/monitoramento');
       return;
     }
-    if (_view == _EquipamentosView.manutencao) {
+    if (_view == _EquipamentosView.manutencao ||
+        _view == _EquipamentosView.edicao) {
       setState(() => _view = _EquipamentosView.detalhes);
       return;
     }
@@ -211,6 +246,15 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
           onCancel: _back,
           onSubmit: _saveEquipamento,
         );
+      case _EquipamentosView.edicao:
+        child = _selected == null
+            ? const SizedBox.shrink()
+            : _EquipamentoForm(
+                initial: _selected,
+                saving: _saving,
+                onCancel: _back,
+                onSubmit: _updateEquipamento,
+              );
       case _EquipamentosView.detalhes:
         child = _selected == null
             ? _EquipamentosList(
@@ -225,7 +269,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 saving: _saving,
                 onRegister: () =>
                     setState(() => _view = _EquipamentosView.manutencao),
-                onOutOfUse: _markForaDeUso,
+                onStatusChanged: () => _setStatus(
+                  _selected!.status == 'Fora de uso' ? 'Em uso' : 'Fora de uso',
+                ),
+                onEdit: () => setState(() => _view = _EquipamentosView.edicao),
               );
       case _EquipamentosView.manutencao:
         child = _selected == null
@@ -331,11 +378,12 @@ class _EquipamentosList extends StatelessWidget {
                     ),
         ),
         SizedBox(
-          height: 48,
+          width: double.infinity,
+          height: 54,
           child: FilledButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add_circle_rounded, size: 22),
-            label: const Text('Adicionar Equipamento'),
+            label: const Text('Adicionar equipamento'),
             style: _primaryButtonStyle(),
           ),
         ),
@@ -376,11 +424,11 @@ class _EquipamentoCard extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 11, 4, 11),
+                  padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
                   child: Row(
                     children: [
-                      _EquipmentPicture(equipamento: equipamento, size: 72),
-                      const SizedBox(width: 12),
+                      _EquipmentPicture(equipamento: equipamento, size: 78),
+                      const SizedBox(width: 13),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,7 +438,7 @@ class _EquipamentoCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 17,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF222222),
                               ),
@@ -420,8 +468,8 @@ class _EquipamentoCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: status.color,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
                                 ),

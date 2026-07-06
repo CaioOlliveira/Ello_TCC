@@ -19,6 +19,10 @@ const envSchema = z.object({
     emptyStringToUndefined,
     z.string().uuid().optional(),
   ),
+  GEMINI_API_KEY: z.preprocess(emptyStringToUndefined, z.string().optional()),
+  GEMINI_MODEL: z
+    .preprocess(emptyStringToUndefined, z.string().optional())
+    .default("gemini-2.5-flash"),
 });
 
 export const env = envSchema.parse(process.env);
