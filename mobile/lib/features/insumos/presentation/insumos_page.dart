@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 
 part 'cadastro_insumo_page.dart';
 part 'detalhe_insumo_page.dart';
@@ -140,36 +141,54 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
-              child: switch (_view) {
-                _InsumosView.lista => _InsumosListView(
-                    insumos: _insumos,
-                    loading: _loading,
-                    error: _error,
-                    onRetry: _load,
-                    onBack: () => context.go('/monitoramento'),
-                    onAdd: _showCadastro,
-                    onOpen: _showDetalhe,
-                    selectedFilter: _selectedFilter,
-                    onFilterChanged: _selectFilter,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.03),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
                   ),
-                _InsumosView.cadastro => _InsumoFormView(
-                    idosoId: idoso?.id ?? '',
-                    onCancel: _showList,
-                    onSaved: _onCreated,
-                  ),
-                _InsumosView.detalhe => _InsumoDetailView(
-                    insumo: _selected,
-                    onBack: _showList,
-                    onAtualizar: _showAtualizar,
-                  ),
-                _InsumosView.atualizar => _InsumoStockView(
-                    insumo: _selected,
-                    usuarioId: ref.watch(authSessionProvider)?.id,
-                    onCancel: () =>
-                        setState(() => _view = _InsumosView.detalhe),
-                    onSaved: _onUpdated,
-                  ),
-              },
+                ),
+                child: KeyedSubtree(
+                  key: ValueKey(_view),
+                  child: switch (_view) {
+                    _InsumosView.lista => _InsumosListView(
+                        insumos: _insumos,
+                        loading: _loading,
+                        error: _error,
+                        onRetry: _load,
+                        onBack: () => context.go('/monitoramento'),
+                        onAdd: _showCadastro,
+                        onOpen: _showDetalhe,
+                        selectedFilter: _selectedFilter,
+                        onFilterChanged: _selectFilter,
+                      ),
+                    _InsumosView.cadastro => _InsumoFormView(
+                        idosoId: idoso?.id ?? '',
+                        onCancel: _showList,
+                        onSaved: _onCreated,
+                      ),
+                    _InsumosView.detalhe => _InsumoDetailView(
+                        insumo: _selected,
+                        onBack: _showList,
+                        onAtualizar: _showAtualizar,
+                      ),
+                    _InsumosView.atualizar => _InsumoStockView(
+                        insumo: _selected,
+                        usuarioId: ref.watch(authSessionProvider)?.id,
+                        onCancel: () =>
+                            setState(() => _view = _InsumosView.detalhe),
+                        onSaved: _onUpdated,
+                      ),
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -267,9 +286,12 @@ class _InsumosListView extends StatelessWidget {
                             ),
                             itemBuilder: (context, index) {
                               final insumo = insumos[index];
-                              return _InsumoCard(
-                                insumo: insumo,
-                                onTap: () => onOpen(insumo),
+                              return StaggeredEntry(
+                                index: index,
+                                child: _InsumoCard(
+                                  insumo: insumo,
+                                  onTap: () => onOpen(insumo),
+                                ),
                               );
                             },
                           ),
