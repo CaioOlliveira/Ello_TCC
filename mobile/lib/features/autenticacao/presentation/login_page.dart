@@ -165,63 +165,58 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
     return Scaffold(
       backgroundColor: AppColors.background,
+      // resizeToAvoidBottomInset (default true) already shrinks the body
+      // for the keyboard; adding extra bottom padding on top of that
+      // double-reserves space and pushes content off-screen.
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(
-          child: AnimatedPadding(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.only(bottom: bottomInset),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 260),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              child: switch (_view) {
-                AuthView.landing => _LandingView(
-                    key: const ValueKey('landing-view'),
-                    onApplePressed: () => _showPendingProviderMessage('Apple'),
-                    onGooglePressed: () =>
-                        _showPendingProviderMessage('Google'),
-                    onEmailPressed: () => _goTo(AuthView.login),
-                    onCadastroPressed: () => _goTo(AuthView.cadastro),
-                  ),
-                AuthView.login => _LoginFormView(
-                    key: const ValueKey('login-view'),
-                    formKey: _loginFormKey,
-                    emailController: _emailController,
-                    senhaController: _senhaController,
-                    loading: _loading,
-                    errorMessage: _errorMessage,
-                    onBack: () => _goTo(AuthView.landing),
-                    onSubmit: _submitLogin,
-                  ),
-                AuthView.cadastro => _CadastroFormView(
-                    key: const ValueKey('cadastro-view'),
-                    formKey: _cadastroFormKey,
-                    nomeController: _nomeController,
-                    emailController: _emailController,
-                    telefoneController: _telefoneController,
-                    senhaController: _senhaController,
-                    confirmarSenhaController: _confirmarSenhaController,
-                    loading: _loading,
-                    errorMessage: _errorMessage,
-                    aceitouTermos: _aceitouTermos,
-                    onBack: () => _goTo(AuthView.landing),
-                    onSubmit: _submitCadastro,
-                    onAceitouTermosChanged: (value) {
-                      setState(() {
-                        _aceitouTermos = value ?? false;
-                        _errorMessage = null;
-                      });
-                    },
-                    confirmarSenhaValidator: _confirmarSenhaValidator,
-                  ),
-              },
-            ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: switch (_view) {
+              AuthView.landing => _LandingView(
+                  key: const ValueKey('landing-view'),
+                  onApplePressed: () => _showPendingProviderMessage('Apple'),
+                  onGooglePressed: () => _showPendingProviderMessage('Google'),
+                  onEmailPressed: () => _goTo(AuthView.login),
+                  onCadastroPressed: () => _goTo(AuthView.cadastro),
+                ),
+              AuthView.login => _LoginFormView(
+                  key: const ValueKey('login-view'),
+                  formKey: _loginFormKey,
+                  emailController: _emailController,
+                  senhaController: _senhaController,
+                  loading: _loading,
+                  errorMessage: _errorMessage,
+                  onBack: () => _goTo(AuthView.landing),
+                  onSubmit: _submitLogin,
+                ),
+              AuthView.cadastro => _CadastroFormView(
+                  key: const ValueKey('cadastro-view'),
+                  formKey: _cadastroFormKey,
+                  nomeController: _nomeController,
+                  emailController: _emailController,
+                  telefoneController: _telefoneController,
+                  senhaController: _senhaController,
+                  confirmarSenhaController: _confirmarSenhaController,
+                  loading: _loading,
+                  errorMessage: _errorMessage,
+                  aceitouTermos: _aceitouTermos,
+                  onBack: () => _goTo(AuthView.landing),
+                  onSubmit: _submitCadastro,
+                  onAceitouTermosChanged: (value) {
+                    setState(() {
+                      _aceitouTermos = value ?? false;
+                      _errorMessage = null;
+                    });
+                  },
+                  confirmarSenhaValidator: _confirmarSenhaValidator,
+                ),
+            },
           ),
         ),
       ),
@@ -351,97 +346,82 @@ class _LoginFormView extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSizes.lg,
-                  AppSizes.xl,
-                  AppSizes.lg,
-                  AppSizes.lg,
-                ),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight:
-                        (constraints.maxHeight - AppSizes.xl - AppSizes.lg)
-                            .clamp(0, double.infinity),
-                  ),
-                  child: IntrinsicHeight(
-                    child: Form(
-                      key: formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Entre com e-mail',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: const Color(0xFF177385),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: AppSizes.sm),
-                          Text(
-                            'Use seu e-mail e senha cadastrados.',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: const Color(0xFF6F8288),
-                            ),
-                          ),
-                          const SizedBox(height: AppSizes.xl),
-                          _InputWrapper(
-                            child: AppTextField(
-                              label: 'E-mail',
-                              controller: emailController,
-                              validator: Validators.email,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.next,
-                              prefixIcon: Icons.mail_outline,
-                              autofillHints: const [AutofillHints.email],
-                            ),
-                          ),
-                          const SizedBox(height: AppSizes.md),
-                          _InputWrapper(
-                            child: AppTextField(
-                              label: 'Senha',
-                              controller: senhaController,
-                              validator: Validators.password,
-                              obscureText: true,
-                              textInputAction: TextInputAction.done,
-                              prefixIcon: Icons.lock_outline,
-                              autofillHints: const [AutofillHints.password],
-                            ),
-                          ),
-                          if (errorMessage != null) ...[
-                            const SizedBox(height: AppSizes.md),
-                            _ErrorBox(message: errorMessage!),
-                          ],
-                          const Spacer(),
-                          const SizedBox(height: AppSizes.lg),
-                          SizedBox(
-                            height: 54,
-                            child: FilledButton(
-                              onPressed: loading ? null : onSubmit,
-                              style: _primaryButtonStyle(),
-                              child: loading
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.4,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text('Entrar'),
-                            ),
-                          ),
-                        ],
-                      ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSizes.lg,
+              AppSizes.xl,
+              AppSizes.lg,
+              AppSizes.lg,
+            ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Entre com e-mail',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: const Color(0xFF177385),
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ),
-              );
-            },
+                  const SizedBox(height: AppSizes.sm),
+                  Text(
+                    'Use seu e-mail e senha cadastrados.',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: const Color(0xFF6F8288),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.xl),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'E-mail',
+                      controller: emailController,
+                      validator: Validators.email,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icons.mail_outline,
+                      autofillHints: const [AutofillHints.email],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'Senha',
+                      controller: senhaController,
+                      validator: Validators.password,
+                      obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      prefixIcon: Icons.lock_outline,
+                      autofillHints: const [AutofillHints.password],
+                    ),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: AppSizes.md),
+                    _ErrorBox(message: errorMessage!),
+                  ],
+                  const SizedBox(height: AppSizes.xl),
+                  SizedBox(
+                    height: 54,
+                    child: FilledButton(
+                      onPressed: loading ? null : onSubmit,
+                      style: _primaryButtonStyle(),
+                      child: loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Entrar'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],

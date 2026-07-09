@@ -195,6 +195,8 @@ class InsulinaRegistro {
     required this.doseUnidades,
     required this.aplicadoEm,
     this.glicemiaId,
+    this.nomeInsulina,
+    this.localAplicacao,
     this.observacoes,
   });
 
@@ -203,12 +205,14 @@ class InsulinaRegistro {
       id: json['id']?.toString() ?? '',
       idosoId: json['idosoId']?.toString() ?? '',
       glicemiaId: json['glicemiaId']?.toString(),
+      nomeInsulina: json['nomeInsulina']?.toString(),
       tipoInsulina: json['tipoInsulina']?.toString() ?? '',
       doseUnidades: json['doseUnidades'] is num
           ? (json['doseUnidades'] as num).toDouble()
           : double.tryParse(json['doseUnidades']?.toString() ?? '') ?? 0,
       aplicadoEm: DateTime.tryParse(json['aplicadoEm']?.toString() ?? '') ??
           DateTime.now(),
+      localAplicacao: json['localAplicacao']?.toString(),
       observacoes: json['observacoes']?.toString(),
     );
   }
@@ -216,10 +220,63 @@ class InsulinaRegistro {
   final String id;
   final String idosoId;
   final String? glicemiaId;
+  final String? nomeInsulina;
   final String tipoInsulina;
   final double doseUnidades;
   final DateTime aplicadoEm;
+  final String? localAplicacao;
   final String? observacoes;
+}
+
+class GlicemiaHistoricoBadge {
+  const GlicemiaHistoricoBadge({required this.texto, required this.cor});
+
+  factory GlicemiaHistoricoBadge.fromJson(Map<String, dynamic>? json) {
+    return GlicemiaHistoricoBadge(
+      texto: json?['texto']?.toString() ?? '',
+      cor: json?['cor']?.toString() ?? 'neutro',
+    );
+  }
+
+  final String texto;
+  final String cor;
+}
+
+class GlicemiaHistoricoEntrada {
+  const GlicemiaHistoricoEntrada({
+    required this.id,
+    required this.usuarioNome,
+    required this.acao,
+    required this.descricao,
+    required this.dataHora,
+    required this.badge,
+    this.valor,
+  });
+
+  factory GlicemiaHistoricoEntrada.fromJson(Map<String, dynamic> json) {
+    final valor = json['valor'];
+
+    return GlicemiaHistoricoEntrada(
+      id: json['id']?.toString() ?? '',
+      usuarioNome: json['usuarioNome']?.toString() ?? 'Cuidador',
+      acao: json['acao']?.toString() ?? 'criar',
+      descricao: json['descricao']?.toString() ?? '',
+      valor: valor is num ? valor.toInt() : null,
+      dataHora: DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
+          DateTime.now(),
+      badge: GlicemiaHistoricoBadge.fromJson(
+        json['badge'] is Map<String, dynamic> ? json['badge'] : null,
+      ),
+    );
+  }
+
+  final String id;
+  final String usuarioNome;
+  final String acao;
+  final String descricao;
+  final int? valor;
+  final DateTime dataHora;
+  final GlicemiaHistoricoBadge badge;
 }
 
 class GlicemiaSeriePonto {
@@ -1067,6 +1124,39 @@ class ApiClient {
     }
   }
 
+  Future<List<GlicemiaHistoricoEntrada>> getHistoricoGlicemia({
+    required String idosoId,
+    DateTime? dataReferencia,
+    String periodo = 'dia',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.glicemiaHistorico,
+        queryParameters: {
+          'idosoId': idosoId,
+          'periodo': periodo,
+          if (dataReferencia != null)
+            'dataReferencia': _toIsoDateOnly(dataReferencia),
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is List) {
+        return dados
+            .whereType<Map<String, dynamic>>()
+            .map(GlicemiaHistoricoEntrada.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar histórico de glicemia.',
+      );
+    }
+  }
+
   Future<GlicemiaRegistro> criarGlicemia({
     required String idosoId,
     required int valor,
@@ -1112,6 +1202,8 @@ class ApiClient {
     required double doseUnidades,
     required DateTime aplicadoEm,
     String? glicemiaId,
+    String? nomeInsulina,
+    String? localAplicacao,
     String? observacoes,
     String? registradoPorId,
   }) async {
@@ -1122,9 +1214,13 @@ class ApiClient {
           'idosoId': idosoId,
           if (glicemiaId != null && glicemiaId.isNotEmpty)
             'glicemiaId': glicemiaId,
+          if (nomeInsulina != null && nomeInsulina.isNotEmpty)
+            'nomeInsulina': nomeInsulina,
           'tipoInsulina': tipoInsulina,
           'doseUnidades': doseUnidades,
           'aplicadoEm': aplicadoEm.toUtc().toIso8601String(),
+          if (localAplicacao != null && localAplicacao.isNotEmpty)
+            'localAplicacao': localAplicacao,
           if (observacoes != null && observacoes.isNotEmpty)
             'observacoes': observacoes,
           if (registradoPorId != null && registradoPorId.isNotEmpty)

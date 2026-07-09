@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 
 class HumorPage extends ConsumerStatefulWidget {
   const HumorPage({super.key});
@@ -135,7 +136,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 26),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 48),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -144,49 +145,63 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                       onProfile: () => context.go('/perfil?from=humor'),
                     ),
                     const SizedBox(height: 10),
-                    _IdosoCard(idoso: idoso),
+                    StaggeredEntry(index: 0, child: _IdosoCard(idoso: idoso)),
                     const SizedBox(height: 19),
-                    Text(
-                      'Como ${_firstName(idoso?.nome ?? 'o idoso')} esta hoje?',
-                      style: const TextStyle(
-                        color: Color(0xFF242424),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
+                    StaggeredEntry(
+                      index: 1,
+                      child: Text(
+                        'Como ${_firstName(idoso?.nome ?? 'o idoso')} esta hoje?',
+                        style: const TextStyle(
+                          color: Color(0xFF242424),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _MoodSelector(
-                      selectedMood: _selectedMood,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedMood = value;
-                          _errorMessage = null;
-                        });
-                      },
+                    StaggeredEntry(
+                      index: 2,
+                      child: _MoodSelector(
+                        selectedMood: _selectedMood,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedMood = value;
+                            _errorMessage = null;
+                          });
+                        },
+                      ),
                     ),
                     const SizedBox(height: 24),
-                    _ObservationBox(controller: _observacoesController),
+                    StaggeredEntry(
+                      index: 3,
+                      child: _ObservationBox(
+                        controller: _observacoesController,
+                      ),
+                    ),
                     const SizedBox(height: 23),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _SmallField(
-                            label: 'Data',
-                            controller: _dataController,
-                            icon: Icons.calendar_month_rounded,
-                            onTap: _selectDate,
+                    StaggeredEntry(
+                      index: 4,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _SmallField(
+                              label: 'Data',
+                              controller: _dataController,
+                              icon: Icons.calendar_month_rounded,
+                              onTap: _selectDate,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _SmallField(
-                            label: 'Hora',
-                            controller: _horaController,
-                            icon: Icons.access_time_rounded,
-                            onTap: _selectTime,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _SmallField(
+                              label: 'Hora',
+                              controller: _horaController,
+                              icon: Icons.access_time_rounded,
+                              onTap: _selectTime,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 14),
@@ -200,26 +215,15 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 36),
-                    Center(
+                    const SizedBox(height: 32),
+                    StaggeredEntry(
+                      index: 5,
                       child: SizedBox(
-                        width: 286,
-                        height: 46,
-                        child: FilledButton(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton.icon(
                           onPressed: _saving ? null : _save,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF003B4F),
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: const Color(0xFF7BA3AD),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          child: _saving
+                          icon: _saving
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
@@ -228,10 +232,29 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text('Salvar Registro'),
+                              : const Icon(Icons.check_circle_rounded),
+                          label: Text(
+                            _saving ? 'Salvando...' : 'Salvar Registro',
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF003B4F),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFF7BA3AD),
+                            elevation: 4,
+                            shadowColor:
+                                const Color(0xFF003B4F).withValues(alpha: 0.4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -358,7 +381,9 @@ class _IdosoCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 9),
                       Text(
-                        '${idoso!.idade} anos',
+                        idoso!.idade > 0
+                            ? '${idoso!.idade} anos'
+                            : 'Idade não informada',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 15,
@@ -441,11 +466,26 @@ class _MoodButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFE0F4F1) : Colors.white,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? const Color(0xFF2FAD9F) : Colors.transparent,
+            width: 1.4,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(mood.icon, color: color, size: 38),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: selected ? 1 : 0),
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutBack,
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: 1 + value * 0.18,
+                  child: child,
+                );
+              },
+              child: Icon(mood.icon, color: color, size: 38),
+            ),
             const SizedBox(height: 3),
             Text(
               mood.label,
@@ -474,32 +514,48 @@ class _ObservationBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(7, 0, 7, 7),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: const Color(0xFF38AFC0)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(left: 1, bottom: 2),
-            child: Text(
-              'Observacoes:',
-              style: TextStyle(
-                color: Color(0xFF38AFC0),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+          const Row(
+            children: [
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                color: Color(0xFF2A9CAF),
+                size: 19,
               ),
-            ),
+              SizedBox(width: 6),
+              Text(
+                'Observações',
+                style: TextStyle(
+                  color: Color(0xFF17324D),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 8),
           TextField(
             controller: controller,
             minLines: 4,
             maxLines: 4,
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF2FBFC),
               hintText: 'Conte como foi o dia.',
               hintStyle: const TextStyle(
                 color: Color(0xFF8A8A8A),
@@ -507,18 +563,18 @@ class _ObservationBox extends StatelessWidget {
               ),
               contentPadding: const EdgeInsets.all(10),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFF38AFC0)),
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: Color(0xFFCDE7EA)),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFF38AFC0)),
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: Color(0xFFCDE7EA)),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(9),
                 borderSide: const BorderSide(
                   color: Color(0xFF2FAD9F),
-                  width: 1.4,
+                  width: 1.6,
                 ),
               ),
             ),
@@ -544,50 +600,56 @@ class _SmallField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 4),
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF555555),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDCF1F4),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: const Color(0xFF148A9C), size: 17),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Color(0xFF6F636B),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      controller.text,
+                      style: const TextStyle(
+                        color: Color(0xFF17324D),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        SizedBox(
-          height: 32,
-          child: TextField(
-            controller: controller,
-            readOnly: true,
-            onTap: onTap,
-            style: const TextStyle(color: Color(0xFF17324D), fontSize: 13),
-            decoration: InputDecoration(
-              suffixIcon: Icon(icon, color: const Color(0xFF2A9CAF), size: 17),
-              suffixIconConstraints: const BoxConstraints(
-                minWidth: 27,
-                minHeight: 27,
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFF38AFC0)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFF38AFC0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFF2FAD9F)),
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

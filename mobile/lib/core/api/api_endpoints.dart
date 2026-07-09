@@ -13,6 +13,7 @@ class ApiEndpoints {
   static const iaPerguntar = '/ia/perguntar';
   static const iaConversas = '/ia/conversas';
   static const glicemiaResumo = '/glicemias/resumo';
+  static const glicemiaHistorico = '/glicemias/historico';
   static const glicemiaInsulinas = '/glicemias/insulinas';
   static String compromisso(String id) => '/agenda/$id';
   static String ocorrenciaCompromisso(String id) => '/agenda/$id/ocorrencias';

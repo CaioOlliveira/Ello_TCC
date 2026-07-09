@@ -49,9 +49,11 @@ type InsulinaRow = {
   id: string;
   idosoId: string;
   glicemiaId?: string | null;
+  nomeInsulina?: string | null;
   tipoInsulina: string;
   doseUnidades: number | string;
   aplicadoEm: Date | string;
+  localAplicacao?: string | null;
   observacoes?: string | null;
   registradoPorId?: string | null;
 };
@@ -71,14 +73,26 @@ type RegistroInsulina = {
   id: string;
   idosoId: string;
   glicemiaId?: string | null;
+  nomeInsulina?: string | null;
   tipoInsulina: string;
   doseUnidades: number;
   aplicadoEm: string;
+  localAplicacao?: string | null;
   observacoes?: string | null;
   registradoPorId?: string | null;
 };
 
 type PeriodoGlicemia = "dia" | "semanal" | "mes";
+
+type HistoricoGlicemiaEntrada = {
+  id: string;
+  usuarioNome: string;
+  acao: "criar" | "atualizar" | "remover";
+  descricao: string;
+  valor: number | null;
+  dataHora: string;
+  badge: { texto: string; cor: "normal" | "alerta" | "atualizado" | "neutro" };
+};
 
 const glicemiasMemoria: RegistroGlicemia[] = [];
 const insulinasMemoria: RegistroInsulina[] = [];
@@ -102,9 +116,11 @@ const mapearInsulina = (row: InsulinaRow): RegistroInsulina => ({
   id: row.id,
   idosoId: row.idosoId,
   glicemiaId: row.glicemiaId,
+  nomeInsulina: row.nomeInsulina,
   tipoInsulina: row.tipoInsulina,
   doseUnidades: Number(row.doseUnidades),
   aplicadoEm: toIsoString(row.aplicadoEm),
+  localAplicacao: row.localAplicacao,
   observacoes: row.observacoes,
   registradoPorId: row.registradoPorId,
 });
@@ -371,14 +387,22 @@ const ensureInsulinaSchema = async () => {
       id uuid primary key default gen_random_uuid(),
       idoso_id uuid not null references fichas_idosos(id) on delete cascade,
       glicemia_id uuid references registros_glicemia(id) on delete set null,
+      nome_insulina text,
       tipo_insulina text not null,
       dose_unidades numeric(6, 2) not null check (dose_unidades > 0 and dose_unidades <= 200),
       aplicado_em timestamptz not null,
+      local_aplicacao text,
       observacoes text,
       registrado_por_id uuid references usuarios(id),
       criado_em timestamptz not null default now(),
       atualizado_em timestamptz not null default now()
     )
+  `);
+
+  await getPool().query(`
+    alter table ${insulinaTable}
+      add column if not exists nome_insulina text,
+      add column if not exists local_aplicacao text
   `);
 
   await getPool().query(`
@@ -429,9 +453,11 @@ const buscarInsulinas = async (idosoId: string): Promise<RegistroInsulina[]> => 
         id,
         idoso_id as "idosoId",
         glicemia_id as "glicemiaId",
+        nome_insulina as "nomeInsulina",
         tipo_insulina as "tipoInsulina",
         dose_unidades as "doseUnidades",
         aplicado_em as "aplicadoEm",
+        local_aplicacao as "localAplicacao",
         observacoes,
         registrado_por_id as "registradoPorId"
       from ${insulinaTable}
@@ -443,6 +469,110 @@ const buscarInsulinas = async (idosoId: string): Promise<RegistroInsulina[]> => 
   );
 
   return result.rows.map(mapearInsulina);
+};
+
+const valorDoRegistro = (dados: Record<string, unknown> | null | undefined) => {
+  if (!dados) return null;
+  const valor = dados.valor ?? dados.valor_mg_dl;
+  return typeof valor === "number" ? valor : Number(valor) || null;
+};
+
+const observacoesDoRegistro = (
+  dados: Record<string, unknown> | null | undefined,
+) => (dados?.observacoes == null ? null : String(dados.observacoes));
+
+const montarEntradaHistorico = (row: {
+  id: string;
+  acao: string;
+  dadosAnteriores: Record<string, unknown> | null;
+  dadosNovos: Record<string, unknown> | null;
+  criadoEm: Date | string;
+  usuarioNome: string;
+}): HistoricoGlicemiaEntrada => {
+  const valorNovo = valorDoRegistro(row.dadosNovos);
+  const valorAnterior = valorDoRegistro(row.dadosAnteriores);
+
+  if (row.acao === "criar") {
+    return {
+      id: row.id,
+      usuarioNome: row.usuarioNome,
+      acao: "criar",
+      descricao: "registrou medição",
+      valor: valorNovo,
+      dataHora: toIsoString(row.criadoEm),
+      badge: { texto: "Normal", cor: "normal" },
+    };
+  }
+
+  if (row.acao === "remover") {
+    return {
+      id: row.id,
+      usuarioNome: row.usuarioNome,
+      acao: "remover",
+      descricao: "removeu registro",
+      valor: valorAnterior,
+      dataHora: toIsoString(row.criadoEm),
+      badge: { texto: "Removido", cor: "alerta" },
+    };
+  }
+
+  const valorMudou = valorNovo != null && valorNovo !== valorAnterior;
+  const observacoesMudaram =
+    observacoesDoRegistro(row.dadosNovos) !==
+    observacoesDoRegistro(row.dadosAnteriores);
+
+  if (valorMudou) {
+    return {
+      id: row.id,
+      usuarioNome: row.usuarioNome,
+      acao: "atualizar",
+      descricao: "atualizou valor",
+      valor: valorNovo,
+      dataHora: toIsoString(row.criadoEm),
+      badge: { texto: "Atualizado", cor: "atualizado" },
+    };
+  }
+
+  if (observacoesMudaram) {
+    return {
+      id: row.id,
+      usuarioNome: row.usuarioNome,
+      acao: "atualizar",
+      descricao: "editou observação",
+      valor: valorNovo ?? valorAnterior,
+      dataHora: toIsoString(row.criadoEm),
+      badge: { texto: "Alerta", cor: "alerta" },
+    };
+  }
+
+  return {
+    id: row.id,
+    usuarioNome: row.usuarioNome,
+    acao: "atualizar",
+    descricao: "atualizou registro",
+    valor: valorNovo ?? valorAnterior,
+    dataHora: toIsoString(row.criadoEm),
+    badge: { texto: "Atualizado", cor: "atualizado" },
+  };
+};
+
+const inicioDoPeriodoHistorico = (
+  referencia: Date,
+  periodo: PeriodoGlicemia,
+) => {
+  if (periodo === "semanal") {
+    const inicio = startOfDay(referencia);
+    inicio.setDate(inicio.getDate() - 6);
+    return inicio;
+  }
+
+  if (periodo === "mes") {
+    const inicio = startOfDay(referencia);
+    inicio.setDate(inicio.getDate() - 29);
+    return inicio;
+  }
+
+  return startOfDay(referencia);
 };
 
 export const glicemiaService = {
@@ -511,6 +641,74 @@ export const glicemiaService = {
     ]);
 
     return montarResumo(registros, insulinas, referencia, periodo);
+  },
+
+  async historico(
+    idosoId: string,
+    dataReferencia?: string,
+    periodo: PeriodoGlicemia = "dia",
+  ): Promise<HistoricoGlicemiaEntrada[]> {
+    const referencia = dataReferencia
+      ? new Date(`${dataReferencia}T12:00:00`)
+      : new Date();
+    const inicio = inicioDoPeriodoHistorico(referencia, periodo);
+
+    if (!isDatabaseEnabled) {
+      return glicemiasMemoria
+        .filter(
+          (registro) =>
+            registro.idosoId === idosoId &&
+            new Date(registro.medidoEm) >= inicio,
+        )
+        .map((registro) =>
+          montarEntradaHistorico({
+            id: registro.id,
+            acao: "criar",
+            dadosAnteriores: null,
+            dadosNovos: registro as unknown as Record<string, unknown>,
+            criadoEm: registro.medidoEm,
+            usuarioNome: "Cuidador",
+          }),
+        );
+    }
+
+    const result = await getPool().query<{
+      id: string;
+      acao: string;
+      dadosAnteriores: Record<string, unknown> | null;
+      dadosNovos: Record<string, unknown> | null;
+      criadoEm: Date;
+      usuarioNome: string | null;
+    }>(
+      `
+        select
+          h.id,
+          h.acao,
+          h.dados_anteriores as "dadosAnteriores",
+          h.dados_novos as "dadosNovos",
+          h.criado_em as "criadoEm",
+          coalesce(u.nome, 'Cuidador') as "usuarioNome"
+        from historico_alteracoes h
+        left join usuarios u on u.id = h.usuario_id
+        where h.idoso_id = $1
+          and h.tipo_entidade = $2
+          and h.criado_em >= $3
+        order by h.criado_em desc
+        limit 100
+      `,
+      [idosoId, table, inicio.toISOString()],
+    );
+
+    return result.rows.map((row) =>
+      montarEntradaHistorico({
+        id: row.id,
+        acao: row.acao,
+        dadosAnteriores: row.dadosAnteriores,
+        dadosNovos: row.dadosNovos,
+        criadoEm: row.criadoEm,
+        usuarioNome: row.usuarioNome ?? "Cuidador",
+      }),
+    );
   },
 
   async criar(input: CriarGlicemiaInput) {
@@ -592,29 +790,35 @@ export const glicemiaService = {
           insert into ${insulinaTable} (
             idoso_id,
             glicemia_id,
+            nome_insulina,
             tipo_insulina,
             dose_unidades,
             aplicado_em,
+            local_aplicacao,
             observacoes,
             registrado_por_id
           )
-          values ($1, $2, $3, $4, $5, $6, $7)
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           returning
             id,
             idoso_id as "idosoId",
             glicemia_id as "glicemiaId",
+            nome_insulina as "nomeInsulina",
             tipo_insulina as "tipoInsulina",
             dose_unidades as "doseUnidades",
             aplicado_em as "aplicadoEm",
+            local_aplicacao as "localAplicacao",
             observacoes,
             registrado_por_id as "registradoPorId"
         `,
         [
           input.idosoId,
           input.glicemiaId ?? null,
+          input.nomeInsulina ?? null,
           input.tipoInsulina,
           input.doseUnidades,
           input.aplicadoEm,
+          input.localAplicacao ?? null,
           input.observacoes ?? null,
           registradoPorId,
         ],
@@ -637,9 +841,11 @@ export const glicemiaService = {
       id: `insulina-${Date.now()}`,
       idosoId: input.idosoId,
       glicemiaId: input.glicemiaId,
+      nomeInsulina: input.nomeInsulina,
       tipoInsulina: input.tipoInsulina,
       doseUnidades: input.doseUnidades,
       aplicadoEm: input.aplicadoEm,
+      localAplicacao: input.localAplicacao,
       observacoes: input.observacoes,
       registradoPorId: input.registradoPorId,
     };
