@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 
 class DashboardIdosoPage extends ConsumerWidget {
   const DashboardIdosoPage({super.key});
@@ -22,46 +23,52 @@ class DashboardIdosoPage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Text(
-                    'ello',
-                    style: TextStyle(
-                      color: Color(0xFF0E6F7E),
-                      fontSize: 42,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 0,
-                      height: 1,
+              StaggeredEntry(
+                index: 0,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Text(
+                      'ello',
+                      style: TextStyle(
+                        color: Color(0xFF0E6F7E),
+                        fontSize: 42,
+                        fontWeight: FontWeight.w300,
+                        letterSpacing: 0,
+                        height: 1,
+                      ),
                     ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: InkWell(
-                      onTap: () => context.go('/perfil?from=dashboard'),
-                      borderRadius: BorderRadius.circular(99),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFD1F2F6),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.person_outline_rounded,
-                          color: Color(0xFF238FA1),
-                          size: 27,
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: InkWell(
+                        onTap: () => context.go('/perfil?from=dashboard'),
+                        borderRadius: BorderRadius.circular(99),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFD1F2F6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person_outline_rounded,
+                            color: Color(0xFF238FA1),
+                            size: 27,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
-              _IdosoHeroCard(
-                nome: idoso?.nome ?? 'Selecione uma ficha',
-                idade: idoso?.idade,
-                foto: idoso?.urlFoto,
+              StaggeredEntry(
+                index: 1,
+                child: _IdosoHeroCard(
+                  nome: idoso?.nome ?? 'Selecione uma ficha',
+                  idade: idoso?.idade,
+                  foto: idoso?.urlFoto,
+                ),
               ),
               const Spacer(),
             ],
