@@ -118,6 +118,11 @@ export const iaService = {
     );
 
     const historico = await buscarMensagens(conversa.id);
+    const idosoId = input.idosoId ?? conversa.idoso_id;
+    const [usuarioNome, idosoNome] = await Promise.all([
+      buscarNomeUsuario(input.usuarioId),
+      idosoId ? buscarNomeIdoso(idosoId) : Promise.resolve(null),
+    ]);
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
     try {
@@ -128,10 +133,7 @@ export const iaService = {
             role: "user",
             parts: [
               {
-                text: montarPrompt(
-                  historico,
-                  input.idosoId ?? conversa.idoso_id,
-                ),
+                text: montarPrompt(historico, usuarioNome, idosoNome),
               },
             ],
           },
@@ -246,6 +248,22 @@ async function garantirTabelasIa() {
   `);
 }
 
+async function buscarNomeUsuario(usuarioId: string) {
+  const result = await getPool().query<{ nome: string }>(
+    "select nome from usuarios where id = $1 limit 1",
+    [usuarioId],
+  );
+  return result.rows[0]?.nome ?? null;
+}
+
+async function buscarNomeIdoso(idosoId: string) {
+  const result = await getPool().query<{ nome: string }>(
+    "select nome_completo as nome from fichas_idosos where id = $1 limit 1",
+    [idosoId],
+  );
+  return result.rows[0]?.nome ?? null;
+}
+
 async function buscarConversaDoUsuario(conversaId: string, usuarioId: string) {
   const result = await getPool().query<ConversaIaRow>(
     `
@@ -339,11 +357,18 @@ function gerarTitulo(mensagem: string) {
   return `${compacta.slice(0, 44).trim()}...`;
 }
 
-function montarPrompt(mensagens: MensagemIaRow[], idosoId?: string | null) {
+function montarPrompt(
+  mensagens: MensagemIaRow[],
+  usuarioNome: string | null,
+  idosoNome: string | null,
+) {
+  const remetenteUsuario = usuarioNome
+    ? `Cuidador/familiar (${usuarioNome})`
+    : "Cuidador/familiar";
   const historico = mensagens
     .map((mensagem) => {
       const remetente =
-        mensagem.remetente === "usuario" ? "Cuidador/familiar" : "Assistente";
+        mensagem.remetente === "usuario" ? remetenteUsuario : "Assistente";
       return `${remetente}: ${mensagem.conteudo}`;
     })
     .join("\n\n");
@@ -351,7 +376,12 @@ function montarPrompt(mensagens: MensagemIaRow[], idosoId?: string | null) {
   return [
     personalidade,
     "Responda em portugues do Brasil.",
-    idosoId ? `Contexto: a conversa esta relacionada ao idoso ${idosoId}.` : "",
+    usuarioNome
+      ? `Voce esta conversando com o cuidador/familiar chamado ${usuarioNome}. Trate-o pelo primeiro nome quando fizer sentido, nunca por um identificador tecnico ou codigo.`
+      : "Nao foi informado o nome do cuidador/familiar; nao invente um nome nem use codigos ou identificadores para se referir a ele.",
+    idosoNome
+      ? `A conversa esta relacionada ao idoso chamado ${idosoNome}.`
+      : "",
     "Historico da conversa:",
     historico,
   ]
