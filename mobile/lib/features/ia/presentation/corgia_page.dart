@@ -261,7 +261,11 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
                                 return const _TypingBubble();
                               }
 
-                              return _MessageBubble(message: _messages[index]);
+                              return _MessagePopIn(
+                                child: _MessageBubble(
+                                  message: _messages[index],
+                                ),
+                              );
                             },
                           ),
                   ),
@@ -520,6 +524,31 @@ class _ChatMessage {
   final bool isError;
 }
 
+class _MessagePopIn extends StatelessWidget {
+  const _MessagePopIn({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, builtChild) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 8),
+            child: builtChild,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({required this.message});
 
@@ -605,21 +634,74 @@ class _TypingBubble extends StatelessWidget {
           const _CoraAvatar(size: 44),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             decoration: BoxDecoration(
               color: const Color(0xFFD9E0E3),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFF087F8C),
-              ),
-            ),
+            child: const _TypingDots(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TypingDots extends StatefulWidget {
+  const _TypingDots();
+
+  @override
+  State<_TypingDots> createState() => _TypingDotsState();
+}
+
+class _TypingDotsState extends State<_TypingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 34,
+      height: 10,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(3, (index) {
+              final phase = (_controller.value - index * 0.2) % 1.0;
+              final bounce = phase < 0.5
+                  ? Curves.easeOut.transform(phase * 2)
+                  : Curves.easeIn.transform((1 - phase) * 2);
+              return Transform.translate(
+                offset: Offset(0, -bounce * 5),
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF087F8C),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              );
+            }),
+          );
+        },
       ),
     );
   }
