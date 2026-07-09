@@ -445,8 +445,11 @@ class _EquipamentoDetails extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 10),
                   itemCount: manutencoes.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) => _MaintenanceEntry(
-                    manutencao: manutencoes[index],
+                  itemBuilder: (context, index) => StaggeredEntry(
+                    index: index,
+                    child: _MaintenanceEntry(
+                      manutencao: manutencoes[index],
+                    ),
                   ),
                 ),
         ),
