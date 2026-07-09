@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 
 class SelecionarIdosoPage extends ConsumerWidget {
   const SelecionarIdosoPage({super.key});
@@ -48,7 +51,7 @@ class SelecionarIdosoPage extends ConsumerWidget {
                         height: 1.18,
                       ),
                     ),
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 22),
                     Expanded(
                       child: idososAsync.when(
                         data: (idosos) => _FichasGrid(idosos: idosos),
@@ -66,7 +69,7 @@ class SelecionarIdosoPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
-                      height: 40,
+                      height: 44,
                       child: OutlinedButton.icon(
                         onPressed: () => context.go('/idosos/convite'),
                         icon: const Icon(Icons.mail_outline_rounded, size: 19),
@@ -78,11 +81,11 @@ class SelecionarIdosoPage extends ConsumerWidget {
                             width: 1,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(13),
                           ),
                           textStyle: const TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -111,76 +114,63 @@ class ConviteIdosoPage extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 26),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: (constraints.maxHeight - 36)
-                            .clamp(0, double.infinity),
-                      ),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: IconButton(
-                                    onPressed: () => context.go('/idosos'),
-                                    icon: const Icon(
-                                      Icons.chevron_left_rounded,
-                                      color: Color(0xFF238FA1),
-                                      size: 32,
-                                    ),
-                                  ),
-                                ),
-                                const Text(
-                                  'ello',
-                                  style: TextStyle(
-                                    color: Color(0xFF0E6F7E),
-                                    fontSize: 34,
-                                    fontWeight: FontWeight.w300,
-                                    letterSpacing: 0,
-                                    height: 1,
-                                  ),
-                                ),
-                              ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 26),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            onPressed: () => context.go('/idosos'),
+                            icon: const Icon(
+                              Icons.chevron_left_rounded,
+                              color: Color(0xFF238FA1),
+                              size: 32,
                             ),
-                            const SizedBox(height: 24),
-                            const Text(
-                              'Entrar com convite',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 23,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Use o codigo enviado por outro cuidador\npara acessar uma ficha compartilhada',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Color(0xFF4C4C4C),
-                                fontSize: 11,
-                                height: 1.25,
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            const _InviteCard(),
-                            const Spacer(),
-                          ],
+                          ),
                         ),
+                        const Text(
+                          'ello',
+                          style: TextStyle(
+                            color: Color(0xFF0E6F7E),
+                            fontSize: 34,
+                            fontWeight: FontWeight.w300,
+                            letterSpacing: 0,
+                            height: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Entrar com convite',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Use o codigo enviado por outro cuidador\npara acessar uma ficha compartilhada',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF4C4C4C),
+                        fontSize: 11,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    const _InviteCard(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -246,179 +236,253 @@ class _FichasGrid extends ConsumerWidget {
         ref.invalidate(idososDoUsuarioProvider);
         await ref.read(idososDoUsuarioProvider.future);
       },
-      child: GridView.count(
+      child: GridView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.9,
-        children: [
-          for (final idoso in idosos)
-            _CompactGridCell(
-              child: _IdosoCard(
-                idoso: idoso,
-                onTap: () {
-                  ref.read(selectedIdosoProvider.notifier).state = idoso;
-                  context.go('/dashboard');
-                },
-              ),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 14,
+          childAspectRatio: 0.72,
+        ),
+        itemCount: idosos.length + 1,
+        itemBuilder: (context, index) {
+          if (index == idosos.length) {
+            return StaggeredEntry(
+              index: index,
+              child: _AddFichaCard(onTap: () => context.go('/idosos/cadastro')),
+            );
+          }
+
+          final idoso = idosos[index];
+          return StaggeredEntry(
+            index: index,
+            child: _IdosoPoster(
+              idoso: idoso,
+              onTap: () {
+                ref.read(selectedIdosoProvider.notifier).state = idoso;
+                context.go('/dashboard');
+              },
             ),
-          _CompactGridCell(
-            child: _AddFichaCard(onTap: () => context.go('/idosos/cadastro')),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 }
 
-class _IdosoCard extends StatelessWidget {
-  const _IdosoCard({
-    required this.idoso,
-    required this.onTap,
-  });
+const _posterGradients = [
+  [Color(0xFF0E6F7E), Color(0xFF3CAAB6)],
+  [Color(0xFF2A5D8A), Color(0xFF5AA3D0)],
+  [Color(0xFF7B4FA0), Color(0xFFB07FD1)],
+  [Color(0xFFC06B3E), Color(0xFFE8A868)],
+  [Color(0xFF3E8A5E), Color(0xFF7ECB93)],
+  [Color(0xFFB2455F), Color(0xFFE38299)],
+];
+
+List<Color> _gradientFor(String seed) {
+  final hash = seed.codeUnits.fold<int>(0, (acc, unit) => acc + unit);
+  return _posterGradients[hash % _posterGradients.length];
+}
+
+class _IdosoPoster extends StatefulWidget {
+  const _IdosoPoster({required this.idoso, required this.onTap});
 
   final IdosoResumo idoso;
   final VoidCallback onTap;
 
   @override
+  State<_IdosoPoster> createState() => _IdosoPosterState();
+}
+
+class _IdosoPosterState extends State<_IdosoPoster> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return _FichaTile(
-      onTap: onTap,
-      child: Stack(
-        children: [
-          Positioned(
-            right: 7,
-            top: 7,
-            child: Icon(
-              Icons.more_vert_rounded,
-              color: const Color(0xFF0E7890).withValues(alpha: 0.95),
-              size: 19,
-            ),
+    final idoso = widget.idoso;
+    final image = _avatarImage(idoso.urlFoto);
+    final gradient = _gradientFor(idoso.id.isEmpty ? idoso.nome : idoso.id);
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.last.withValues(alpha: 0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 35,
-                  backgroundColor: const Color(0xFFD1F2F6),
-                  backgroundImage: _avatarImage(idoso.urlFoto),
-                  child: idoso.urlFoto == null || idoso.urlFoto!.isEmpty
-                      ? const Icon(
-                          Icons.person_outline_rounded,
-                          color: Color(0xFF238FA1),
-                          size: 52,
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 9),
-                Text(
-                  _primeiroNome(idoso.nome),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (image != null)
+                Image(image: image, fit: BoxFit.cover)
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: gradient,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _iniciais(idoso.nome),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 46,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
-              ],
-            ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.65),
+                      ],
+                      stops: const [0.55, 1],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _primeiroNome(idoso.nome),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (idoso.idade > 0) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${idoso.idade} anos',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _CompactGridCell extends StatelessWidget {
-  const _CompactGridCell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      widthFactor: 0.82,
-      heightFactor: 0.82,
-      alignment: Alignment.topCenter,
-      child: child,
-    );
-  }
-}
-
-class _AddFichaCard extends StatelessWidget {
+class _AddFichaCard extends StatefulWidget {
   const _AddFichaCard({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
+  State<_AddFichaCard> createState() => _AddFichaCardState();
+}
+
+class _AddFichaCardState extends State<_AddFichaCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return _FichaTile(
-      onTap: onTap,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: const BoxDecoration(
-                color: Color(0xFFC8EAF0),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: Color(0xFF17324D),
-                size: 45,
-              ),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: _OutlinedCard(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFC8EAF0),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: Color(0xFF17324D),
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Adicionar\nficha',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF17324D),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 13),
-            const Text(
-              'Adicionar ficha',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _FichaTile extends StatelessWidget {
-  const _FichaTile({
-    required this.child,
-    required this.onTap,
-  });
+class _OutlinedCard extends StatelessWidget {
+  const _OutlinedCard({required this.child});
 
   final Widget child;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(9),
-      elevation: 3,
-      shadowColor: Colors.black.withValues(alpha: 0.18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: const Color(0xFF37AFC3), width: 1),
-          ),
-          child: child,
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4FBFC),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF37AFC3),
+          width: 1.6,
+          strokeAlign: BorderSide.strokeAlignInside,
         ),
       ),
+      child: child,
     );
   }
 }
@@ -565,6 +629,15 @@ class _ErrorState extends StatelessWidget {
 
 ImageProvider? _avatarImage(String? url) {
   if (url == null || url.isEmpty) return null;
+  if (url.startsWith('data:image')) {
+    final commaIndex = url.indexOf(',');
+    if (commaIndex == -1) return null;
+    try {
+      return MemoryImage(base64Decode(url.substring(commaIndex + 1)));
+    } catch (_) {
+      return null;
+    }
+  }
   final uri = Uri.tryParse(url);
   if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
   return NetworkImage(url);
@@ -574,4 +647,12 @@ String _primeiroNome(String nome) {
   final trimmed = nome.trim();
   if (trimmed.isEmpty) return 'Sem nome';
   return trimmed.split(RegExp(r'\s+')).first;
+}
+
+String _iniciais(String nome) {
+  final partes = nome.trim().split(RegExp(r'\s+'));
+  if (partes.isEmpty || partes.first.isEmpty) return '?';
+  final primeira = partes.first[0];
+  final ultima = partes.length > 1 ? partes.last[0] : '';
+  return '$primeira$ultima'.toUpperCase();
 }
