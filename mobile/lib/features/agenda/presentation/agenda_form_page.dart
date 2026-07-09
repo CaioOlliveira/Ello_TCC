@@ -126,8 +126,7 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
           frequencia: _frequencia,
           observacoes: _observacoesController.text.trim(),
           ativarLembrete: _lembrete,
-          antecedenciaLembreteMinutos:
-              _lembrete ? _antecedenciaMinutos : null,
+          antecedenciaLembreteMinutos: _lembrete ? _antecedenciaMinutos : null,
           status: _status,
         ),
       ),
@@ -317,7 +316,8 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                       DropdownMenuItem(value: 10, child: Text('10 min antes')),
                       DropdownMenuItem(value: 30, child: Text('30 min antes')),
                       DropdownMenuItem(value: 60, child: Text('1 hora antes')),
-                      DropdownMenuItem(value: 120, child: Text('2 horas antes')),
+                      DropdownMenuItem(
+                          value: 120, child: Text('2 horas antes')),
                       DropdownMenuItem(value: 1440, child: Text('1 dia antes')),
                     ],
                     onChanged: _lembrete
