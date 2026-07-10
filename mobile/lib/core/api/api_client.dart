@@ -417,6 +417,212 @@ class GlicemiaResumo {
   final int totalInsulinas;
 }
 
+class MedicamentoHorario {
+  const MedicamentoHorario({
+    required this.id,
+    required this.horario,
+    this.quantidadeDose,
+    this.unidadeDose,
+    this.diasSemana = const [],
+  });
+
+  factory MedicamentoHorario.fromJson(Map<String, dynamic> json) {
+    final dose = json['quantidadeDose'] ?? json['quantidade_dose'];
+    final diasRaw = (json['diasSemana'] ?? json['dias_semana'])?.toString();
+    final horarioTexto = json['horario']?.toString() ?? '';
+
+    return MedicamentoHorario(
+      id: json['id']?.toString() ?? '',
+      horario:
+          horarioTexto.length > 5 ? horarioTexto.substring(0, 5) : horarioTexto,
+      quantidadeDose: dose is num
+          ? dose.toDouble()
+          : double.tryParse(dose?.toString() ?? ''),
+      unidadeDose: (json['unidadeDose'] ?? json['unidade_dose'])?.toString(),
+      diasSemana: diasRaw == null || diasRaw.isEmpty
+          ? const []
+          : diasRaw.split(',').map((item) => item.trim()).toList(),
+    );
+  }
+
+  final String id;
+  final String horario;
+  final double? quantidadeDose;
+  final String? unidadeDose;
+  final List<String> diasSemana;
+}
+
+class MedicamentoResumo {
+  const MedicamentoResumo({
+    required this.id,
+    required this.nome,
+    this.dosagem,
+    this.formato,
+    this.quantidadeEstoque,
+    this.unidadeEstoque,
+    this.alertaEstoqueBaixo,
+    this.proximoHorario,
+    this.totalHorarios = 0,
+  });
+
+  factory MedicamentoResumo.fromJson(Map<String, dynamic> json) {
+    final estoque = json['quantidadeEstoque'];
+    final alerta = json['alertaEstoqueBaixo'];
+
+    return MedicamentoResumo(
+      id: json['id']?.toString() ?? '',
+      nome: json['nome']?.toString() ?? 'Sem nome',
+      dosagem: json['dosagem']?.toString(),
+      formato: json['formato']?.toString(),
+      quantidadeEstoque: estoque is num ? estoque.toDouble() : null,
+      unidadeEstoque: json['unidadeEstoque']?.toString(),
+      alertaEstoqueBaixo: alerta is num ? alerta.toDouble() : null,
+      proximoHorario: json['proximoHorario']?.toString(),
+      totalHorarios: json['totalHorarios'] is num
+          ? (json['totalHorarios'] as num).toInt()
+          : 0,
+    );
+  }
+
+  final String id;
+  final String nome;
+  final String? dosagem;
+  final String? formato;
+  final double? quantidadeEstoque;
+  final String? unidadeEstoque;
+  final double? alertaEstoqueBaixo;
+  final String? proximoHorario;
+  final int totalHorarios;
+
+  bool get estoqueBaixo =>
+      quantidadeEstoque != null &&
+      alertaEstoqueBaixo != null &&
+      quantidadeEstoque! <= alertaEstoqueBaixo!;
+}
+
+class MedicamentosResumo {
+  const MedicamentosResumo({
+    required this.medicamentos,
+    required this.totalMedicamentos,
+    this.proximoMedicamento,
+  });
+
+  factory MedicamentosResumo.fromJson(Map<String, dynamic> json) {
+    final medicamentos = json['medicamentos'];
+    final proximo = json['proximoMedicamento'];
+
+    return MedicamentosResumo(
+      proximoMedicamento: proximo is Map<String, dynamic>
+          ? MedicamentoResumo.fromJson(proximo)
+          : null,
+      medicamentos: medicamentos is List
+          ? medicamentos
+              .whereType<Map<String, dynamic>>()
+              .map(MedicamentoResumo.fromJson)
+              .toList()
+          : const [],
+      totalMedicamentos: json['totalMedicamentos'] is num
+          ? (json['totalMedicamentos'] as num).toInt()
+          : 0,
+    );
+  }
+
+  final MedicamentoResumo? proximoMedicamento;
+  final List<MedicamentoResumo> medicamentos;
+  final int totalMedicamentos;
+}
+
+class MedicamentoDetalhe {
+  const MedicamentoDetalhe({
+    required this.id,
+    required this.idosoId,
+    required this.nome,
+    this.dosagem,
+    this.formato,
+    this.instrucoes,
+    this.dataInicio,
+    this.dataFim,
+    this.quantidadeEstoque,
+    this.unidadeEstoque,
+    this.alertaEstoqueBaixo,
+    this.ativo = true,
+    this.horarios = const [],
+  });
+
+  factory MedicamentoDetalhe.fromJson(
+    Map<String, dynamic> json, {
+    List<MedicamentoHorario> horarios = const [],
+  }) {
+    final estoque = json['quantidadeEstoque'] ?? json['quantidade_estoque'];
+    final alerta = json['alertaEstoqueBaixo'] ?? json['alerta_estoque_baixo'];
+
+    return MedicamentoDetalhe(
+      id: json['id']?.toString() ?? '',
+      idosoId: (json['idosoId'] ?? json['idoso_id'])?.toString() ?? '',
+      nome: json['nome']?.toString() ?? '',
+      dosagem: json['dosagem']?.toString(),
+      formato: json['formato']?.toString(),
+      instrucoes: json['instrucoes']?.toString(),
+      dataInicio: (json['dataInicio'] ?? json['data_inicio'])?.toString(),
+      dataFim: (json['dataFim'] ?? json['data_fim'])?.toString(),
+      quantidadeEstoque:
+          estoque is num ? estoque.toDouble() : double.tryParse('$estoque'),
+      unidadeEstoque:
+          (json['unidadeEstoque'] ?? json['unidade_estoque'])?.toString(),
+      alertaEstoqueBaixo:
+          alerta is num ? alerta.toDouble() : double.tryParse('$alerta'),
+      ativo: json['ativo'] is bool ? json['ativo'] as bool : true,
+      horarios: horarios,
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final String nome;
+  final String? dosagem;
+  final String? formato;
+  final String? instrucoes;
+  final String? dataInicio;
+  final String? dataFim;
+  final double? quantidadeEstoque;
+  final String? unidadeEstoque;
+  final double? alertaEstoqueBaixo;
+  final bool ativo;
+  final List<MedicamentoHorario> horarios;
+}
+
+class HistoricoMedicamentoEntrada {
+  const HistoricoMedicamentoEntrada({
+    required this.id,
+    required this.usuarioNome,
+    required this.medicamentoNome,
+    required this.descricao,
+    required this.dataHora,
+    required this.badge,
+  });
+
+  factory HistoricoMedicamentoEntrada.fromJson(Map<String, dynamic> json) {
+    return HistoricoMedicamentoEntrada(
+      id: json['id']?.toString() ?? '',
+      usuarioNome: json['usuarioNome']?.toString() ?? 'Cuidador',
+      medicamentoNome: json['medicamentoNome']?.toString() ?? 'Medicamento',
+      descricao: json['descricao']?.toString() ?? '',
+      dataHora: DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
+          DateTime.now(),
+      badge: GlicemiaHistoricoBadge.fromJson(
+        json['badge'] is Map<String, dynamic> ? json['badge'] : null,
+      ),
+    );
+  }
+
+  final String id;
+  final String usuarioNome;
+  final String medicamentoNome;
+  final String descricao;
+  final DateTime dataHora;
+  final GlicemiaHistoricoBadge badge;
+}
+
 class InsumoResumo {
   const InsumoResumo({
     required this.id,
@@ -1239,6 +1445,272 @@ class ApiClient {
         error,
         fallback: 'Erro ao registrar uso de insulina.',
       );
+    }
+  }
+
+  Future<MedicamentosResumo> getResumoMedicamentos({
+    required String idosoId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.medicamentosResumo,
+        queryParameters: {'idosoId': idosoId},
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return MedicamentosResumo.fromJson(dados);
+      }
+
+      return MedicamentosResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao consultar medicamentos.');
+    }
+  }
+
+  Future<List<HistoricoMedicamentoEntrada>> getHistoricoMedicamentos({
+    required String idosoId,
+    DateTime? dataReferencia,
+    String periodo = 'dia',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.medicamentosHistorico,
+        queryParameters: {
+          'idosoId': idosoId,
+          'periodo': periodo,
+          if (dataReferencia != null)
+            'dataReferencia': _toIsoDateOnly(dataReferencia),
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is List) {
+        return dados
+            .whereType<Map<String, dynamic>>()
+            .map(HistoricoMedicamentoEntrada.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar histórico de medicamentos.',
+      );
+    }
+  }
+
+  Future<List<MedicamentoHorario>> getHorariosMedicamento(
+    String medicamentoId,
+  ) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.horariosMedicamento(medicamentoId),
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is List) {
+        return dados
+            .whereType<Map<String, dynamic>>()
+            .map(MedicamentoHorario.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao consultar horários.');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAdministracoesMedicamento(
+    String medicamentoId,
+  ) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.administracoesMedicamento(medicamentoId),
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is List) {
+        return dados.whereType<Map<String, dynamic>>().toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar administrações.',
+      );
+    }
+  }
+
+  Future<MedicamentoDetalhe> criarMedicamento({
+    required String idosoId,
+    required String nome,
+    String? dosagem,
+    String? formato,
+    String? instrucoes,
+    String? dataInicio,
+    String? dataFim,
+    double? quantidadeEstoque,
+    String? unidadeEstoque,
+    double? alertaEstoqueBaixo,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.medicamentos,
+        data: {
+          'idosoId': idosoId,
+          'nome': nome,
+          if (dosagem != null && dosagem.isNotEmpty) 'dosagem': dosagem,
+          if (formato != null && formato.isNotEmpty) 'formato': formato,
+          if (instrucoes != null && instrucoes.isNotEmpty)
+            'instrucoes': instrucoes,
+          if (dataInicio != null && dataInicio.isNotEmpty)
+            'dataInicio': dataInicio,
+          if (dataFim != null && dataFim.isNotEmpty) 'dataFim': dataFim,
+          if (quantidadeEstoque != null) 'quantidadeEstoque': quantidadeEstoque,
+          if (unidadeEstoque != null && unidadeEstoque.isNotEmpty)
+            'unidadeEstoque': unidadeEstoque,
+          if (alertaEstoqueBaixo != null)
+            'alertaEstoqueBaixo': alertaEstoqueBaixo,
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return MedicamentoDetalhe.fromJson(dados);
+      }
+
+      throw const ApiException('Erro ao registrar medicamento.');
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao registrar medicamento.');
+    }
+  }
+
+  Future<MedicamentoDetalhe> atualizarMedicamento({
+    required String id,
+    String? nome,
+    String? dosagem,
+    String? formato,
+    String? instrucoes,
+    String? dataInicio,
+    String? dataFim,
+    double? quantidadeEstoque,
+    String? unidadeEstoque,
+    double? alertaEstoqueBaixo,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.medicamento(id),
+        data: {
+          if (nome != null && nome.isNotEmpty) 'nome': nome,
+          if (dosagem != null && dosagem.isNotEmpty) 'dosagem': dosagem,
+          if (formato != null && formato.isNotEmpty) 'formato': formato,
+          if (instrucoes != null && instrucoes.isNotEmpty)
+            'instrucoes': instrucoes,
+          if (dataInicio != null && dataInicio.isNotEmpty)
+            'dataInicio': dataInicio,
+          if (dataFim != null && dataFim.isNotEmpty) 'dataFim': dataFim,
+          if (quantidadeEstoque != null) 'quantidadeEstoque': quantidadeEstoque,
+          if (unidadeEstoque != null && unidadeEstoque.isNotEmpty)
+            'unidadeEstoque': unidadeEstoque,
+          if (alertaEstoqueBaixo != null)
+            'alertaEstoqueBaixo': alertaEstoqueBaixo,
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return MedicamentoDetalhe.fromJson(dados);
+      }
+
+      throw const ApiException('Erro ao atualizar medicamento.');
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar medicamento.');
+    }
+  }
+
+  Future<void> removerMedicamento(String id) async {
+    try {
+      await _dio.delete<void>(ApiEndpoints.medicamento(id));
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao remover medicamento.');
+    }
+  }
+
+  Future<List<MedicamentoHorario>> substituirHorariosMedicamento({
+    required String medicamentoId,
+    required List<
+            ({String horario, double? quantidadeDose, String? unidadeDose})>
+        horarios,
+    List<String>? diasSemana,
+    String? registradoPorId,
+  }) async {
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        ApiEndpoints.horariosMedicamento(medicamentoId),
+        data: {
+          if (diasSemana != null && diasSemana.isNotEmpty)
+            'diasSemana': diasSemana,
+          'horarios': [
+            for (final item in horarios)
+              {
+                'horario': item.horario,
+                if (item.quantidadeDose != null)
+                  'quantidadeDose': item.quantidadeDose,
+                if (item.unidadeDose != null && item.unidadeDose!.isNotEmpty)
+                  'unidadeDose': item.unidadeDose,
+              },
+          ],
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is List) {
+        return dados
+            .whereType<Map<String, dynamic>>()
+            .map(MedicamentoHorario.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao salvar horários.');
+    }
+  }
+
+  Future<void> registrarAdministracaoMedicamento({
+    required String medicamentoId,
+    required String idosoId,
+    required DateTime horarioPrevisto,
+    required String status,
+    DateTime? administradoEm,
+    double? quantidadeDose,
+    String? registradoPorId,
+    String? observacoes,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.administracoesMedicamento(medicamentoId),
+        data: {
+          'idosoId': idosoId,
+          'horarioPrevisto': horarioPrevisto.toUtc().toIso8601String(),
+          'status': status,
+          if (administradoEm != null)
+            'administradoEm': administradoEm.toUtc().toIso8601String(),
+          if (quantidadeDose != null) 'quantidadeDose': quantidadeDose,
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
+          if (observacoes != null && observacoes.isNotEmpty)
+            'observacoes': observacoes,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao registrar dose.');
     }
   }
 

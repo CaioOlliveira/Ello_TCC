@@ -15,6 +15,9 @@ class ApiEndpoints {
   static const glicemiaResumo = '/glicemias/resumo';
   static const glicemiaHistorico = '/glicemias/historico';
   static const glicemiaInsulinas = '/glicemias/insulinas';
+  static const medicamentos = '/medicamentos';
+  static const medicamentosResumo = '/medicamentos/resumo';
+  static const medicamentosHistorico = '/medicamentos/historico';
   static String compromisso(String id) => '/agenda/$id';
   static String ocorrenciaCompromisso(String id) => '/agenda/$id/ocorrencias';
   static String equipamento(String id) => '/equipamentos/$id';
@@ -26,4 +29,8 @@ class ApiEndpoints {
   static String usuario(String id) => '/usuarios/$id';
   static String iaMensagens(String conversaId) =>
       '/ia/conversas/$conversaId/mensagens';
+  static String medicamento(String id) => '/medicamentos/$id';
+  static String horariosMedicamento(String id) => '/medicamentos/$id/horarios';
+  static String administracoesMedicamento(String id) =>
+      '/medicamentos/$id/administracoes';
 }
