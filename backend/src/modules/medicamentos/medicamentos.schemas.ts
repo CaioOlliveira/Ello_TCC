@@ -35,6 +35,7 @@ export const registrarAdministracaoSchema = z.object({
 });
 
 export const substituirHorariosMedicamentoSchema = z.object({
+  frequenciaTipo: z.enum(["diaria", "semanal", "alternado"]).default("diaria"),
   diasSemana: z.array(z.string().min(1)).optional(),
   horarios: z.array(
     z.object({

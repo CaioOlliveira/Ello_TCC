@@ -72,14 +72,76 @@ const inicioDoPeriodoHistorico = (
   return startOfDay(referencia);
 };
 
-const proximaOcorrencia = (horaMinuto: string, agora: Date): Date => {
-  const [hora, minuto] = horaMinuto.split(":").map((parte) => Number(parte));
-  const candidata = new Date(agora);
-  candidata.setHours(hora || 0, minuto || 0, 0, 0);
-  if (candidata.getTime() <= agora.getTime()) {
-    candidata.setDate(candidata.getDate() + 1);
+const NOMES_DIAS_SEMANA = [
+  "Domingo",
+  "Segunda",
+  "Terça",
+  "Quarta",
+  "Quinta",
+  "Sexta",
+  "Sábado",
+];
+
+const diaEhValido = (
+  candidata: Date,
+  tipoFrequencia: string,
+  diasSemana: string | null,
+  dataAncora: Date | null,
+): boolean => {
+  if (tipoFrequencia === "semanal" && diasSemana) {
+    const dias = new Set(diasSemana.split(",").map((item) => item.trim()));
+    return dias.has(NOMES_DIAS_SEMANA[candidata.getDay()]);
   }
-  return candidata;
+
+  if (tipoFrequencia === "alternado") {
+    if (!dataAncora) return true;
+
+    // data_inicio vem do banco como uma coluna "date" (sem hora), que o
+    // driver do Postgres materializa como meia-noite UTC. Comparamos os
+    // componentes de calendario (candidata em hora local, ancora em UTC)
+    // em vez de subtrair instantes, para nao depender do fuso do servidor.
+    const diaCandidataUtc = Date.UTC(
+      candidata.getFullYear(),
+      candidata.getMonth(),
+      candidata.getDate(),
+    );
+    const diaAncoraUtc = Date.UTC(
+      dataAncora.getUTCFullYear(),
+      dataAncora.getUTCMonth(),
+      dataAncora.getUTCDate(),
+    );
+    const diffDias = Math.round(
+      (diaCandidataUtc - diaAncoraUtc) / (1000 * 60 * 60 * 24),
+    );
+    return diffDias % 2 === 0;
+  }
+
+  return true;
+};
+
+const proximaOcorrencia = (
+  horaMinuto: string,
+  agora: Date,
+  tipoFrequencia: string,
+  diasSemana: string | null,
+  dataAncora: Date | null,
+): Date | null => {
+  const [hora, minuto] = horaMinuto.split(":").map((parte) => Number(parte));
+
+  for (let offset = 0; offset < 15; offset++) {
+    const candidata = new Date(agora);
+    candidata.setDate(candidata.getDate() + offset);
+    candidata.setHours(hora || 0, minuto || 0, 0, 0);
+
+    if (candidata.getTime() <= agora.getTime()) continue;
+    if (!diaEhValido(candidata, tipoFrequencia, diasSemana, dataAncora)) {
+      continue;
+    }
+
+    return candidata;
+  }
+
+  return null;
 };
 
 const formatarHorario = (valor: unknown) => {
@@ -210,10 +272,11 @@ export const medicamentosService = {
     const medicamento = await this.buscarPorId(medicamentoId);
     const pool = getPool();
     const client = await pool.connect();
-    const diasSemana = input.diasSemana?.length
-      ? input.diasSemana.join(",")
-      : null;
-    const tipoFrequencia = diasSemana ? "semanal" : "diaria";
+    const tipoFrequencia = input.frequenciaTipo;
+    const diasSemana =
+      tipoFrequencia === "semanal" && input.diasSemana?.length
+        ? input.diasSemana.join(",")
+        : null;
 
     try {
       await client.query("begin");
@@ -299,10 +362,22 @@ export const medicamentosService = {
     let proximaData: Date | null = null;
 
     for (const medicamento of medicamentosResult.rows) {
-      const horariosResult = await getPool().query<{ horario: string }>(
-        "select horario from horarios_medicamentos where medicamento_id = $1",
+      const horariosResult = await getPool().query<{
+        horario: string;
+        tipo_frequencia: string | null;
+        dias_semana: string | null;
+      }>(
+        `
+          select horario, tipo_frequencia, dias_semana
+          from horarios_medicamentos
+          where medicamento_id = $1
+        `,
         [medicamento.id],
       );
+
+      const dataAncora = medicamento.data_inicio
+        ? new Date(String(medicamento.data_inicio))
+        : null;
 
       let proximoHorario: string | null = null;
       let proximaOcorrenciaMedicamento: Date | null = null;
@@ -310,7 +385,14 @@ export const medicamentosService = {
       for (const row of horariosResult.rows) {
         const horaFormatada = formatarHorario(row.horario);
         if (!horaFormatada) continue;
-        const ocorrencia = proximaOcorrencia(horaFormatada, agora);
+        const ocorrencia = proximaOcorrencia(
+          horaFormatada,
+          agora,
+          row.tipo_frequencia ?? "diaria",
+          row.dias_semana,
+          dataAncora,
+        );
+        if (!ocorrencia) continue;
         if (
           !proximaOcorrenciaMedicamento ||
           ocorrencia < proximaOcorrenciaMedicamento
