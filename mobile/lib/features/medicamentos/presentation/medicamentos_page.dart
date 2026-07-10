@@ -971,6 +971,7 @@ class _MedicamentoFormView extends StatelessWidget {
     final escolhido = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -980,11 +981,12 @@ class _MedicamentoFormView extends StatelessWidget {
     if (escolhido != null) onFormatoChanged(escolhido);
   }
 
-  /// O que mostrar como chips no campo Frequência, de acordo com o tipo
-  /// selecionado ('diaria' nao mostra chip, ja que e o padrao implicito).
+  /// O que mostrar como chip no campo Frequência. As tres opcoes (diaria,
+  /// dias especificos, alternado) sao mutuamente exclusivas.
   List<String> get _frequenciaChips {
     if (frequenciaTipo == 'alternado') return const [_kDiaAlternado];
     if (frequenciaTipo == 'semanal') return diasSemana;
+    if (frequenciaTipo == 'diaria') return const [_kTodosOsDias];
     return const [];
   }
 
@@ -998,27 +1000,20 @@ class _MedicamentoFormView extends StatelessWidget {
   }
 
   Future<void> _escolherFrequencia(BuildContext context) async {
-    final diasEscolhidos =
-        frequenciaTipo == 'semanal' ? diasSemana : const <String>[];
-    final diasDisponiveis =
-        _kDiasSemana.where((dia) => !diasEscolhidos.contains(dia)).toList();
-
     final escolha = await showModalBottomSheet<_FrequenciaEscolha>(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
-      builder: (context) => _FrequenciaSheet(diasDisponiveis: diasDisponiveis),
+      builder: (context) => _FrequenciaSheet(
+        tipoInicial: frequenciaTipo,
+        diasIniciais: diasSemana,
+      ),
     );
 
-    if (escolha == null) return;
-
-    if (escolha.dia != null) {
-      onFrequenciaChanged('semanal', [...diasEscolhidos, escolha.dia!]);
-    } else {
-      onFrequenciaChanged(escolha.tipo, const []);
-    }
+    if (escolha != null) onFrequenciaChanged(escolha.tipo, escolha.dias);
   }
 
   Future<void> _escolherHorario(BuildContext context) async {
@@ -1476,84 +1471,179 @@ class _OptionSheet extends StatelessWidget {
 }
 
 class _FrequenciaEscolha {
-  const _FrequenciaEscolha.tipo(this.tipo) : dia = null;
-  const _FrequenciaEscolha.dia(this.dia) : tipo = 'semanal';
+  const _FrequenciaEscolha({required this.tipo, required this.dias});
 
   final String tipo;
-  final String? dia;
+  final List<String> dias;
 }
 
-class _FrequenciaSheet extends StatelessWidget {
-  const _FrequenciaSheet({required this.diasDisponiveis});
+/// Bottom sheet com as 3 frequencias mutuamente exclusivas ("Todos os
+/// dias", "Dias especificos" e "Dia sim, dia nao"). Quando "Dias
+/// especificos" e escolhido, os chips de dia da semana aparecem para
+/// selecao multipla; as outras duas opcoes fecham a folha na hora, ja
+/// que nao precisam de mais nenhuma escolha.
+class _FrequenciaSheet extends StatefulWidget {
+  const _FrequenciaSheet({
+    required this.tipoInicial,
+    required this.diasIniciais,
+  });
 
-  final List<String> diasDisponiveis;
+  final String tipoInicial;
+  final List<String> diasIniciais;
+
+  @override
+  State<_FrequenciaSheet> createState() => _FrequenciaSheetState();
+}
+
+class _FrequenciaSheetState extends State<_FrequenciaSheet> {
+  late String _tipo;
+  late Set<String> _dias;
+
+  @override
+  void initState() {
+    super.initState();
+    _tipo = widget.tipoInicial;
+    _dias = widget.tipoInicial == 'semanal'
+        ? widget.diasIniciais.toSet()
+        : <String>{};
+  }
+
+  void _selecionarModo(String tipo) {
+    setState(() => _tipo = tipo);
+    if (tipo != 'semanal') {
+      Navigator.of(context).pop(_FrequenciaEscolha(tipo: tipo, dias: const []));
+    }
+  }
+
+  void _confirmarDiasEspecificos() {
+    Navigator.of(context).pop(
+      _FrequenciaEscolha(tipo: 'semanal', dias: _dias.toList()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Frequência',
-              style: TextStyle(
-                color: Color(0xFF073248),
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+        padding: EdgeInsets.fromLTRB(
+          18,
+          16,
+          18,
+          MediaQuery.viewInsetsOf(context).bottom + 16,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Frequência',
+                style: TextStyle(
+                  color: Color(0xFF073248),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(
-                Icons.event_repeat_rounded,
-                color: Color(0xFF2FA3B5),
+              const SizedBox(height: 6),
+              _FrequenciaOpcao(
+                icon: Icons.event_repeat_rounded,
+                label: _kTodosOsDias,
+                selecionado: _tipo == 'diaria',
+                onTap: () => _selecionarModo('diaria'),
               ),
-              title: const Text(_kTodosOsDias),
-              onTap: () => Navigator.of(context)
-                  .pop(const _FrequenciaEscolha.tipo('diaria')),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(
-                Icons.swap_horiz_rounded,
-                color: Color(0xFF2FA3B5),
+              _FrequenciaOpcao(
+                icon: Icons.swap_horiz_rounded,
+                label: _kDiaAlternado,
+                selecionado: _tipo == 'alternado',
+                onTap: () => _selecionarModo('alternado'),
               ),
-              title: const Text(_kDiaAlternado),
-              onTap: () => Navigator.of(context)
-                  .pop(const _FrequenciaEscolha.tipo('alternado')),
-            ),
-            if (diasDisponiveis.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
-                child: Divider(height: 1),
+              _FrequenciaOpcao(
+                icon: Icons.event_note_rounded,
+                label: 'Dias específicos',
+                selecionado: _tipo == 'semanal',
+                onTap: () => _selecionarModo('semanal'),
               ),
-              const Padding(
-                padding: EdgeInsets.only(top: 4, bottom: 2),
-                child: Text(
-                  'Ou dias específicos',
-                  style: TextStyle(
-                    color: Color(0xFF8A8A8A),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+              if (_tipo == 'semanal') ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final dia in _kDiasSemana)
+                      FilterChip(
+                        label: Text(dia),
+                        selected: _dias.contains(dia),
+                        onSelected: (selecionado) => setState(() {
+                          if (selecionado) {
+                            _dias.add(dia);
+                          } else {
+                            _dias.remove(dia);
+                          }
+                        }),
+                        selectedColor: const Color(0xFFD8F1F4),
+                        checkmarkColor: const Color(0xFF0E6F7E),
+                        labelStyle: TextStyle(
+                          color: _dias.contains(dia)
+                              ? const Color(0xFF0E6F7E)
+                              : const Color(0xFF394B52),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: FilledButton(
+                    onPressed: _dias.isEmpty ? null : _confirmarDiasEspecificos,
+                    style: _primaryButtonStyle(),
+                    child: const Text('Aplicar'),
                   ),
                 ),
-              ),
-              for (final dia in diasDisponiveis)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(dia),
-                  onTap: () =>
-                      Navigator.of(context).pop(_FrequenciaEscolha.dia(dia)),
-                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _FrequenciaOpcao extends StatelessWidget {
+  const _FrequenciaOpcao({
+    required this.icon,
+    required this.label,
+    required this.selecionado,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selecionado;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        icon,
+        color: selecionado ? const Color(0xFF0E6F7E) : const Color(0xFF8A8A8A),
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: selecionado ? const Color(0xFF0E6F7E) : Colors.black,
+          fontWeight: selecionado ? FontWeight.w700 : FontWeight.w400,
+        ),
+      ),
+      trailing: Icon(
+        selecionado ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selecionado ? const Color(0xFF0E6F7E) : const Color(0xFFBBBBBB),
+      ),
+      onTap: onTap,
     );
   }
 }
