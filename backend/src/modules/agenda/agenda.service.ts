@@ -1,19 +1,21 @@
+import { AppError } from "../../common/errors/app-error.js";
 import { registrarHistorico } from "../../database/audit.js";
+import { getPool } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
 import { notificacoesService } from "../notificacoes/notificacoes.service.js";
 import {
   deleteRow,
-  getRowById,
   insertRow,
-  listRows,
   updateRow,
 } from "../../database/simple-crud.js";
 import type {
   AtualizarEventoInput,
+  AtualizarOcorrenciaEventoInput,
   CriarEventoInput,
 } from "./agenda.schemas.js";
 
 const table = "tarefas";
+const occurrencesTable = "tarefas_ocorrencias_status";
 const notFound = ["TAREFA_NAO_ENCONTRADA", "Tarefa nao encontrada."] as const;
 
 const fields = {
@@ -34,19 +36,94 @@ const fields = {
 } as const;
 
 export const agendaService = {
+  async garantirTabelaOcorrencias() {
+    await getPool().query(`
+      create table if not exists ${occurrencesTable} (
+        tarefa_id uuid not null references ${table}(id) on delete cascade,
+        data_ocorrencia date not null,
+        status text not null,
+        criado_em timestamptz not null default now(),
+        atualizado_em timestamptz not null default now(),
+        primary key (tarefa_id, data_ocorrencia)
+      )
+    `);
+  },
+
   async listar(limit: number, offset: number, idosoId?: string) {
-    return listRows<Record<string, unknown>>(table, {
-      limit,
-      offset,
-      where: idosoId ? "idoso_id = $1" : undefined,
-      params: idosoId ? [idosoId] : undefined,
-      orderBy:
-        "data_compromisso asc nulls last, hora_compromisso asc nulls last",
-    });
+    await this.garantirTabelaOcorrencias();
+    const where = idosoId ? "where t.idoso_id = $1" : "";
+    const params = idosoId ? [idosoId] : [];
+
+    const countResult = await getPool().query<{ total: string }>(
+      `select count(*) as total from ${table} t ${where}`,
+      params,
+    );
+
+    const result = await getPool().query<Record<string, unknown>>(
+      `
+        select
+          t.*,
+          u.nome as criado_por_nome,
+          coalesce(
+            json_agg(
+              json_build_object(
+                'data_ocorrencia', tos.data_ocorrencia,
+                'status', tos.status
+              )
+              order by tos.data_ocorrencia
+            ) filter (where tos.tarefa_id is not null),
+            '[]'::json
+          ) as ocorrencias_status
+        from ${table} t
+        left join usuarios u on u.id = t.criado_por_id
+        left join ${occurrencesTable} tos on tos.tarefa_id = t.id
+        ${where}
+        group by t.id, u.nome
+        order by t.data_compromisso asc nulls last, t.hora_compromisso asc nulls last
+        limit $${params.length + 1} offset $${params.length + 2}
+      `,
+      [...params, limit, offset],
+    );
+
+    return {
+      dados: result.rows,
+      total: Number(countResult.rows[0]?.total ?? 0),
+    };
   },
 
   async buscarPorId(id: string) {
-    return getRowById<Record<string, unknown>>(table, id, ...notFound);
+    await this.garantirTabelaOcorrencias();
+    const result = await getPool().query<Record<string, unknown>>(
+      `
+        select
+          t.*,
+          u.nome as criado_por_nome,
+          coalesce(
+            json_agg(
+              json_build_object(
+                'data_ocorrencia', tos.data_ocorrencia,
+                'status', tos.status
+              )
+              order by tos.data_ocorrencia
+            ) filter (where tos.tarefa_id is not null),
+            '[]'::json
+          ) as ocorrencias_status
+        from ${table} t
+        left join usuarios u on u.id = t.criado_por_id
+        left join ${occurrencesTable} tos on tos.tarefa_id = t.id
+        where t.id = $1
+        group by t.id, u.nome
+        limit 1
+      `,
+      [id],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new AppError(notFound[0], notFound[1], 404);
+    }
+
+    return row;
   },
 
   async criar(input: CriarEventoInput) {
@@ -97,7 +174,7 @@ export const agendaService = {
       });
     }
 
-    return evento;
+    return this.buscarPorId(String(evento.id));
   },
 
   async atualizar(id: string, input: AtualizarEventoInput) {
@@ -115,7 +192,38 @@ export const agendaService = {
       dadosAnteriores: anterior,
       dadosNovos: atualizado,
     });
-    return atualizado;
+    return this.buscarPorId(String(atualizado.id));
+  },
+
+  async atualizarOcorrencia(
+    id: string,
+    input: AtualizarOcorrenciaEventoInput,
+  ) {
+    await this.buscarPorId(id);
+    await this.garantirTabelaOcorrencias();
+
+    if (input.status === "agendado") {
+      await getPool().query(
+        `delete from ${occurrencesTable} where tarefa_id = $1 and data_ocorrencia = $2`,
+        [id, input.dataOcorrencia],
+      );
+    } else {
+      await getPool().query(
+        `
+          insert into ${occurrencesTable} (
+            tarefa_id,
+            data_ocorrencia,
+            status
+          )
+          values ($1, $2, $3)
+          on conflict (tarefa_id, data_ocorrencia)
+          do update set status = excluded.status, atualizado_em = now()
+        `,
+        [id, input.dataOcorrencia, input.status],
+      );
+    }
+
+    return this.buscarPorId(id);
   },
 
   async remover(id: string) {

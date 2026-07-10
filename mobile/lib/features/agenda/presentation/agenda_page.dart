@@ -113,7 +113,12 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     final previousItems = List<AgendaCompromisso>.from(_items);
     final localId =
         item?.id ?? 'local-${DateTime.now().microsecondsSinceEpoch}';
-    final localItem = _itemFromFormData(data, id: localId);
+    final localItem = _itemFromFormData(
+      data,
+      id: localId,
+      criadoPorId: usuario?.id,
+      criadoPorNome: usuario?.nome,
+    );
     final payload = data.toPayload(
       idosoId: idoso.id,
       criadoPorId: usuario?.id,
@@ -155,7 +160,9 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir compromisso'),
-        content: Text('Deseja excluir "${item.titulo}"?'),
+        content: Text(
+          'Deseja excluir "${item.titulo}"? Se for recorrente, todos os proximos dias tambem serao removidos.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -192,7 +199,80 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
 
   Future<void> _toggleStatus(AgendaCompromisso item) async {
     final nextStatus = item.status == 'concluido' ? 'agendado' : 'concluido';
+    final occurrenceDate = item.dataOcorrencia ?? _selectedDay;
+    final occurrenceKey = formatAgendaIsoDate(occurrenceDate);
+    final sourceItem = _items.firstWhere(
+      (current) => current.id == item.id,
+      orElse: () => item,
+    );
+    final previousItems = List<AgendaCompromisso>.from(_items);
+    final optimisticStatuses = Map<String, String>.from(
+      sourceItem.ocorrenciasStatus,
+    );
+    if (nextStatus == 'agendado') {
+      optimisticStatuses.remove(occurrenceKey);
+    } else {
+      optimisticStatuses[occurrenceKey] = nextStatus;
+    }
 
+    setState(() {
+      _saving = true;
+      _upsertItem(sourceItem.copyWith(ocorrenciasStatus: optimisticStatuses));
+    });
+
+    try {
+      final response =
+          await ref.read(apiClientProvider).atualizarOcorrenciaCompromisso(
+                id: item.id,
+                dataOcorrencia: occurrenceKey,
+                status: nextStatus,
+              );
+      if (!mounted) return;
+      final serverItem = _itemFromResponse(
+        response,
+        fallback: sourceItem.copyWith(ocorrenciasStatus: optimisticStatuses),
+      );
+      if (serverItem != null) {
+        setState(() => _upsertItem(serverItem));
+      }
+    } on ApiException {
+      if (!mounted) return;
+      setState(() => _items = previousItems);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _items = previousItems);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _cancel(AgendaCompromisso item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar compromisso'),
+        content: Text(
+          'Deseja cancelar "${item.titulo}"? Se for recorrente, ele deixara de aparecer nos proximos dias.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Voltar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Cancelar compromisso'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _updateStatus(item, 'cancelado');
+    }
+  }
+
+  Future<void> _updateStatus(AgendaCompromisso item, String nextStatus) async {
     final previousItems = List<AgendaCompromisso>.from(_items);
     setState(() {
       _saving = true;
@@ -225,6 +305,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   AgendaCompromisso _itemFromFormData(
     AgendaCompromissoFormData data, {
     required String id,
+    String? criadoPorId,
+    String? criadoPorNome,
   }) {
     return AgendaCompromisso(
       id: id,
@@ -237,6 +319,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       ativarLembrete: data.ativarLembrete,
       antecedenciaLembreteMinutos: data.antecedenciaLembreteMinutos ?? 30,
       status: data.status,
+      criadoPorId: criadoPorId,
+      criadoPorNome: criadoPorNome,
     );
   }
 
@@ -277,9 +361,26 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   List<AgendaCompromisso> get _itemsForSelectedDay {
-    final items =
-        _items.where((item) => sameAgendaDay(item.dataHora, _selectedDay));
-    return items.toList()..sort((a, b) => a.dataHora.compareTo(b.dataHora));
+    final items = _items.where(
+      (item) => agendaItemOccursOnDay(
+        start: item.dataHora,
+        frequencia: item.frequencia,
+        status: item.status,
+        day: _selectedDay,
+      ),
+    ).map(
+      (item) => item.copyWith(
+        status: item.statusNoDia(_selectedDay),
+        dataOcorrencia: _selectedDay,
+      ),
+    );
+    return items.toList()..sort(_compareAgendaTimes);
+  }
+
+  int _compareAgendaTimes(AgendaCompromisso a, AgendaCompromisso b) {
+    final aMinutes = (a.dataHora.hour * 60) + a.dataHora.minute;
+    final bMinutes = (b.dataHora.hour * 60) + b.dataHora.minute;
+    return aMinutes.compareTo(bMinutes);
   }
 
   @override
@@ -354,6 +455,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                                 onEdit: (item) => _openForm(item: item),
                                 onDelete: _delete,
                                 onStatusChanged: _toggleStatus,
+                                onCancel: _cancel,
                               )
                             : _MonthView(
                                 month: _visibleMonth,
@@ -493,6 +595,7 @@ class _DayView extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onStatusChanged,
+    required this.onCancel,
   });
 
   final DateTime selectedDay;
@@ -501,6 +604,7 @@ class _DayView extends StatelessWidget {
   final ValueChanged<AgendaCompromisso> onEdit;
   final ValueChanged<AgendaCompromisso> onDelete;
   final ValueChanged<AgendaCompromisso> onStatusChanged;
+  final ValueChanged<AgendaCompromisso> onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -563,6 +667,7 @@ class _DayView extends StatelessWidget {
                       onEdit: () => onEdit(item),
                       onDelete: () => onDelete(item),
                       onStatusChanged: () => onStatusChanged(item),
+                      onCancel: () => onCancel(item),
                     );
                   },
                 ),
@@ -650,12 +755,14 @@ class _TimelineItem extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onStatusChanged,
+    required this.onCancel,
   });
 
   final AgendaCompromisso item;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onStatusChanged;
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -738,6 +845,7 @@ class _TimelineItem extends StatelessWidget {
                         onSelected: (value) {
                           if (value == 'editar') onEdit();
                           if (value == 'status') onStatusChanged();
+                          if (value == 'cancelar') onCancel();
                           if (value == 'excluir') onDelete();
                         },
                         itemBuilder: (context) => [
@@ -750,6 +858,10 @@ class _TimelineItem extends StatelessWidget {
                             child: Text(
                               done ? 'Reabrir' : 'Concluir',
                             ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'cancelar',
+                            child: Text('Cancelar'),
                           ),
                           const PopupMenuItem(
                             value: 'excluir',
@@ -779,6 +891,31 @@ class _TimelineItem extends StatelessWidget {
                       ),
                     ),
                   ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.person_outline_rounded,
+                        color: Color(0xFF1995A8),
+                        size: 15,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item.criadoPorNome?.isNotEmpty == true
+                              ? 'Adicionado por ${item.criadoPorNome}'
+                              : 'Cuidador nao informado',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF4F6B72),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -871,13 +1008,13 @@ class _MonthView extends StatelessWidget {
         const SizedBox(height: 16),
         const Row(
           children: [
-            _CalendarWeekday('Sun'),
-            _CalendarWeekday('Mon'),
-            _CalendarWeekday('Tue'),
-            _CalendarWeekday('Wed'),
-            _CalendarWeekday('Thu'),
-            _CalendarWeekday('Fri'),
-            _CalendarWeekday('Sat'),
+            _CalendarWeekday('Dom'),
+            _CalendarWeekday('Seg'),
+            _CalendarWeekday('Ter'),
+            _CalendarWeekday('Qua'),
+            _CalendarWeekday('Qui'),
+            _CalendarWeekday('Sex'),
+            _CalendarWeekday('Sab'),
           ],
         ),
         const SizedBox(height: 8),
@@ -914,7 +1051,11 @@ class _CalendarWeekday extends StatelessWidget {
       child: Text(
         label,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Color(0xFF777777), fontSize: 9),
+        style: const TextStyle(
+          color: Color(0xFF4F4F4F),
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -938,27 +1079,44 @@ class _CalendarCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (dayNumber == null) {
-      return const SizedBox(height: 69);
+      return const SizedBox(height: 106);
     }
 
     final day = DateTime(month.year, month.month, dayNumber!);
     final dayItems = items
-        .where((item) => sameAgendaDay(item.dataHora, day))
-        .take(3)
+        .where(
+          (item) => agendaItemOccursOnDay(
+            start: item.dataHora,
+            frequencia: item.frequencia,
+            status: item.status,
+            day: day,
+          ),
+        )
+        .take(2)
         .toList();
     final selected = sameAgendaDay(day, selectedDay);
+    final totalItems = items
+        .where(
+          (item) => agendaItemOccursOnDay(
+            start: item.dataHora,
+            frequencia: item.frequencia,
+            status: item.status,
+            day: day,
+          ),
+        )
+        .length;
 
     return InkWell(
       onTap: () => onDaySelected(day),
       borderRadius: BorderRadius.circular(5),
       child: Container(
-        height: 69,
-        padding: const EdgeInsets.fromLTRB(2, 2, 2, 1),
+        height: 106,
+        padding: const EdgeInsets.fromLTRB(2, 5, 2, 3),
         child: Column(
           children: [
             Container(
-              width: 18,
-              height: 18,
+              width: 28,
+              height: 28,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected ? const Color(0xFF003B4F) : Colors.transparent,
@@ -968,35 +1126,41 @@ class _CalendarCell extends StatelessWidget {
                 '$dayNumber',
                 style: TextStyle(
                   color: selected ? Colors.white : Colors.black,
-                  fontSize: 9,
+                  fontSize: 15,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
                 ),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             for (final item in dayItems)
               Container(
                 width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 2),
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                margin: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 decoration: BoxDecoration(
                   color: agendaTagColor(item.tag),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(3),
                 ),
                 child: Text(
                   item.titulo,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 6, height: 1),
+                  style: const TextStyle(
+                    color: Color(0xFF073248),
+                    fontSize: 10,
+                    height: 1.1,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            if (items
-                    .where((item) => sameAgendaDay(item.dataHora, day))
-                    .length >
-                3)
-              const Text(
-                'view more',
-                style: TextStyle(color: Color(0xFF1696AA), fontSize: 7),
+            if (totalItems > 2)
+              Text(
+                '+${totalItems - 2} mais',
+                style: const TextStyle(
+                  color: Color(0xFF1696AA),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
           ],
         ),

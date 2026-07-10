@@ -10,6 +10,10 @@ class AgendaCompromisso {
     required this.ativarLembrete,
     required this.antecedenciaLembreteMinutos,
     required this.status,
+    this.ocorrenciasStatus = const {},
+    this.dataOcorrencia,
+    this.criadoPorNome,
+    this.criadoPorId,
   });
 
   factory AgendaCompromisso.fromJson(Map<String, dynamic> json) {
@@ -43,6 +47,13 @@ class AgendaCompromisso {
       antecedenciaLembreteMinutos:
           lembrete is num ? lembrete.toInt() : int.tryParse('$lembrete') ?? 30,
       status: json['status']?.toString() ?? 'agendado',
+      ocorrenciasStatus: _parseOcorrenciasStatus(
+        json['ocorrencias_status'] ?? json['ocorrenciasStatus'],
+      ),
+      criadoPorNome: (json['criado_por_nome'] ?? json['criadoPorNome'])
+          ?.toString()
+          .trim(),
+      criadoPorId: (json['criado_por_id'] ?? json['criadoPorId'])?.toString(),
     );
   }
 
@@ -56,6 +67,10 @@ class AgendaCompromisso {
   final bool ativarLembrete;
   final int antecedenciaLembreteMinutos;
   final String status;
+  final Map<String, String> ocorrenciasStatus;
+  final DateTime? dataOcorrencia;
+  final String? criadoPorNome;
+  final String? criadoPorId;
 
   AgendaCompromisso copyWith({
     String? id,
@@ -68,6 +83,10 @@ class AgendaCompromisso {
     bool? ativarLembrete,
     int? antecedenciaLembreteMinutos,
     String? status,
+    Map<String, String>? ocorrenciasStatus,
+    DateTime? dataOcorrencia,
+    String? criadoPorNome,
+    String? criadoPorId,
   }) {
     return AgendaCompromisso(
       id: id ?? this.id,
@@ -81,7 +100,19 @@ class AgendaCompromisso {
       antecedenciaLembreteMinutos:
           antecedenciaLembreteMinutos ?? this.antecedenciaLembreteMinutos,
       status: status ?? this.status,
+      ocorrenciasStatus: ocorrenciasStatus ?? this.ocorrenciasStatus,
+      dataOcorrencia: dataOcorrencia ?? this.dataOcorrencia,
+      criadoPorNome: criadoPorNome ?? this.criadoPorNome,
+      criadoPorId: criadoPorId ?? this.criadoPorId,
     );
+  }
+
+  String statusNoDia(DateTime day) {
+    final statusDaOcorrencia = ocorrenciasStatus[_formatPayloadDate(day)];
+    if (statusDaOcorrencia != null) return statusDaOcorrencia;
+    if (status == 'cancelado') return status;
+    if (_isRecurringFrequency(frequencia)) return 'agendado';
+    return status;
   }
 }
 
@@ -192,8 +223,8 @@ String _normalizeFrequencia(dynamic value) {
     case 'anualmente':
       return 'Anualmente';
     case 'nao repetir':
-    case 'não repetir':
-      return 'Não repetir';
+    case 'n\u00e3o repetir':
+      return 'Nao repetir';
     default:
       return 'Semanalmente';
   }
@@ -224,4 +255,31 @@ String? _parseTag(dynamic value) {
   }
 
   return null;
+}
+
+Map<String, String> _parseOcorrenciasStatus(dynamic value) {
+  if (value is! List) return const {};
+
+  final result = <String, String>{};
+  for (final item in value) {
+    if (item is! Map) continue;
+    final date = _datePart(item['data_ocorrencia'] ?? item['dataOcorrencia']);
+    final status = item['status']?.toString();
+    if (date != null && status != null && status.isNotEmpty) {
+      result[date] = status;
+    }
+  }
+  return result;
+}
+
+bool _isRecurringFrequency(String value) {
+  final normalized = value.toLowerCase().trim();
+  return normalized == 'diario' ||
+      normalized == 'diariamente' ||
+      normalized == 'semanal' ||
+      normalized == 'semanalmente' ||
+      normalized == 'mensal' ||
+      normalized == 'mensalmente' ||
+      normalized == 'anual' ||
+      normalized == 'anualmente';
 }

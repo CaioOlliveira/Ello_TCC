@@ -5,7 +5,11 @@ import {
   getPagination,
   idParamSchema,
 } from "../../common/utils/request-query.js";
-import { atualizarEventoSchema, criarEventoSchema } from "./agenda.schemas.js";
+import {
+  atualizarEventoSchema,
+  atualizarOcorrenciaEventoSchema,
+  criarEventoSchema,
+} from "./agenda.schemas.js";
 import { agendaService } from "./agenda.service.js";
 
 export const listarCompromissos: RequestHandler = asyncHandler(
@@ -41,6 +45,14 @@ export const atualizarCompromisso: RequestHandler = asyncHandler(
     const { id } = idParamSchema.parse(req.params);
     const input = atualizarEventoSchema.parse(req.body);
     res.json({ dados: await agendaService.atualizar(id, input) });
+  },
+);
+
+export const atualizarOcorrenciaCompromisso: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const input = atualizarOcorrenciaEventoSchema.parse(req.body);
+    res.json({ dados: await agendaService.atualizarOcorrencia(id, input) });
   },
 );
 

@@ -121,6 +121,7 @@ class EquipamentoFormData {
   Map<String, dynamic> toPayload({
     required String idosoId,
     String? criadoPorId,
+    bool includeDefaultStatus = true,
   }) {
     return {
       'idosoId': idosoId,
@@ -144,7 +145,7 @@ class EquipamentoFormData {
       if (urlFoto != null && urlFoto!.isNotEmpty) 'urlFoto': urlFoto,
       if (observacoesSeguranca.isNotEmpty)
         'observacoesSeguranca': observacoesSeguranca,
-      'status': 'Em uso',
+      if (includeDefaultStatus) 'status': 'Em uso',
     };
   }
 }

@@ -118,6 +118,104 @@ class IdosoResumo {
   }
 }
 
+class AiConversa {
+  const AiConversa({
+    required this.id,
+    required this.usuarioId,
+    required this.titulo,
+    required this.criadoEm,
+    required this.atualizadoEm,
+    this.idosoId,
+  });
+
+  factory AiConversa.fromJson(Map<String, dynamic> json) {
+    return AiConversa(
+      id: json['id']?.toString() ?? '',
+      usuarioId:
+          json['usuarioId']?.toString() ?? json['usuario_id']?.toString() ?? '',
+      idosoId: json['idosoId']?.toString() ?? json['idoso_id']?.toString(),
+      titulo: json['titulo']?.toString() ?? 'Novo chat',
+      criadoEm: DateTime.tryParse(
+            json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
+          ) ??
+          DateTime.now(),
+      atualizadoEm: DateTime.tryParse(
+            json['atualizadoEm']?.toString() ??
+                json['atualizado_em']?.toString() ??
+                '',
+          ) ??
+          DateTime.now(),
+    );
+  }
+
+  final String id;
+  final String usuarioId;
+  final String? idosoId;
+  final String titulo;
+  final DateTime criadoEm;
+  final DateTime atualizadoEm;
+}
+
+class AiMensagem {
+  const AiMensagem({
+    required this.id,
+    required this.conversaId,
+    required this.remetente,
+    required this.conteudo,
+    required this.criadoEm,
+  });
+
+  factory AiMensagem.fromJson(Map<String, dynamic> json) {
+    return AiMensagem(
+      id: json['id']?.toString() ?? '',
+      conversaId: json['conversaId']?.toString() ??
+          json['conversa_id']?.toString() ??
+          '',
+      remetente: json['remetente']?.toString() ?? 'ia',
+      conteudo: json['conteudo']?.toString() ?? '',
+      criadoEm: DateTime.tryParse(
+            json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
+          ) ??
+          DateTime.now(),
+    );
+  }
+
+  final String id;
+  final String conversaId;
+  final String remetente;
+  final String conteudo;
+  final DateTime criadoEm;
+
+  bool get fromUser => remetente == 'usuario';
+}
+
+class AiPerguntaResposta {
+  const AiPerguntaResposta({
+    required this.resposta,
+    this.conversa,
+    this.mensagem,
+  });
+
+  factory AiPerguntaResposta.fromJson(Map<String, dynamic> json) {
+    final conversa = json['conversa'];
+    final mensagem = json['mensagem'];
+
+    return AiPerguntaResposta(
+      resposta: json['resposta']?.toString() ?? '',
+      conversa: conversa is Map<String, dynamic>
+          ? AiConversa.fromJson(conversa)
+          : null,
+      mensagem: mensagem is Map<String, dynamic>
+          ? AiMensagem.fromJson(mensagem)
+          : null,
+    );
+  }
+
+  final String resposta;
+  final AiConversa? conversa;
+  final AiMensagem? mensagem;
+}
+
 class GlicemiaRegistro {
   const GlicemiaRegistro({
     required this.id,
@@ -869,6 +967,116 @@ class ApiClient {
     }
   }
 
+  Future<List<AiConversa>> listarConversasIa({
+    required String usuarioId,
+    String? idosoId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.iaConversas,
+        queryParameters: {
+          'usuarioId': usuarioId,
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(AiConversa.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel carregar os chats.',
+      );
+    }
+  }
+
+  Future<AiConversa> criarConversaIa({
+    required String usuarioId,
+    String? idosoId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.iaConversas,
+        data: {
+          'usuarioId': usuarioId,
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'titulo': 'Novo chat',
+        },
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) return AiConversa.fromJson(dados);
+      return AiConversa.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel criar um novo chat.',
+      );
+    }
+  }
+
+  Future<List<AiMensagem>> listarMensagensIa({
+    required String conversaId,
+    required String usuarioId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.iaMensagens(conversaId),
+        queryParameters: {'usuarioId': usuarioId},
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(AiMensagem.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel abrir este chat.',
+      );
+    }
+  }
+
+  Future<AiPerguntaResposta> perguntarIa({
+    required String usuarioId,
+    required String mensagem,
+    String? conversaId,
+    String? idosoId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.iaPerguntar,
+        data: {
+          'usuarioId': usuarioId,
+          'mensagem': mensagem,
+          if (conversaId != null && conversaId.isNotEmpty)
+            'conversaId': conversaId,
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+        },
+      );
+
+      return AiPerguntaResposta.fromJson(
+        response.data ?? <String, dynamic>{},
+      );
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel falar com a IA agora.',
+      );
+    }
+  }
+
   Future<List<InsumoResumo>> listarInsumos({
     String? idosoId,
     String filtro = 'todos',
@@ -1066,6 +1274,28 @@ class ApiClient {
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao atualizar compromisso.');
+    }
+  }
+
+  Future<Map<String, dynamic>> atualizarOcorrenciaCompromisso({
+    required String id,
+    required String dataOcorrencia,
+    required String status,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.ocorrenciaCompromisso(id),
+        data: {
+          'dataOcorrencia': dataOcorrencia,
+          'status': status,
+        },
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao atualizar ocorrencia do compromisso.',
+      );
     }
   }
 

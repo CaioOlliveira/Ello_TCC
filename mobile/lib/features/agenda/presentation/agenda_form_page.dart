@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'agenda_models.dart';
 import 'agenda_utils.dart';
@@ -27,13 +26,13 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
   late final TextEditingController _horaController;
   late final TextEditingController _localController;
   late final TextEditingController _observacoesController;
-  late final TextEditingController _antecedenciaController;
   late List<String> _tags;
   late DateTime _data;
   late TimeOfDay _hora;
   late String _tag;
   late String _frequencia;
   late bool _lembrete;
+  late int _antecedenciaMinutos;
   String _status = 'agendado';
 
   @override
@@ -47,16 +46,16 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
     if (!_tags.contains(_tag)) _tags.add(_tag);
     _frequencia = initial?.frequencia ?? 'Semanalmente';
     _lembrete = initial?.ativarLembrete ?? true;
-    _status = initial?.status ?? 'agendado';
+    _antecedenciaMinutos = _normalizeReminderMinutes(
+      initial?.antecedenciaLembreteMinutos ?? 30,
+    );
+    _status = initial?.status == 'cancelado' ? 'cancelado' : 'agendado';
 
     _tituloController = TextEditingController(text: initial?.titulo);
     _dataController = TextEditingController(text: formatAgendaDate(_data));
     _horaController = TextEditingController(text: formatAgendaTimeOfDay(_hora));
     _localController = TextEditingController(text: initial?.local);
     _observacoesController = TextEditingController(text: initial?.observacoes);
-    _antecedenciaController = TextEditingController(
-      text: '${initial?.antecedenciaLembreteMinutos ?? 30}',
-    );
   }
 
   @override
@@ -66,7 +65,6 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
     _horaController.dispose();
     _localController.dispose();
     _observacoesController.dispose();
-    _antecedenciaController.dispose();
     super.dispose();
   }
 
@@ -116,7 +114,6 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
       _hora.hour,
       _hora.minute,
     );
-    final antecedencia = int.tryParse(_antecedenciaController.text) ?? 0;
 
     Navigator.of(context).pop(
       AgendaFormResult(
@@ -129,7 +126,8 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
           frequencia: _frequencia,
           observacoes: _observacoesController.text.trim(),
           ativarLembrete: _lembrete,
-          antecedenciaLembreteMinutos: _lembrete ? antecedencia : null,
+          antecedenciaLembreteMinutos:
+              _lembrete ? _antecedenciaMinutos : null,
           status: _status,
         ),
       ),
@@ -249,8 +247,8 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                     decoration: _fieldDecoration(),
                     items: const [
                       DropdownMenuItem(
-                        value: 'Não repetir',
-                        child: Text('Não repetir'),
+                        value: 'Nao repetir',
+                        child: Text('Nao repetir'),
                       ),
                       DropdownMenuItem(
                         value: 'Diariamente',
@@ -310,22 +308,25 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                     ],
                   ),
                   const _FormLabel('Antecedencia do lembrete'),
-                  SizedBox(
-                    width: 120,
-                    child: _AgendaTextField(
-                      controller: _antecedenciaController,
-                      enabled: _lembrete,
-                      suffixIcon: Icons.access_time_rounded,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (value) {
-                        if (!_lembrete) return null;
-                        if (value == null || value.isEmpty) {
-                          return 'Informe.';
-                        }
-                        return null;
-                      },
-                    ),
+                  DropdownButtonFormField<int>(
+                    initialValue: _antecedenciaMinutos,
+                    decoration:
+                        _fieldDecoration(suffixIcon: Icons.access_time_rounded),
+                    items: const [
+                      DropdownMenuItem(value: 5, child: Text('5 min antes')),
+                      DropdownMenuItem(value: 10, child: Text('10 min antes')),
+                      DropdownMenuItem(value: 30, child: Text('30 min antes')),
+                      DropdownMenuItem(value: 60, child: Text('1 hora antes')),
+                      DropdownMenuItem(value: 120, child: Text('2 horas antes')),
+                      DropdownMenuItem(value: 1440, child: Text('1 dia antes')),
+                    ],
+                    onChanged: _lembrete
+                        ? (value) {
+                            if (value != null) {
+                              setState(() => _antecedenciaMinutos = value);
+                            }
+                          }
+                        : null,
                   ),
                   const SizedBox(height: 8),
                   const _FormLabel('Status'),
@@ -335,8 +336,6 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                     items: const [
                       DropdownMenuItem(
                           value: 'agendado', child: Text('Agendado')),
-                      DropdownMenuItem(
-                          value: 'concluido', child: Text('Concluido')),
                       DropdownMenuItem(
                           value: 'cancelado', child: Text('Cancelado')),
                     ],
@@ -463,25 +462,19 @@ class _AgendaTextField extends StatelessWidget {
     required this.controller,
     this.validator,
     this.readOnly = false,
-    this.enabled,
     this.suffixIcon,
     this.onTap,
     this.minLines,
     this.maxLines = 1,
-    this.keyboardType,
-    this.inputFormatters,
   });
 
   final TextEditingController controller;
   final FormFieldValidator<String>? validator;
   final bool readOnly;
-  final bool? enabled;
   final IconData? suffixIcon;
   final VoidCallback? onTap;
   final int? minLines;
   final int? maxLines;
-  final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -489,12 +482,9 @@ class _AgendaTextField extends StatelessWidget {
       controller: controller,
       validator: validator,
       readOnly: readOnly,
-      enabled: enabled,
       onTap: onTap,
       minLines: minLines,
       maxLines: maxLines,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
       decoration: _fieldDecoration(suffixIcon: suffixIcon),
     );
   }
@@ -541,4 +531,10 @@ InputDecoration _fieldDecoration({IconData? suffixIcon}) {
       borderSide: const BorderSide(color: Color(0xFF007C8B), width: 1.5),
     ),
   );
+}
+
+int _normalizeReminderMinutes(int value) {
+  const options = [5, 10, 30, 60, 120, 1440];
+  if (options.contains(value)) return value;
+  return 30;
 }

@@ -10,6 +10,32 @@ bool sameAgendaDay(DateTime a, DateTime b) {
       localA.day == localB.day;
 }
 
+bool agendaItemOccursOnDay({
+  required DateTime start,
+  required String frequencia,
+  required String status,
+  required DateTime day,
+}) {
+  if (status.toLowerCase() == 'cancelado') return false;
+
+  final startDay = DateTime(start.year, start.month, start.day);
+  final targetDay = DateTime(day.year, day.month, day.day);
+  if (targetDay.isBefore(startDay)) return false;
+
+  switch (_normalizeFrequencyKey(frequencia)) {
+    case 'diaria':
+      return true;
+    case 'semanal':
+      return startDay.weekday == targetDay.weekday;
+    case 'mensal':
+      return startDay.day == targetDay.day;
+    case 'anual':
+      return startDay.month == targetDay.month && startDay.day == targetDay.day;
+    default:
+      return sameAgendaDay(startDay, targetDay);
+  }
+}
+
 int? dayForCalendarCell(int row, int column, int leading, int daysInMonth) {
   final value = (row * 7) + column - leading + 1;
   if (value < 1 || value > daysInMonth) return null;
@@ -55,6 +81,17 @@ String agendaMonthName(int month) {
     'Dezembro',
   ];
   return names[month - 1];
+}
+
+String _normalizeFrequencyKey(String value) {
+  final normalized = value.toLowerCase().trim();
+  if (normalized == 'diario' || normalized == 'diariamente') return 'diaria';
+  if (normalized == 'semanal' || normalized == 'semanalmente') {
+    return 'semanal';
+  }
+  if (normalized == 'mensal' || normalized == 'mensalmente') return 'mensal';
+  if (normalized == 'anual' || normalized == 'anualmente') return 'anual';
+  return 'unica';
 }
 
 Color agendaTagColor(String tag) {

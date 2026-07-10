@@ -5,11 +5,13 @@ class _EquipamentoForm extends StatefulWidget {
     required this.saving,
     required this.onCancel,
     required this.onSubmit,
+    this.initial,
   });
 
   final bool saving;
   final VoidCallback onCancel;
   final ValueChanged<EquipamentoFormData> onSubmit;
+  final Equipamento? initial;
 
   @override
   State<_EquipamentoForm> createState() => _EquipamentoFormState();
@@ -24,7 +26,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
   final _ultimaManutencao = TextEditingController();
   final _frequencia = TextEditingController();
   final _local = TextEditingController();
-  final _manual = TextEditingController(text: 'manual.pdf');
+  final _manual = TextEditingController();
   final _observacoes = TextEditingController();
   final _imagePicker = ImagePicker();
 
@@ -32,6 +34,32 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
   DateTime? _validadeValue;
   DateTime? _ultimaValue;
   String? _urlFoto;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    if (initial == null) return;
+
+    _nome.text = initial.nome;
+    _marca.text = initial.marca;
+    _modelo.text = initial.modelo;
+    _dataCompraValue = initial.dataAquisicao;
+    _validadeValue = initial.validade;
+    _ultimaValue = initial.ultimaManutencaoEm;
+    _dataCompra.text =
+        initial.dataAquisicao == null ? '' : formatDate(initial.dataAquisicao);
+    _validade.text =
+        initial.validade == null ? '' : formatDate(initial.validade);
+    _ultimaManutencao.text = initial.ultimaManutencaoEm == null
+        ? ''
+        : formatDate(initial.ultimaManutencaoEm);
+    _frequencia.text = initial.frequenciaManutencaoDias?.toString() ?? '';
+    _local.text = initial.localGuardado;
+    _manual.text = initial.urlManual;
+    _observacoes.text = initial.observacoesSeguranca;
+    _urlFoto = initial.urlFoto.isEmpty ? null : initial.urlFoto;
+  }
 
   @override
   void dispose() {
@@ -104,10 +132,10 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
       children: [
-        const Text(
-          'Novo equipamento',
+        Text(
+          widget.initial == null ? 'Novo equipamento' : 'Editar equipamento',
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             color: Color(0xFF073248),
             fontSize: 22,
             fontWeight: FontWeight.w800,
@@ -226,7 +254,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  _manual.text,
+                  _manual.text.isEmpty ? 'Nenhum manual anexado' : _manual.text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -258,7 +286,22 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                       color: Colors.white,
                     ),
                   )
-                : const Text('Salvar'),
+                : Text(widget.initial == null ? 'Salvar' : 'Salvar alteracoes'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 46,
+          child: OutlinedButton(
+            onPressed: widget.saving ? null : widget.onCancel,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF003B4F),
+              side: const BorderSide(color: Color(0xFF38AFC0)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Cancelar'),
           ),
         ),
       ],
@@ -272,34 +315,94 @@ class _EquipamentoDetails extends StatelessWidget {
     required this.manutencoes,
     required this.saving,
     required this.onRegister,
-    required this.onOutOfUse,
+    required this.onStatusChanged,
+    required this.onEdit,
   });
 
   final Equipamento equipamento;
   final List<ManutencaoEquipamento> manutencoes;
   final bool saving;
   final VoidCallback onRegister;
-  final VoidCallback onOutOfUse;
+  final VoidCallback onStatusChanged;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Detalhes do equipamento',
-          style: TextStyle(
-            color: Color(0xFF073248),
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            height: 0.9,
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Expanded(
+              child: Text(
+                'Detalhes do equipamento',
+                style: TextStyle(
+                  color: Color(0xFF073248),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
+              ),
+            ),
+            PopupMenuButton<String>(
+              enabled: !saving,
+              padding: EdgeInsets.zero,
+              icon: const Icon(
+                Icons.more_vert_rounded,
+                color: Color(0xFF073248),
+                size: 28,
+              ),
+              onSelected: (value) {
+                if (value == 'manutencao') onRegister();
+                if (value == 'status') onStatusChanged();
+                if (value == 'editar') onEdit();
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'manutencao',
+                  child: Row(
+                    children: [
+                      Icon(Icons.build_rounded, size: 20),
+                      SizedBox(width: 10),
+                      Text('Registrar manutencao'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'status',
+                  child: Row(
+                    children: [
+                      Icon(
+                        equipamento.status == 'Fora de uso'
+                            ? Icons.check_circle_rounded
+                            : Icons.block_rounded,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        equipamento.status == 'Fora de uso'
+                            ? 'Colocar em uso'
+                            : 'Marcar fora de uso',
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'editar',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_rounded, size: 20),
+                      SizedBox(width: 10),
+                      Text('Editar'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        const Text(
-          'Acompanhe informacoes, historico e ocorrencias',
-          style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
-        ),
-        const SizedBox(height: 9),
+        const SizedBox(height: 12),
         _DetailsHeader(equipamento: equipamento),
         const SizedBox(height: 9),
         Row(
@@ -346,47 +449,6 @@ class _EquipamentoDetails extends StatelessWidget {
                     manutencao: manutencoes[index],
                   ),
                 ),
-        ),
-        SizedBox(
-          height: 48,
-          child: FilledButton.icon(
-            onPressed: saving ? null : onRegister,
-            icon: const Icon(Icons.build_rounded, size: 22),
-            label: const Text('Registrar manutencao'),
-            style: _primaryButtonStyle(),
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 48,
-          child: FilledButton.icon(
-            onPressed: saving ? null : onOutOfUse,
-            icon: const Icon(Icons.block_rounded, size: 22),
-            label: const Text('Marcar como fora de uso'),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF003B4F),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 48,
-          child: FilledButton.icon(
-            onPressed: null,
-            icon: const Icon(Icons.edit_rounded, size: 22),
-            label: const Text('Editar'),
-            style: FilledButton.styleFrom(
-              disabledBackgroundColor: const Color(0xFFC7C7C7),
-              disabledForegroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
         ),
       ],
     );

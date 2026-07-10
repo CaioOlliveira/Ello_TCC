@@ -13,9 +13,12 @@ class ApiEndpoints {
   static const refeicoes = '/refeicoes';
   static const dicaAlimentacao = '/refeicoes/dica';
   static const glicemias = '/glicemias';
+  static const iaPerguntar = '/ia/perguntar';
+  static const iaConversas = '/ia/conversas';
   static const glicemiaResumo = '/glicemias/resumo';
   static const glicemiaInsulinas = '/glicemias/insulinas';
   static String compromisso(String id) => '/agenda/$id';
+  static String ocorrenciaCompromisso(String id) => '/agenda/$id/ocorrencias';
   static String equipamento(String id) => '/equipamentos/$id';
   static String insumo(String id) => '/insumos/$id';
   static String refeicao(String id) => '/refeicoes/$id';
@@ -25,4 +28,6 @@ class ApiEndpoints {
       '/equipamentos/$id/manutencoes';
   static String idoso(String id) => '/idosos/$id';
   static String usuario(String id) => '/usuarios/$id';
+  static String iaMensagens(String conversaId) =>
+      '/ia/conversas/$conversaId/mensagens';
 }

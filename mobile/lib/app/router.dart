@@ -14,6 +14,7 @@ import '../features/idosos/presentation/dashboard_idoso_page.dart';
 import '../features/idosos/presentation/perfil_idoso_page.dart';
 import '../features/idosos/presentation/selecionar_idoso_page.dart';
 import '../features/insumos/presentation/insumos_page.dart';
+import '../features/ia/presentation/corgia_page.dart';
 import '../features/medicamentos/presentation/medicamentos_page.dart';
 import '../features/monitoramento/presentation/monitoramento_page.dart';
 import '../features/perfil/presentation/perfil_page.dart';
@@ -65,6 +66,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/monitoramento',
             builder: (context, state) => const MonitoramentoPage(),
+          ),
+          GoRoute(
+            path: '/corgia',
+            builder: (context, state) => const CorgiaPage(),
           ),
           GoRoute(
             path: '/alimentacao',
@@ -149,9 +154,9 @@ class AppShell extends StatelessWidget {
         location == '/sono') {
       return 1;
     }
-    if (location == '/relatorios') return 2;
-    if (location == '/idoso/perfil') return 2;
-    if (location == '/coraia') return 3;
+    if (location == '/corgia' || location == '/coraia') return 2;
+    if (location == '/relatorios') return 3;
+    if (location == '/idoso/perfil') return 3;
     return 0;
   }
 
@@ -190,13 +195,13 @@ class AppShell extends StatelessWidget {
                 _ShellNavItem(
                   icon: Icons.auto_awesome_rounded,
                   label: 'CoraIA',
-                  selected: selectedIndex == 3,
-                  onTap: () => context.go('/coraia'),
+                  selected: selectedIndex == 2,
+                  onTap: () => context.go('/corgia'),
                 ),
                 _ShellNavItem(
                   icon: Icons.person_outline,
                   label: 'Perfil',
-                  selected: selectedIndex == 2,
+                  selected: selectedIndex == 3,
                   onTap: () => context.go('/idoso/perfil'),
                 ),
               ],
