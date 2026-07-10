@@ -33,6 +33,9 @@ const _kDiasSemana = [
   'Sábado',
 ];
 
+const _kTodosOsDias = 'Todos os dias';
+const _kDiaAlternado = 'Dia sim, dia não';
+
 const _kStatusDose = [
   ('tomado', 'Tomado', Icons.check_circle_rounded, Color(0xFF28A745)),
   ('atrasado', 'Atrasado', Icons.schedule_rounded, Color(0xFFE49A20)),
@@ -68,6 +71,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   bool _editando = false;
 
   String? _formato;
+  String _frequenciaTipo = 'diaria';
   final List<String> _diasSemana = [];
   final List<String> _horarios = [];
   DateTime? _dataInicio;
@@ -141,6 +145,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     _doseController.clear();
     _observacoesController.clear();
     _formato = null;
+    _frequenciaTipo = 'diaria';
     _diasSemana.clear();
     _horarios.clear();
     _dataInicio = null;
@@ -181,6 +186,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
           ..clear()
           ..addAll(horarios.map((h) => h.horario));
         if (horarios.isNotEmpty) {
+          _frequenciaTipo = horarios.first.frequenciaTipo;
           _diasSemana
             ..clear()
             ..addAll(horarios.first.diasSemana);
@@ -266,7 +272,8 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
             for (final horario in _horarios)
               (horario: horario, quantidadeDose: dose, unidadeDose: null),
           ],
-          diasSemana: _diasSemana,
+          frequenciaTipo: _frequenciaTipo,
+          diasSemana: _frequenciaTipo == 'semanal' ? _diasSemana : null,
           registradoPorId: ref.read(authSessionProvider)?.id,
         );
       }
@@ -423,15 +430,19 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
               doseController: _doseController,
               observacoesController: _observacoesController,
               formato: _formato,
+              frequenciaTipo: _frequenciaTipo,
               diasSemana: _diasSemana,
               horarios: _horarios,
               dataInicio: _dataInicio,
               dataFim: _dataFim,
               lembretesAtivos: _lembretesAtivos,
               onFormatoChanged: (value) => setState(() => _formato = value),
-              onDiaAdded: (value) => setState(() => _diasSemana.add(value)),
-              onDiaRemoved: (index) =>
-                  setState(() => _diasSemana.removeAt(index)),
+              onFrequenciaChanged: (tipo, dias) => setState(() {
+                _frequenciaTipo = tipo;
+                _diasSemana
+                  ..clear()
+                  ..addAll(dias);
+              }),
               onHorarioAdded: (value) => setState(() {
                 _horarios.add(value);
                 _horarios.sort();
@@ -911,14 +922,14 @@ class _MedicamentoFormView extends StatelessWidget {
     required this.doseController,
     required this.observacoesController,
     required this.formato,
+    required this.frequenciaTipo,
     required this.diasSemana,
     required this.horarios,
     required this.dataInicio,
     required this.dataFim,
     required this.lembretesAtivos,
     required this.onFormatoChanged,
-    required this.onDiaAdded,
-    required this.onDiaRemoved,
+    required this.onFrequenciaChanged,
     required this.onHorarioAdded,
     required this.onHorarioRemoved,
     required this.onDataInicioChanged,
@@ -937,14 +948,17 @@ class _MedicamentoFormView extends StatelessWidget {
   final TextEditingController doseController;
   final TextEditingController observacoesController;
   final String? formato;
+  final String frequenciaTipo;
   final List<String> diasSemana;
   final List<String> horarios;
   final DateTime? dataInicio;
   final DateTime? dataFim;
   final bool lembretesAtivos;
   final ValueChanged<String?> onFormatoChanged;
-  final ValueChanged<String> onDiaAdded;
-  final ValueChanged<int> onDiaRemoved;
+
+  /// Recebe o novo tipo de frequencia ('diaria' | 'semanal' | 'alternado')
+  /// e a lista de dias da semana (so relevante quando tipo == 'semanal').
+  final void Function(String tipo, List<String> dias) onFrequenciaChanged;
   final ValueChanged<String> onHorarioAdded;
   final ValueChanged<int> onHorarioRemoved;
   final ValueChanged<DateTime?> onDataInicioChanged;
@@ -966,20 +980,45 @@ class _MedicamentoFormView extends StatelessWidget {
     if (escolhido != null) onFormatoChanged(escolhido);
   }
 
-  Future<void> _escolherDia(BuildContext context) async {
-    final disponiveis =
-        _kDiasSemana.where((dia) => !diasSemana.contains(dia)).toList();
-    if (disponiveis.isEmpty) return;
-    final escolhido = await showModalBottomSheet<String>(
+  /// O que mostrar como chips no campo Frequência, de acordo com o tipo
+  /// selecionado ('diaria' nao mostra chip, ja que e o padrao implicito).
+  List<String> get _frequenciaChips {
+    if (frequenciaTipo == 'alternado') return const [_kDiaAlternado];
+    if (frequenciaTipo == 'semanal') return diasSemana;
+    return const [];
+  }
+
+  void _removerFrequencia(int index) {
+    if (frequenciaTipo == 'semanal') {
+      final restantes = [...diasSemana]..removeAt(index);
+      onFrequenciaChanged(restantes.isEmpty ? 'diaria' : 'semanal', restantes);
+      return;
+    }
+    onFrequenciaChanged('diaria', const []);
+  }
+
+  Future<void> _escolherFrequencia(BuildContext context) async {
+    final diasEscolhidos =
+        frequenciaTipo == 'semanal' ? diasSemana : const <String>[];
+    final diasDisponiveis =
+        _kDiasSemana.where((dia) => !diasEscolhidos.contains(dia)).toList();
+
+    final escolha = await showModalBottomSheet<_FrequenciaEscolha>(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
-      builder: (context) =>
-          _OptionSheet(title: 'Frequência', options: disponiveis),
+      builder: (context) => _FrequenciaSheet(diasDisponiveis: diasDisponiveis),
     );
-    if (escolhido != null) onDiaAdded(escolhido);
+
+    if (escolha == null) return;
+
+    if (escolha.dia != null) {
+      onFrequenciaChanged('semanal', [...diasEscolhidos, escolha.dia!]);
+    } else {
+      onFrequenciaChanged(escolha.tipo, const []);
+    }
   }
 
   Future<void> _escolherHorario(BuildContext context) async {
@@ -1092,9 +1131,9 @@ class _MedicamentoFormView extends StatelessWidget {
                     const SizedBox(height: 12),
                     const _FieldLabel('Frequência'),
                     _ChipsField(
-                      values: diasSemana,
-                      onAdd: () => _escolherDia(context),
-                      onRemove: onDiaRemoved,
+                      values: _frequenciaChips,
+                      onAdd: () => _escolherFrequencia(context),
+                      onRemove: _removerFrequencia,
                     ),
                     const SizedBox(height: 12),
                     const _FieldLabel('Horários'),
@@ -1429,6 +1468,89 @@ class _OptionSheet extends StatelessWidget {
                 title: Text(option),
                 onTap: () => Navigator.of(context).pop(option),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FrequenciaEscolha {
+  const _FrequenciaEscolha.tipo(this.tipo) : dia = null;
+  const _FrequenciaEscolha.dia(this.dia) : tipo = 'semanal';
+
+  final String tipo;
+  final String? dia;
+}
+
+class _FrequenciaSheet extends StatelessWidget {
+  const _FrequenciaSheet({required this.diasDisponiveis});
+
+  final List<String> diasDisponiveis;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Frequência',
+              style: TextStyle(
+                color: Color(0xFF073248),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.event_repeat_rounded,
+                color: Color(0xFF2FA3B5),
+              ),
+              title: const Text(_kTodosOsDias),
+              onTap: () => Navigator.of(context)
+                  .pop(const _FrequenciaEscolha.tipo('diaria')),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.swap_horiz_rounded,
+                color: Color(0xFF2FA3B5),
+              ),
+              title: const Text(_kDiaAlternado),
+              onTap: () => Navigator.of(context)
+                  .pop(const _FrequenciaEscolha.tipo('alternado')),
+            ),
+            if (diasDisponiveis.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Divider(height: 1),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 4, bottom: 2),
+                child: Text(
+                  'Ou dias específicos',
+                  style: TextStyle(
+                    color: Color(0xFF8A8A8A),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              for (final dia in diasDisponiveis)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(dia),
+                  onTap: () =>
+                      Navigator.of(context).pop(_FrequenciaEscolha.dia(dia)),
+                ),
+            ],
           ],
         ),
       ),

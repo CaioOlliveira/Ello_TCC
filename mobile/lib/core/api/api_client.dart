@@ -424,6 +424,7 @@ class MedicamentoHorario {
     this.quantidadeDose,
     this.unidadeDose,
     this.diasSemana = const [],
+    this.frequenciaTipo = 'diaria',
   });
 
   factory MedicamentoHorario.fromJson(Map<String, dynamic> json) {
@@ -442,6 +443,9 @@ class MedicamentoHorario {
       diasSemana: diasRaw == null || diasRaw.isEmpty
           ? const []
           : diasRaw.split(',').map((item) => item.trim()).toList(),
+      frequenciaTipo:
+          (json['tipoFrequencia'] ?? json['tipo_frequencia'])?.toString() ??
+              'diaria',
     );
   }
 
@@ -450,6 +454,7 @@ class MedicamentoHorario {
   final double? quantidadeDose;
   final String? unidadeDose;
   final List<String> diasSemana;
+  final String frequenciaTipo;
 }
 
 class MedicamentoResumo {
@@ -1645,6 +1650,7 @@ class ApiClient {
     required List<
             ({String horario, double? quantidadeDose, String? unidadeDose})>
         horarios,
+    String frequenciaTipo = 'diaria',
     List<String>? diasSemana,
     String? registradoPorId,
   }) async {
@@ -1652,6 +1658,7 @@ class ApiClient {
       final response = await _dio.put<Map<String, dynamic>>(
         ApiEndpoints.horariosMedicamento(medicamentoId),
         data: {
+          'frequenciaTipo': frequenciaTipo,
           if (diasSemana != null && diasSemana.isNotEmpty)
             'diasSemana': diasSemana,
           'horarios': [
