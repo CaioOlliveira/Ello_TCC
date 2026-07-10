@@ -1,6 +1,8 @@
 import { registrarHistorico } from "../../database/audit.js";
+import { getPool, isDatabaseEnabled } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
 import { insertRow, listRows } from "../../database/simple-crud.js";
+import { notificacoesService } from "../notificacoes/notificacoes.service.js";
 
 type RegistroConfig = {
   table: string;
@@ -118,6 +120,58 @@ export const registrosService = {
       dadosNovos: registro,
     });
 
+    if (tipo === "humor") {
+      await notificarFamiliaSobreHumor({
+        idosoId: String(input.idosoId),
+        registroId: String(registro.id),
+        humor: String(input.humor ?? ""),
+      });
+    }
+
     return registro;
   },
 };
+
+async function notificarFamiliaSobreHumor({
+  idosoId,
+  registroId,
+  humor,
+}: {
+  idosoId: string;
+  registroId: string;
+  humor: string;
+}) {
+  if (!isDatabaseEnabled) return;
+
+  const result = await getPool().query<{ usuario_id: string }>(
+    `
+      select distinct usuario_id
+      from (
+        select usuario_id
+        from membros_ficha
+        where idoso_id = $1
+          and lower(coalesce(status, 'ativo')) = 'ativo'
+        union
+        select criado_por_id as usuario_id
+        from fichas_idosos
+        where id = $1
+      ) usuarios
+      where usuario_id is not null
+    `,
+    [idosoId],
+  );
+
+  await Promise.all(
+    result.rows.map((row) =>
+      notificacoesService.criar({
+        idosoId,
+        usuarioId: row.usuario_id,
+        titulo: "Novo registro de humor",
+        mensagem: `Um novo humor foi registrado: ${humor}.`,
+        tipoNotificacao: "humor",
+        tipoEntidadeRelacionada: "registros_humor",
+        entidadeRelacionadaId: registroId,
+      }),
+    ),
+  );
+}

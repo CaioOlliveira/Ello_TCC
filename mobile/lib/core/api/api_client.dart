@@ -10,6 +10,16 @@ class IdosoResumo {
     required this.idade,
     required this.condicoes,
     this.urlFoto,
+    this.pesoKg,
+    this.tipoSanguineo,
+    this.dataNascimento,
+    this.sexo,
+    this.limitacoes,
+    this.observacoesGerais,
+    this.alergiasRestricoes,
+    this.contatoEmergenciaNome,
+    this.contatoEmergenciaTelefone,
+    this.contatoEmergenciaParentesco,
     this.monitoramentos = const [],
   });
 
@@ -21,7 +31,26 @@ class IdosoResumo {
       id: json['id']?.toString() ?? '',
       nome: json['nome']?.toString() ?? 'Sem nome',
       idade: json['idade'] is num ? (json['idade'] as num).toInt() : 0,
-      urlFoto: json['urlFoto']?.toString(),
+      urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
+      pesoKg: _numOrNull(json['pesoKg'] ?? json['peso_kg']),
+      tipoSanguineo: json['tipoSanguineo']?.toString() ??
+          json['tipo_sanguineo']?.toString(),
+      dataNascimento: json['dataNascimento']?.toString() ??
+          json['data_nascimento']?.toString(),
+      sexo: json['sexo']?.toString(),
+      limitacoes: json['limitacoes']?.toString(),
+      observacoesGerais: json['observacoesGerais']?.toString() ??
+          json['observacoes_saude']?.toString(),
+      alergiasRestricoes: json['alergiasRestricoes']?.toString() ??
+          json['alergias_restricoes']?.toString(),
+      contatoEmergenciaNome: json['contatoEmergenciaNome']?.toString() ??
+          json['contato_emergencia_nome']?.toString(),
+      contatoEmergenciaTelefone:
+          json['contatoEmergenciaTelefone']?.toString() ??
+              json['contato_emergencia_telefone']?.toString(),
+      contatoEmergenciaParentesco:
+          json['contatoEmergenciaParentesco']?.toString() ??
+              json['contato_emergencia_parentesco']?.toString(),
       condicoes: condicoes is List
           ? condicoes.map((item) => item.toString()).toList()
           : const [],
@@ -35,6 +64,16 @@ class IdosoResumo {
   final String nome;
   final int idade;
   final String? urlFoto;
+  final double? pesoKg;
+  final String? tipoSanguineo;
+  final String? dataNascimento;
+  final String? sexo;
+  final String? limitacoes;
+  final String? observacoesGerais;
+  final String? alergiasRestricoes;
+  final String? contatoEmergenciaNome;
+  final String? contatoEmergenciaTelefone;
+  final String? contatoEmergenciaParentesco;
   final List<String> condicoes;
   final List<String> monitoramentos;
 
@@ -42,6 +81,16 @@ class IdosoResumo {
     String? nome,
     int? idade,
     String? urlFoto,
+    double? pesoKg,
+    String? tipoSanguineo,
+    String? dataNascimento,
+    String? sexo,
+    String? limitacoes,
+    String? observacoesGerais,
+    String? alergiasRestricoes,
+    String? contatoEmergenciaNome,
+    String? contatoEmergenciaTelefone,
+    String? contatoEmergenciaParentesco,
     List<String>? condicoes,
     List<String>? monitoramentos,
   }) {
@@ -50,6 +99,19 @@ class IdosoResumo {
       nome: nome ?? this.nome,
       idade: idade ?? this.idade,
       urlFoto: urlFoto ?? this.urlFoto,
+      pesoKg: pesoKg ?? this.pesoKg,
+      tipoSanguineo: tipoSanguineo ?? this.tipoSanguineo,
+      dataNascimento: dataNascimento ?? this.dataNascimento,
+      sexo: sexo ?? this.sexo,
+      limitacoes: limitacoes ?? this.limitacoes,
+      observacoesGerais: observacoesGerais ?? this.observacoesGerais,
+      alergiasRestricoes: alergiasRestricoes ?? this.alergiasRestricoes,
+      contatoEmergenciaNome:
+          contatoEmergenciaNome ?? this.contatoEmergenciaNome,
+      contatoEmergenciaTelefone:
+          contatoEmergenciaTelefone ?? this.contatoEmergenciaTelefone,
+      contatoEmergenciaParentesco:
+          contatoEmergenciaParentesco ?? this.contatoEmergenciaParentesco,
       condicoes: condicoes ?? this.condicoes,
       monitoramentos: monitoramentos ?? this.monitoramentos,
     );
@@ -357,6 +419,123 @@ class InsumoResumo {
   }
 }
 
+class AlimentoConsumido {
+  const AlimentoConsumido({
+    required this.nome,
+    this.pesoGramas,
+    this.calorias,
+  });
+
+  factory AlimentoConsumido.fromJson(Map<String, dynamic> json) {
+    return AlimentoConsumido(
+      nome: json['nome']?.toString() ?? '',
+      pesoGramas: _numOrNull(json['pesoGramas'] ?? json['peso_gramas']),
+      calorias: _numOrNull(json['calorias']),
+    );
+  }
+
+  final String nome;
+  final double? pesoGramas;
+  final double? calorias;
+
+  Map<String, dynamic> toJson() => {
+        'nome': nome,
+        if (pesoGramas != null) 'pesoGramas': pesoGramas,
+        if (calorias != null) 'calorias': calorias,
+      };
+}
+
+class RefeicaoResumo {
+  const RefeicaoResumo({
+    required this.id,
+    required this.idosoId,
+    required this.tipoRefeicao,
+    required this.alimentos,
+    required this.aceitacao,
+    this.dataConsumo,
+    this.horaConsumo,
+    this.observacoes,
+    this.registradoPorId,
+    this.concluidaEm,
+  });
+
+  factory RefeicaoResumo.fromJson(Map<String, dynamic> json) {
+    final alimentosJson = json['alimentos'];
+    return RefeicaoResumo(
+      id: json['id']?.toString() ?? '',
+      idosoId:
+          json['idosoId']?.toString() ?? json['idoso_id']?.toString() ?? '',
+      tipoRefeicao: json['tipoRefeicao']?.toString() ??
+          json['tipo_refeicao']?.toString() ??
+          'Refeicao',
+      alimentos: alimentosJson is List
+          ? alimentosJson
+              .whereType<Map<String, dynamic>>()
+              .map(AlimentoConsumido.fromJson)
+              .where((item) => item.nome.isNotEmpty)
+              .toList()
+          : const [],
+      aceitacao: json['aceitacao']?.toString() ?? '',
+      dataConsumo: _dateOnlyOrNull(
+        json['dataConsumo'] ?? json['data_consumo'],
+      ),
+      horaConsumo:
+          json['horaConsumo']?.toString() ?? json['hora_consumo']?.toString(),
+      observacoes: json['observacoes']?.toString(),
+      registradoPorId: json['registradoPorId']?.toString() ??
+          json['registrado_por_id']?.toString(),
+      concluidaEm: DateTime.tryParse(
+        json['concluidaEm']?.toString() ??
+            json['concluida_em']?.toString() ??
+            '',
+      ),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final String tipoRefeicao;
+  final List<AlimentoConsumido> alimentos;
+  final String aceitacao;
+  final DateTime? dataConsumo;
+  final String? horaConsumo;
+  final String? observacoes;
+  final String? registradoPorId;
+  final DateTime? concluidaEm;
+
+  bool get concluida => concluidaEm != null;
+}
+
+class HidratacaoRegistro {
+  const HidratacaoRegistro({
+    required this.id,
+    required this.idosoId,
+    required this.quantidadeMl,
+    required this.registradoEm,
+  });
+
+  factory HidratacaoRegistro.fromJson(Map<String, dynamic> json) {
+    return HidratacaoRegistro(
+      id: json['id']?.toString() ?? '',
+      idosoId:
+          json['idosoId']?.toString() ?? json['idoso_id']?.toString() ?? '',
+      quantidadeMl:
+          _numOrNull(json['quantidadeMl'] ?? json['quantidade_ml']) ?? 0,
+      registradoEm: DateTime.tryParse(
+            json['registradoEm']?.toString() ??
+                json['registrado_em']?.toString() ??
+                '',
+          ) ??
+          DateTime.now(),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final double quantidadeMl;
+  final DateTime registradoEm;
+}
+
 class ApiClient {
   ApiClient({required String baseUrl})
       : _dio = Dio(
@@ -473,12 +652,15 @@ class ApiClient {
     String? dataNascimento,
     String? urlFoto,
     String? sexo,
+    String? tipoSanguineo,
     List<String>? condicoesSaude,
     List<String>? monitoramentos,
+    String? limitacoes,
     String? alergiasRestricoes,
     String? observacoesGerais,
     String? contatoEmergenciaNome,
     String? contatoEmergenciaTelefone,
+    String? contatoEmergenciaParentesco,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -491,23 +673,26 @@ class ApiClient {
           if (criadoPorId != null && criadoPorId.isNotEmpty)
             'criadoPorId': criadoPorId,
           if (sexo != null && sexo.isNotEmpty) 'sexo': sexo,
+          if (tipoSanguineo != null && tipoSanguineo.isNotEmpty)
+            'tipoSanguineo': tipoSanguineo,
           if (condicoesSaude != null && condicoesSaude.isNotEmpty)
             'condicoesSaude': condicoesSaude,
           if (monitoramentos != null && monitoramentos.isNotEmpty)
             'monitoramentos': monitoramentos,
+          if (limitacoes != null && limitacoes.isNotEmpty)
+            'limitacoes': limitacoes,
           if (alergiasRestricoes != null && alergiasRestricoes.isNotEmpty)
             'alergiasRestricoes': alergiasRestricoes,
           if (observacoesGerais != null && observacoesGerais.isNotEmpty)
             'observacoesGerais': observacoesGerais,
-          if ((contatoEmergenciaNome != null &&
-                  contatoEmergenciaNome.isNotEmpty) ||
-              (contatoEmergenciaTelefone != null &&
-                  contatoEmergenciaTelefone.isNotEmpty))
-            'contatoEmergencia': {
-              'nome': contatoEmergenciaNome,
-              'telefone': contatoEmergenciaTelefone,
-              'principal': true,
-            },
+          if (contatoEmergenciaNome != null && contatoEmergenciaNome.isNotEmpty)
+            'contatoEmergenciaNome': contatoEmergenciaNome,
+          if (contatoEmergenciaTelefone != null &&
+              contatoEmergenciaTelefone.isNotEmpty)
+            'contatoEmergenciaTelefone': contatoEmergenciaTelefone,
+          if (contatoEmergenciaParentesco != null &&
+              contatoEmergenciaParentesco.isNotEmpty)
+            'contatoEmergenciaParentesco': contatoEmergenciaParentesco,
         },
       );
       return response.data ?? <String, dynamic>{};
@@ -533,6 +718,154 @@ class ApiClient {
         error,
         fallback: 'Erro ao atualizar monitoramentos.',
       );
+    }
+  }
+
+  Future<Map<String, dynamic>> atualizarIdoso({
+    required String id,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.idoso(id),
+        data: data,
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar ficha.');
+    }
+  }
+
+  Future<List<RefeicaoResumo>> listarRefeicoes({String? idosoId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.refeicoes,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(RefeicaoResumo.fromJson)
+            .toList();
+      }
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar refeicoes.');
+    }
+  }
+
+  Future<String> buscarDicaAlimentacao() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.dicaAlimentacao,
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return dados['texto']?.toString() ??
+            'Refeicoes nutritivas fazem toda a diferenca.';
+      }
+      return 'Refeicoes nutritivas fazem toda a diferenca.';
+    } on DioException {
+      return 'Refeicoes nutritivas fazem toda a diferenca.';
+    }
+  }
+
+  Future<RefeicaoResumo> criarRefeicao({
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.refeicoes,
+        data: data,
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) return RefeicaoResumo.fromJson(dados);
+      return RefeicaoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao salvar refeicao.');
+    }
+  }
+
+  Future<RefeicaoResumo> atualizarRefeicao({
+    required String id,
+    required Map<String, dynamic> data,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.refeicao(id),
+        data: data,
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) return RefeicaoResumo.fromJson(dados);
+      return RefeicaoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar refeicao.');
+    }
+  }
+
+  Future<RefeicaoResumo> concluirRefeicao({
+    required String id,
+    String? usuarioId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.concluirRefeicao(id),
+        data: {
+          if (usuarioId != null && usuarioId.isNotEmpty) 'usuarioId': usuarioId,
+        },
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) return RefeicaoResumo.fromJson(dados);
+      return RefeicaoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao concluir refeicao.');
+    }
+  }
+
+  Future<List<HidratacaoRegistro>> listarHidratacoes({String? idosoId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.hidratacoes,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(HidratacaoRegistro.fromJson)
+            .toList();
+      }
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar hidratacoes.');
+    }
+  }
+
+  Future<void> criarHidratacao({
+    required String idosoId,
+    required double quantidadeMl,
+    String? registradoPorId,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.hidratacoes,
+        data: {
+          'idosoId': idosoId,
+          'quantidadeMl': quantidadeMl,
+          'registradoEm': DateTime.now().toUtc().toIso8601String(),
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao registrar agua.');
     }
   }
 
@@ -597,6 +930,14 @@ class ApiClient {
     }
   }
 
+  Future<void> removerInsumo({required String id}) async {
+    try {
+      await _dio.delete<void>(ApiEndpoints.insumo(id));
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao excluir insumo.');
+    }
+  }
+
   Future<InsumoResumo> movimentarInsumo({
     required String id,
     required String tipo,
@@ -652,6 +993,27 @@ class ApiClient {
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao salvar humor.');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> listarHumores({String? idosoId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.humores,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data.whereType<Map<String, dynamic>>().toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar humores.');
     }
   }
 

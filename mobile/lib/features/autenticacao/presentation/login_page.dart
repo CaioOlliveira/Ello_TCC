@@ -165,63 +165,55 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(
-          child: AnimatedPadding(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.only(bottom: bottomInset),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 260),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              child: switch (_view) {
-                AuthView.landing => _LandingView(
-                    key: const ValueKey('landing-view'),
-                    onApplePressed: () => _showPendingProviderMessage('Apple'),
-                    onGooglePressed: () =>
-                        _showPendingProviderMessage('Google'),
-                    onEmailPressed: () => _goTo(AuthView.login),
-                    onCadastroPressed: () => _goTo(AuthView.cadastro),
-                  ),
-                AuthView.login => _LoginFormView(
-                    key: const ValueKey('login-view'),
-                    formKey: _loginFormKey,
-                    emailController: _emailController,
-                    senhaController: _senhaController,
-                    loading: _loading,
-                    errorMessage: _errorMessage,
-                    onBack: () => _goTo(AuthView.landing),
-                    onSubmit: _submitLogin,
-                  ),
-                AuthView.cadastro => _CadastroFormView(
-                    key: const ValueKey('cadastro-view'),
-                    formKey: _cadastroFormKey,
-                    nomeController: _nomeController,
-                    emailController: _emailController,
-                    telefoneController: _telefoneController,
-                    senhaController: _senhaController,
-                    confirmarSenhaController: _confirmarSenhaController,
-                    loading: _loading,
-                    errorMessage: _errorMessage,
-                    aceitouTermos: _aceitouTermos,
-                    onBack: () => _goTo(AuthView.landing),
-                    onSubmit: _submitCadastro,
-                    onAceitouTermosChanged: (value) {
-                      setState(() {
-                        _aceitouTermos = value ?? false;
-                        _errorMessage = null;
-                      });
-                    },
-                    confirmarSenhaValidator: _confirmarSenhaValidator,
-                  ),
-              },
-            ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: switch (_view) {
+              AuthView.landing => _LandingView(
+                  key: const ValueKey('landing-view'),
+                  onApplePressed: () => _showPendingProviderMessage('Apple'),
+                  onGooglePressed: () => _showPendingProviderMessage('Google'),
+                  onEmailPressed: () => _goTo(AuthView.login),
+                  onCadastroPressed: () => _goTo(AuthView.cadastro),
+                ),
+              AuthView.login => _LoginFormView(
+                  key: const ValueKey('login-view'),
+                  formKey: _loginFormKey,
+                  emailController: _emailController,
+                  senhaController: _senhaController,
+                  loading: _loading,
+                  errorMessage: _errorMessage,
+                  onBack: () => _goTo(AuthView.landing),
+                  onSubmit: _submitLogin,
+                ),
+              AuthView.cadastro => _CadastroFormView(
+                  key: const ValueKey('cadastro-view'),
+                  formKey: _cadastroFormKey,
+                  nomeController: _nomeController,
+                  emailController: _emailController,
+                  telefoneController: _telefoneController,
+                  senhaController: _senhaController,
+                  confirmarSenhaController: _confirmarSenhaController,
+                  loading: _loading,
+                  errorMessage: _errorMessage,
+                  aceitouTermos: _aceitouTermos,
+                  onBack: () => _goTo(AuthView.landing),
+                  onSubmit: _submitCadastro,
+                  onAceitouTermosChanged: (value) {
+                    setState(() {
+                      _aceitouTermos = value ?? false;
+                      _errorMessage = null;
+                    });
+                  },
+                  confirmarSenhaValidator: _confirmarSenhaValidator,
+                ),
+            },
           ),
         ),
       ),
@@ -354,11 +346,11 @@ class _LoginFormView extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
+                padding: EdgeInsets.fromLTRB(
                   AppSizes.lg,
                   AppSizes.xl,
                   AppSizes.lg,
-                  AppSizes.lg,
+                  AppSizes.lg + MediaQuery.viewInsetsOf(context).bottom,
                 ),
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
@@ -520,11 +512,12 @@ class _CadastroFormView extends StatelessWidget {
         ),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(
               AppSizes.lg,
               AppSizes.lg,
               AppSizes.lg,
-              AppSizes.xl,
+              AppSizes.xl + MediaQuery.viewInsetsOf(context).bottom,
             ),
             child: Form(
               key: formKey,

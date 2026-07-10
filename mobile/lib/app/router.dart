@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../features/agenda/presentation/agenda_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
+import '../features/coraia/presentation/coraia_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
 import '../features/humor/presentation/humor_page.dart';
 import '../features/idosos/presentation/cadastro_idoso_page.dart';
 import '../features/idosos/presentation/dashboard_idoso_page.dart';
+import '../features/idosos/presentation/perfil_idoso_page.dart';
 import '../features/idosos/presentation/selecionar_idoso_page.dart';
 import '../features/insumos/presentation/insumos_page.dart';
 import '../features/medicamentos/presentation/medicamentos_page.dart';
@@ -36,6 +38,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/idosos/cadastro',
         builder: (context, state) => const CadastroIdosoPage(),
+      ),
+      GoRoute(
+        path: '/idosos/editar',
+        builder: (context, state) => CadastroIdosoPage(
+          edicao: true,
+          from: state.uri.queryParameters['from'],
+        ),
       ),
       GoRoute(path: '/perfil', builder: (context, state) => const PerfilPage()),
       GoRoute(
@@ -83,6 +92,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const HumorPage(),
           ),
           GoRoute(
+            path: '/coraia',
+            builder: (context, state) => const CoraIAPage(),
+          ),
+          GoRoute(
             path: '/agua',
             builder: (context, state) =>
                 const ModulePlaceholderPage(title: 'Agua'),
@@ -104,8 +117,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/idoso/perfil',
-            builder: (context, state) =>
-                const ModulePlaceholderPage(title: 'Perfil do idoso'),
+            builder: (context, state) => const PerfilIdosoPage(),
+          ),
+          GoRoute(
+            path: '/idoso/acessos',
+            builder: (context, state) => const AcessosIdosoPage(),
           ),
         ],
       ),
@@ -135,6 +151,7 @@ class AppShell extends StatelessWidget {
     }
     if (location == '/relatorios') return 2;
     if (location == '/idoso/perfil') return 2;
+    if (location == '/coraia') return 3;
     return 0;
   }
 
@@ -169,6 +186,12 @@ class AppShell extends StatelessWidget {
                   label: 'Monitoramento',
                   selected: selectedIndex == 1,
                   onTap: () => context.go('/monitoramento'),
+                ),
+                _ShellNavItem(
+                  icon: Icons.auto_awesome_rounded,
+                  label: 'CoraIA',
+                  selected: selectedIndex == 3,
+                  onTap: () => context.go('/coraia'),
                 ),
                 _ShellNavItem(
                   icon: Icons.person_outline,
