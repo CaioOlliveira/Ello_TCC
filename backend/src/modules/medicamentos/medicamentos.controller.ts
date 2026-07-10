@@ -9,7 +9,10 @@ import {
   atualizarMedicamentoSchema,
   criarHorarioMedicamentoSchema,
   criarMedicamentoSchema,
+  historicoMedicamentosQuerySchema,
   registrarAdministracaoSchema,
+  resumoMedicamentosQuerySchema,
+  substituirHorariosMedicamentoSchema,
 } from "./medicamentos.schemas.js";
 import { medicamentosService } from "./medicamentos.service.js";
 
@@ -24,6 +27,27 @@ export const listarMedicamentos: RequestHandler = asyncHandler(
       idosoId,
     );
     res.json({ dados, meta: { total, pagina, limite } });
+  },
+);
+
+export const obterResumoMedicamentos: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { idosoId } = resumoMedicamentosQuerySchema.parse(req.query);
+    res.json({ dados: await medicamentosService.resumo(idosoId) });
+  },
+);
+
+export const obterHistoricoMedicamentos: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { idosoId, dataReferencia, periodo } =
+      historicoMedicamentosQuerySchema.parse(req.query);
+    res.json({
+      dados: await medicamentosService.historico(
+        idosoId,
+        dataReferencia,
+        periodo,
+      ),
+    });
   },
 );
 
@@ -81,6 +105,24 @@ export const registrarAdministracaoMedicamento: RequestHandler = asyncHandler(
     const input = registrarAdministracaoSchema.parse(req.body);
     res.status(201).json({
       dados: await medicamentosService.registrarAdministracao(id, input),
+    });
+  },
+);
+
+export const listarAdministracoesMedicamento: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const dados = await medicamentosService.listarAdministracoes(id);
+    res.json({ dados, meta: { total: dados.length } });
+  },
+);
+
+export const substituirHorariosMedicamento: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const input = substituirHorariosMedicamentoSchema.parse(req.body);
+    res.json({
+      dados: await medicamentosService.substituirHorarios(id, input),
     });
   },
 );
