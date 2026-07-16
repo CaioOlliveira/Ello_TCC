@@ -8,6 +8,7 @@ import {
   listarConversasIaSchema,
   listarMensagensIaSchema,
   perguntarIaSchema,
+  relatorioInicialIaSchema,
 } from "./ia.schemas.js";
 
 export const listarConversasIa: RequestHandler = asyncHandler(
@@ -36,3 +37,10 @@ export const perguntarIa: RequestHandler = asyncHandler(async (req, res) => {
   const input = perguntarIaSchema.parse(req.body);
   res.json(await iaService.perguntar(input));
 });
+
+export const obterRelatorioInicialIa: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const input = relatorioInicialIaSchema.parse(req.query);
+    res.json({ dados: await iaService.obterRelatorioInicial(input) });
+  },
+);

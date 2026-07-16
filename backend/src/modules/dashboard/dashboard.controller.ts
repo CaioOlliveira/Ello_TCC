@@ -14,3 +14,10 @@ export const obterDashboardIdoso: RequestHandler = asyncHandler(
     res.json({ dados: await dashboardService.obterResumo(idosoId) });
   },
 );
+
+export const obterDicaDashboardIdoso: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { idosoId } = paramsSchema.parse(req.params);
+    res.json({ dados: await dashboardService.obterDicaDoDia(idosoId) });
+  },
+);

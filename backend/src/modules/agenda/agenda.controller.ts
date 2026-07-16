@@ -26,6 +26,20 @@ export const listarCompromissos: RequestHandler = asyncHandler(
   },
 );
 
+export const listarHistoricoAgenda: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { limite, offset, pagina } = getPagination(req.query);
+    const idosoId =
+      typeof req.query.idosoId === "string" ? req.query.idosoId : undefined;
+    const { dados, total } = await agendaService.listarHistorico(
+      limite,
+      offset,
+      idosoId,
+    );
+    res.json({ dados, meta: { total, pagina, limite } });
+  },
+);
+
 export const buscarCompromisso: RequestHandler = asyncHandler(
   async (req, res) => {
     const { id } = idParamSchema.parse(req.params);

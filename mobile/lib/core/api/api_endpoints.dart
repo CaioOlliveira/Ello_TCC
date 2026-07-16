@@ -8,15 +8,20 @@ class ApiEndpoints {
   static const humores = '/registros/humores';
   static const hidratacoes = '/registros/hidratacoes';
   static const agenda = '/agenda';
+  static const agendaHistorico = '/agenda/historico';
   static const equipamentos = '/equipamentos';
+  static const equipamentosHistorico = '/equipamentos/historico';
   static const insumos = '/insumos';
   static const refeicoes = '/refeicoes';
   static const dicaAlimentacao = '/refeicoes/dica';
   static const glicemias = '/glicemias';
   static const iaPerguntar = '/ia/perguntar';
   static const iaConversas = '/ia/conversas';
+  static const iaRelatorioInicial = '/ia/relatorio-inicial';
   static const glicemiaResumo = '/glicemias/resumo';
   static const glicemiaInsulinas = '/glicemias/insulinas';
+  static String dicaDashboard(String idosoId) =>
+      '/dashboard/idosos/$idosoId/dica';
   static String compromisso(String id) => '/agenda/$id';
   static String ocorrenciaCompromisso(String id) => '/agenda/$id/ocorrencias';
   static String equipamento(String id) => '/equipamentos/$id';

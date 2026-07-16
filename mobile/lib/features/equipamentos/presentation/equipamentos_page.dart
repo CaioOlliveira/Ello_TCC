@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +35,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _load();
   }
 
   Future<void> _load() async {
@@ -57,6 +59,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
               .firstOrNull;
         }
       });
+      ref
+          .read(apiClientProvider)
+          .listarHistoricoEquipamentos(idosoId: idoso.id)
+          .catchError((_) => const <Map<String, dynamic>>[]);
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
@@ -213,6 +219,65 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     }
   }
 
+  Future<void> _confirmDeleteEquipamento() async {
+    final selected = _selected;
+    if (selected == null) return;
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: const Text('Excluir equipamento'),
+          content: Text(
+            'Tem certeza que deseja excluir "${selected.nome}"? Essa acao nao pode ser desfeita.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFF1744),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Excluir'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      await _deleteEquipamento(selected);
+    }
+  }
+
+  Future<void> _deleteEquipamento(Equipamento selected) async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(apiClientProvider).removerEquipamento(id: selected.id);
+      if (!mounted) return;
+      setState(() {
+        _equipamentos = [
+          for (final item in _equipamentos)
+            if (item.id != selected.id) item,
+        ];
+        _selected = null;
+        _manutencoes = [];
+        _view = _EquipamentosView.lista;
+      });
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } catch (_) {
+      if (mounted) _showMessage('Nao foi possivel excluir equipamento.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   int _compare(Equipamento a, Equipamento b) => a.nome.compareTo(b.nome);
 
   void _showMessage(String message) {
@@ -262,6 +327,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 equipamentos: _equipamentos,
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
+                onHistory: () => context.push('/equipamentos/historico'),
               )
             : _EquipamentoDetails(
                 equipamento: _selected!,
@@ -273,6 +339,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                   _selected!.status == 'Fora de uso' ? 'Em uso' : 'Fora de uso',
                 ),
                 onEdit: () => setState(() => _view = _EquipamentosView.edicao),
+                onDelete: _confirmDeleteEquipamento,
               );
       case _EquipamentosView.manutencao:
         child = _selected == null
@@ -295,6 +362,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 equipamentos: _equipamentos,
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
+                onHistory: () => context.push('/equipamentos/historico'),
               );
     }
 
@@ -330,12 +398,14 @@ class _EquipamentosList extends StatelessWidget {
     required this.equipamentos,
     required this.onAdd,
     required this.onOpen,
+    required this.onHistory,
   });
 
   final bool loading;
   final List<Equipamento> equipamentos;
   final VoidCallback onAdd;
   final ValueChanged<Equipamento> onOpen;
+  final VoidCallback onHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -379,12 +449,35 @@ class _EquipamentosList extends StatelessWidget {
         ),
         SizedBox(
           width: double.infinity,
-          height: 54,
+          height: 46,
           child: FilledButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add_circle_rounded, size: 22),
-            label: const Text('Adicionar equipamento'),
+            label: const Text('Adicionar Equipamento'),
             style: _primaryButtonStyle(),
+          ),
+        ),
+        const SizedBox(height: 7),
+        SizedBox(
+          width: double.infinity,
+          height: 42,
+          child: OutlinedButton(
+            onPressed: onHistory,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF222222),
+              side: const BorderSide(
+                color: Color(0xFF1696AA),
+                width: 1.4,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(9),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: const Text('Ver Historico'),
           ),
         ),
       ],

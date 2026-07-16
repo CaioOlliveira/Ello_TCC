@@ -52,6 +52,47 @@ export const equipamentosService = {
     });
   },
 
+  async listarHistorico(limit: number, offset: number, idosoId?: string) {
+    const params: unknown[] = ["equipamentos", "manutencoes_equipamentos"];
+    const filters = ["h.tipo_entidade in ($1, $2)"];
+
+    if (idosoId) {
+      params.push(idosoId);
+      filters.push(`h.idoso_id = $${params.length}`);
+    }
+
+    const where = filters.join(" and ");
+    const countResult = await getPool().query<{ total: string }>(
+      `select count(*) as total from historico_alteracoes h where ${where}`,
+      params,
+    );
+
+    const result = await getPool().query<Record<string, unknown>>(
+      `
+        select
+          h.*,
+          u.nome as usuario_nome,
+          e.nome as equipamento_nome
+        from historico_alteracoes h
+        left join usuarios u on u.id = h.usuario_id
+        left join manutencoes_equipamentos me
+          on h.tipo_entidade = 'manutencoes_equipamentos'
+         and me.id::text = h.entidade_id::text
+        left join equipamentos e
+          on e.id = me.equipamento_id
+        where ${where}
+        order by h.criado_em desc
+        limit $${params.length + 1} offset $${params.length + 2}
+      `,
+      [...params, limit, offset],
+    );
+
+    return {
+      dados: result.rows,
+      total: Number(countResult.rows[0]?.total ?? 0),
+    };
+  },
+
   async buscarPorId(id: string) {
     return getRowById<Record<string, unknown>>(table, id, ...notFound);
   },
@@ -101,6 +142,10 @@ export const equipamentosService = {
 
   async remover(id: string) {
     const anterior = await this.buscarPorId(id);
+    await getPool().query(
+      `delete from manutencoes_equipamentos where equipamento_id = $1`,
+      [id],
+    );
     await deleteRow(table, id, ...notFound);
     await registrarHistorico({
       idosoId: String(anterior.idoso_id ?? ""),
@@ -167,7 +212,7 @@ export const equipamentosService = {
     await registrarHistorico({
       usuarioId: registradoPorId,
       idosoId: String(equipamento.idoso_id ?? ""),
-      acao: "criar",
+      acao: "registrar_manutencao",
       tipoEntidade: "manutencoes_equipamentos",
       entidadeId: String(manutencao.id),
       dadosNovos: manutencao,

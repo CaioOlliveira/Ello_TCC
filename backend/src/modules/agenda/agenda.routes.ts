@@ -5,6 +5,7 @@ import {
   atualizarOcorrenciaCompromisso,
   buscarCompromisso,
   criarCompromisso,
+  listarHistoricoAgenda,
   listarCompromissos,
   removerCompromisso,
 } from "./agenda.controller.js";
@@ -12,6 +13,7 @@ import {
 export const agendaRoutes = Router();
 
 agendaRoutes.get("/", listarCompromissos);
+agendaRoutes.get("/historico", listarHistoricoAgenda);
 agendaRoutes.post("/", criarCompromisso);
 agendaRoutes.get("/:id", buscarCompromisso);
 agendaRoutes.patch("/:id/ocorrencias", atualizarOcorrenciaCompromisso);

@@ -32,7 +32,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _load();
   }
 
   Future<void> _load() async {
@@ -60,6 +60,10 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
           }
         }
       });
+      ref
+          .read(apiClientProvider)
+          .listarHistoricoAgenda(idosoId: idoso.id)
+          .catchError((_) => const <Map<String, dynamic>>[]);
     } on ApiException {
       if (!mounted) return;
     } catch (_) {
@@ -361,19 +365,21 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   List<AgendaCompromisso> get _itemsForSelectedDay {
-    final items = _items.where(
-      (item) => agendaItemOccursOnDay(
-        start: item.dataHora,
-        frequencia: item.frequencia,
-        status: item.status,
-        day: _selectedDay,
-      ),
-    ).map(
-      (item) => item.copyWith(
-        status: item.statusNoDia(_selectedDay),
-        dataOcorrencia: _selectedDay,
-      ),
-    );
+    final items = _items
+        .where(
+          (item) => agendaItemOccursOnDay(
+            start: item.dataHora,
+            frequencia: item.frequencia,
+            status: item.status,
+            day: _selectedDay,
+          ),
+        )
+        .map(
+          (item) => item.copyWith(
+            status: item.statusNoDia(_selectedDay),
+            dataOcorrencia: _selectedDay,
+          ),
+        );
     return items.toList()..sort(_compareAgendaTimes);
   }
 
@@ -389,6 +395,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: idoso == null
           ? null
           : FloatingActionButton(
@@ -408,6 +415,40 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                     )
                   : const Icon(Icons.add_rounded, size: 36),
             ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
+              child: SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: OutlinedButton(
+                  onPressed: () => context.go('/agenda/historico'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF222222),
+                    side: const BorderSide(
+                      color: Color(0xFF1696AA),
+                      width: 1.4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: const Text('Ver Historico'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(

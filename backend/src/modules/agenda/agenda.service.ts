@@ -91,6 +91,41 @@ export const agendaService = {
     };
   },
 
+  async listarHistorico(limit: number, offset: number, idosoId?: string) {
+    const params: unknown[] = ["tarefas"];
+    const filters = ["h.tipo_entidade = $1"];
+
+    if (idosoId) {
+      params.push(idosoId);
+      filters.push(`h.idoso_id = $${params.length}`);
+    }
+
+    const where = filters.join(" and ");
+    const countResult = await getPool().query<{ total: string }>(
+      `select count(*) as total from historico_alteracoes h where ${where}`,
+      params,
+    );
+
+    const result = await getPool().query<Record<string, unknown>>(
+      `
+        select
+          h.*,
+          u.nome as usuario_nome
+        from historico_alteracoes h
+        left join usuarios u on u.id = h.usuario_id
+        where ${where}
+        order by h.criado_em desc
+        limit $${params.length + 1} offset $${params.length + 2}
+      `,
+      [...params, limit, offset],
+    );
+
+    return {
+      dados: result.rows,
+      total: Number(countResult.rows[0]?.total ?? 0),
+    };
+  },
+
   async buscarPorId(id: string) {
     await this.garantirTabelaOcorrencias();
     const result = await getPool().query<Record<string, unknown>>(
@@ -199,7 +234,7 @@ export const agendaService = {
     id: string,
     input: AtualizarOcorrenciaEventoInput,
   ) {
-    await this.buscarPorId(id);
+    const anterior = await this.buscarPorId(id);
     await this.garantirTabelaOcorrencias();
 
     if (input.status === "agendado") {
@@ -223,7 +258,24 @@ export const agendaService = {
       );
     }
 
-    return this.buscarPorId(id);
+    const atualizado = await this.buscarPorId(id);
+    await registrarHistorico({
+      idosoId: String(atualizado.idoso_id ?? anterior.idoso_id ?? ""),
+      acao: "atualizar_ocorrencia",
+      tipoEntidade: table,
+      entidadeId: id,
+      dadosAnteriores: {
+        dataOcorrencia: input.dataOcorrencia,
+        ocorrenciasStatus: anterior.ocorrencias_status,
+      },
+      dadosNovos: {
+        dataOcorrencia: input.dataOcorrencia,
+        status: input.status,
+        ocorrenciasStatus: atualizado.ocorrencias_status,
+      },
+    });
+
+    return atualizado;
   },
 
   async remover(id: string) {

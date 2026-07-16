@@ -216,6 +216,51 @@ class AiPerguntaResposta {
   final AiMensagem? mensagem;
 }
 
+class AiRelatorioSecao {
+  const AiRelatorioSecao({
+    required this.tipo,
+    required this.titulo,
+    required this.texto,
+  });
+
+  factory AiRelatorioSecao.fromJson(Map<String, dynamic> json) {
+    return AiRelatorioSecao(
+      tipo: json['tipo']?.toString() ?? 'dica',
+      titulo: json['titulo']?.toString() ?? 'Resumo',
+      texto: json['texto']?.toString() ?? '',
+    );
+  }
+
+  final String tipo;
+  final String titulo;
+  final String texto;
+}
+
+class AiRelatorioInicial {
+  const AiRelatorioInicial({
+    required this.mensagemInicial,
+    required this.secoes,
+  });
+
+  factory AiRelatorioInicial.fromJson(Map<String, dynamic> json) {
+    final secoes = json['secoes'];
+
+    return AiRelatorioInicial(
+      mensagemInicial: json['mensagemInicial']?.toString() ??
+          'Analisei os dados recentes e preparei um resumo geral.',
+      secoes: secoes is List
+          ? secoes
+              .whereType<Map<String, dynamic>>()
+              .map(AiRelatorioSecao.fromJson)
+              .toList()
+          : const [],
+    );
+  }
+
+  final String mensagemInicial;
+  final List<AiRelatorioSecao> secoes;
+}
+
 class GlicemiaRegistro {
   const GlicemiaRegistro({
     required this.id,
@@ -634,18 +679,51 @@ class HidratacaoRegistro {
   final DateTime registradoEm;
 }
 
+class _ApiMemoryCache<T> {
+  const _ApiMemoryCache({
+    required this.value,
+    required this.createdAt,
+  });
+
+  final T value;
+  final DateTime createdAt;
+
+  bool isFresh(Duration ttl) => DateTime.now().difference(createdAt) < ttl;
+}
+
 class ApiClient {
   ApiClient({required String baseUrl})
       : _dio = Dio(
           BaseOptions(
             baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 30),
             headers: {'Content-Type': 'application/json'},
           ),
         );
 
   final Dio _dio;
+  final _agendaCache = <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
+  final _agendaHistoryCache =
+      <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
+  final _equipmentsCache =
+      <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
+  final _equipmentsHistoryCache =
+      <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
+  final _equipmentMaintenancesCache =
+      <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
+  static const _agendaCacheTtl = Duration(minutes: 2);
+
+  void _clearAgendaCaches() {
+    _agendaCache.clear();
+    _agendaHistoryCache.clear();
+  }
+
+  void _clearEquipmentCaches() {
+    _equipmentsCache.clear();
+    _equipmentsHistoryCache.clear();
+    _equipmentMaintenancesCache.clear();
+  }
 
   Future<Map<String, dynamic>> getHealth() async {
     try {
@@ -872,6 +950,22 @@ class ApiClient {
     }
   }
 
+  Future<String> buscarDicaDashboard({required String idosoId}) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.dicaDashboard(idosoId),
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return dados['texto']?.toString() ??
+            'Incentive pequenas pausas e hidratacao ao longo do dia.';
+      }
+      return 'Incentive pequenas pausas e hidratacao ao longo do dia.';
+    } on DioException {
+      return 'Incentive pequenas pausas e hidratacao ao longo do dia.';
+    }
+  }
+
   Future<RefeicaoResumo> criarRefeicao({
     required Map<String, dynamic> data,
   }) async {
@@ -1053,6 +1147,7 @@ class ApiClient {
     required String mensagem,
     String? conversaId,
     String? idosoId,
+    Map<String, String>? imagem,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -1063,6 +1158,7 @@ class ApiClient {
           if (conversaId != null && conversaId.isNotEmpty)
             'conversaId': conversaId,
           if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          if (imagem != null) 'anexos': [imagem],
         },
       );
 
@@ -1073,6 +1169,33 @@ class ApiClient {
       throw _toApiException(
         error,
         fallback: 'Nao foi possivel falar com a IA agora.',
+      );
+    }
+  }
+
+  Future<AiRelatorioInicial> obterRelatorioInicialIa({
+    required String usuarioId,
+    required String idosoId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.iaRelatorioInicial,
+        queryParameters: {
+          'usuarioId': usuarioId,
+          'idosoId': idosoId,
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return AiRelatorioInicial.fromJson(dados);
+      }
+
+      return AiRelatorioInicial.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel carregar o relatorio da IA.',
       );
     }
   }
@@ -1228,6 +1351,12 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> listarCompromissos({
     String? idosoId,
   }) async {
+    final cacheKey = idosoId ?? '';
+    final cached = _agendaCache[cacheKey];
+    if (cached != null && cached.isFresh(_agendaCacheTtl)) {
+      return List<Map<String, dynamic>>.from(cached.value);
+    }
+
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.agenda,
@@ -1239,12 +1368,54 @@ class ApiClient {
       final data = response.data?['dados'];
 
       if (data is List) {
-        return data.whereType<Map<String, dynamic>>().toList();
+        final result = data.whereType<Map<String, dynamic>>().toList();
+        _agendaCache[cacheKey] = _ApiMemoryCache(
+          value: result,
+          createdAt: DateTime.now(),
+        );
+        return List<Map<String, dynamic>>.from(result);
       }
 
       return const [];
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao listar compromissos.');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> listarHistoricoAgenda({
+    String? idosoId,
+  }) async {
+    final cacheKey = idosoId ?? '';
+    final cached = _agendaHistoryCache[cacheKey];
+    if (cached != null && cached.isFresh(_agendaCacheTtl)) {
+      return List<Map<String, dynamic>>.from(cached.value);
+    }
+
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.agendaHistorico,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        final result = data.whereType<Map<String, dynamic>>().toList();
+        _agendaHistoryCache[cacheKey] = _ApiMemoryCache(
+          value: result,
+          createdAt: DateTime.now(),
+        );
+        return List<Map<String, dynamic>>.from(result);
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao listar historico da agenda.',
+      );
     }
   }
 
@@ -1256,6 +1427,7 @@ class ApiClient {
         ApiEndpoints.agenda,
         data: data,
       );
+      _clearAgendaCaches();
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao criar compromisso.');
@@ -1271,6 +1443,7 @@ class ApiClient {
         ApiEndpoints.compromisso(id),
         data: data,
       );
+      _clearAgendaCaches();
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao atualizar compromisso.');
@@ -1290,6 +1463,7 @@ class ApiClient {
           'status': status,
         },
       );
+      _clearAgendaCaches();
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(
@@ -1302,6 +1476,7 @@ class ApiClient {
   Future<void> removerCompromisso({required String id}) async {
     try {
       await _dio.delete<void>(ApiEndpoints.compromisso(id));
+      _clearAgendaCaches();
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao excluir compromisso.');
     }
@@ -1310,6 +1485,12 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> listarEquipamentos({
     String? idosoId,
   }) async {
+    final cacheKey = idosoId ?? '';
+    final cached = _equipmentsCache[cacheKey];
+    if (cached != null && cached.isFresh(_agendaCacheTtl)) {
+      return List<Map<String, dynamic>>.from(cached.value);
+    }
+
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.equipamentos,
@@ -1321,12 +1502,54 @@ class ApiClient {
       final data = response.data?['dados'];
 
       if (data is List) {
-        return data.whereType<Map<String, dynamic>>().toList();
+        final result = data.whereType<Map<String, dynamic>>().toList();
+        _equipmentsCache[cacheKey] = _ApiMemoryCache(
+          value: result,
+          createdAt: DateTime.now(),
+        );
+        return List<Map<String, dynamic>>.from(result);
       }
 
       return const [];
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao listar equipamentos.');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> listarHistoricoEquipamentos({
+    String? idosoId,
+  }) async {
+    final cacheKey = idosoId ?? '';
+    final cached = _equipmentsHistoryCache[cacheKey];
+    if (cached != null && cached.isFresh(_agendaCacheTtl)) {
+      return List<Map<String, dynamic>>.from(cached.value);
+    }
+
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.equipamentosHistorico,
+        queryParameters: {
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+          'limite': 100,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        final result = data.whereType<Map<String, dynamic>>().toList();
+        _equipmentsHistoryCache[cacheKey] = _ApiMemoryCache(
+          value: result,
+          createdAt: DateTime.now(),
+        );
+        return List<Map<String, dynamic>>.from(result);
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao listar historico de equipamentos.',
+      );
     }
   }
 
@@ -1338,6 +1561,7 @@ class ApiClient {
         ApiEndpoints.equipamentos,
         data: data,
       );
+      _clearEquipmentCaches();
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao criar equipamento.');
@@ -1353,15 +1577,30 @@ class ApiClient {
         ApiEndpoints.equipamento(id),
         data: data,
       );
+      _clearEquipmentCaches();
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao atualizar equipamento.');
     }
   }
 
+  Future<void> removerEquipamento({required String id}) async {
+    try {
+      await _dio.delete<void>(ApiEndpoints.equipamento(id));
+      _clearEquipmentCaches();
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao excluir equipamento.');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> listarManutencoesEquipamento({
     required String id,
   }) async {
+    final cached = _equipmentMaintenancesCache[id];
+    if (cached != null && cached.isFresh(_agendaCacheTtl)) {
+      return List<Map<String, dynamic>>.from(cached.value);
+    }
+
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.manutencoesEquipamento(id),
@@ -1369,7 +1608,12 @@ class ApiClient {
       final data = response.data?['dados'];
 
       if (data is List) {
-        return data.whereType<Map<String, dynamic>>().toList();
+        final result = data.whereType<Map<String, dynamic>>().toList();
+        _equipmentMaintenancesCache[id] = _ApiMemoryCache(
+          value: result,
+          createdAt: DateTime.now(),
+        );
+        return List<Map<String, dynamic>>.from(result);
       }
 
       return const [];
@@ -1390,6 +1634,7 @@ class ApiClient {
         ApiEndpoints.manutencoesEquipamento(id),
         data: data,
       );
+      _clearEquipmentCaches();
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(

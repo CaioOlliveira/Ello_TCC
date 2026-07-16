@@ -33,6 +33,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
   DateTime? _dataCompraValue;
   DateTime? _validadeValue;
   DateTime? _ultimaValue;
+  int? _frequenciaValue;
   String? _urlFoto;
 
   @override
@@ -54,9 +55,12 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     _ultimaManutencao.text = initial.ultimaManutencaoEm == null
         ? ''
         : formatDate(initial.ultimaManutencaoEm);
-    _frequencia.text = initial.frequenciaManutencaoDias?.toString() ?? '';
+    _frequenciaValue = initial.frequenciaManutencaoDias;
+    _frequencia.text = maintenanceFrequencyLabel(_frequenciaValue);
     _local.text = initial.localGuardado;
-    _manual.text = initial.urlManual;
+    _manual.text = initial.urlManual.trim().toLowerCase() == 'manual.pdf'
+        ? ''
+        : initial.urlManual;
     _observacoes.text = initial.observacoesSeguranca;
     _urlFoto = initial.urlFoto.isEmpty ? null : initial.urlFoto;
   }
@@ -107,9 +111,123 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     });
   }
 
+  Future<void> _attachManual() async {
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+        allowMultiple: false,
+        withData: true,
+        dialogTitle: 'Selecione o manual em PDF',
+      );
+    } on PlatformException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel abrir o seletor de arquivos.'),
+        ),
+      );
+      return;
+    }
+    if (result == null) return;
+
+    final file = result.files.single;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione um arquivo PDF.')),
+      );
+      return;
+    }
+
+    var bytes = file.bytes;
+    if ((bytes == null || bytes.isEmpty) && file.path != null) {
+      bytes = await File(file.path!).readAsBytes();
+    }
+
+    if (bytes == null || bytes.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao foi possivel ler o PDF.')),
+      );
+      return;
+    }
+
+    final manualBytes = bytes;
+    final encodedName = Uri.encodeComponent(file.name);
+    setState(() {
+      _manual.text =
+          'data:application/pdf;name=$encodedName;base64,${base64Encode(manualBytes)}';
+    });
+  }
+
+  Future<void> _pickFrequency() async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD0D0D0),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Frequencia de manutencao',
+                  style: TextStyle(
+                    color: Color(0xFF073248),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (final option in maintenanceFrequencyOptions)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      _frequenciaValue == option.days
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: const Color(0xFF178FA1),
+                    ),
+                    title: Text(
+                      option.label,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () => Navigator.of(context).pop(option.days),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (selected == null) return;
+    setState(() {
+      _frequenciaValue = selected;
+      _frequencia.text = maintenanceFrequencyLabel(selected);
+    });
+  }
+
   void _submit() {
     if (_nome.text.trim().isEmpty) return;
-    final frequencia = int.tryParse(_frequencia.text.trim());
     widget.onSubmit(
       EquipamentoFormData(
         nome: _nome.text.trim(),
@@ -118,7 +236,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
         dataAquisicao: _dataCompraValue,
         validade: _validadeValue,
         ultimaManutencaoEm: _ultimaValue,
-        frequenciaManutencaoDias: frequencia,
+        frequenciaManutencaoDias: _frequenciaValue,
         localGuardado: _local.text.trim(),
         urlManual: _manual.text.trim(),
         urlFoto: _urlFoto,
@@ -180,11 +298,10 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           onTap: () =>
               _pickDate(_ultimaManutencao, (date) => _ultimaValue = date),
         ),
-        _LabeledField(
+        _OptionField(
           label: 'Frequencia de manutencao',
           controller: _frequencia,
-          keyboardType: TextInputType.number,
-          suffix: const Icon(Icons.keyboard_arrow_down_rounded),
+          onTap: _pickFrequency,
         ),
         _LabeledField(label: 'Local onde e guardado', controller: _local),
         const SizedBox(height: 6),
@@ -232,7 +349,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: widget.saving ? null : _attachManual,
                 icon: const Icon(Icons.attach_file_rounded, size: 22),
                 label: const Text('Anexar manual'),
                 style: OutlinedButton.styleFrom(
@@ -254,7 +371,9 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  _manual.text.isEmpty ? 'Nenhum manual anexado' : _manual.text,
+                  _manual.text.isEmpty
+                      ? 'Nenhum manual anexado'
+                      : manualDisplayName(_manual.text),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -317,6 +436,7 @@ class _EquipamentoDetails extends StatelessWidget {
     required this.onRegister,
     required this.onStatusChanged,
     required this.onEdit,
+    required this.onDelete,
   });
 
   final Equipamento equipamento;
@@ -325,6 +445,7 @@ class _EquipamentoDetails extends StatelessWidget {
   final VoidCallback onRegister;
   final VoidCallback onStatusChanged;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -357,6 +478,7 @@ class _EquipamentoDetails extends StatelessWidget {
                 if (value == 'manutencao') onRegister();
                 if (value == 'status') onStatusChanged();
                 if (value == 'editar') onEdit();
+                if (value == 'excluir') onDelete();
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(
@@ -395,6 +517,24 @@ class _EquipamentoDetails extends StatelessWidget {
                       Icon(Icons.edit_rounded, size: 20),
                       SizedBox(width: 10),
                       Text('Editar'),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'excluir',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.delete_outline_rounded,
+                        size: 20,
+                        color: Color(0xFFFF1744),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Excluir',
+                        style: TextStyle(color: Color(0xFFFF1744)),
+                      ),
                     ],
                   ),
                 ),
