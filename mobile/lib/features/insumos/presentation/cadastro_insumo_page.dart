@@ -107,6 +107,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
     });
 
     try {
+      final usuarioId = ref.read(authSessionProvider)?.id;
       final insumo = await ref.read(apiClientProvider).criarInsumo(
         data: {
           'idosoId': widget.idosoId,
@@ -128,6 +129,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
           if (_frequenciaUso != null) 'frequenciaUso': _frequenciaUso,
           if (_observacoesController.text.trim().isNotEmpty)
             'observacoes': _observacoesController.text.trim(),
+          if (usuarioId != null && usuarioId.isNotEmpty) 'usuarioId': usuarioId,
         },
       );
 

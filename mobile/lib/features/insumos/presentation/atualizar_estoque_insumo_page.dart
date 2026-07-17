@@ -174,6 +174,8 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
           'observacoes': _observacoesController.text.trim().isEmpty
               ? null
               : _observacoesController.text.trim(),
+          if (widget.usuarioId != null && widget.usuarioId!.isNotEmpty)
+            'usuarioId': widget.usuarioId,
         },
       );
 

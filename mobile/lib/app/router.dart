@@ -10,6 +10,7 @@ import '../features/coraia/presentation/coraia_page.dart';
 import '../features/equipamentos/presentation/equipamentos_history_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
+import '../features/historico/presentation/historico_page.dart';
 import '../features/humor/presentation/humor_page.dart';
 import '../features/idosos/presentation/cadastro_idoso_page.dart';
 import '../features/idosos/presentation/dashboard_idoso_page.dart';
@@ -108,6 +109,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const HumorPage(),
           ),
           GoRoute(
+            path: '/historico/:tipo',
+            builder: (context, state) => HistoricoPage(
+              tipo: state.pathParameters['tipo'] ?? 'insumos',
+            ),
+          ),
+          GoRoute(
             path: '/coraia',
             builder: (context, state) => const CoraIAPage(),
           ),
@@ -159,6 +166,7 @@ class AppShell extends StatelessWidget {
         location == '/equipamentos' ||
         location == '/insumos' ||
         location == '/humor' ||
+        location.startsWith('/historico/') ||
         location == '/agua' ||
         location == '/pressao' ||
         location == '/oxigenacao' ||

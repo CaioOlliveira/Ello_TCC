@@ -91,9 +91,6 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     nome: idoso?.nome ?? 'Selecione uma ficha',
                     idade: idoso?.idade,
                     foto: idoso?.urlFoto,
-                    onEdit: idoso == null
-                        ? null
-                        : () => context.go('/idosos/editar?from=dashboard'),
                   ),
                   const SizedBox(height: 14),
                   _MedicationAlert(
@@ -265,13 +262,11 @@ class _IdosoHeroCard extends StatelessWidget {
     required this.nome,
     this.idade,
     this.foto,
-    this.onEdit,
   });
 
   final String nome;
   final int? idade;
   final String? foto;
-  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -353,20 +348,6 @@ class _IdosoHeroCard extends StatelessWidget {
                       ],
                     ),
                 ],
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              onPressed: onEdit,
-              visualDensity: VisualDensity.compact,
-              tooltip: 'Editar ficha',
-              icon: const Icon(
-                Icons.edit_outlined,
-                color: Colors.white,
-                size: 22,
               ),
             ),
           ),

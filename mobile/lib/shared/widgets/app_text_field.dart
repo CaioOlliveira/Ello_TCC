@@ -12,6 +12,7 @@ class AppTextField extends StatelessWidget {
     this.prefixIcon,
     this.autofillHints,
     this.inputFormatters,
+    this.readOnly = false,
     super.key,
   });
 
@@ -24,6 +25,7 @@ class AppTextField extends StatelessWidget {
   final IconData? prefixIcon;
   final Iterable<String>? autofillHints;
   final List<TextInputFormatter>? inputFormatters;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +37,7 @@ class AppTextField extends StatelessWidget {
       obscureText: obscureText,
       autofillHints: autofillHints,
       inputFormatters: inputFormatters,
+      readOnly: readOnly,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),

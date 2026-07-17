@@ -679,6 +679,60 @@ class HidratacaoRegistro {
   final DateTime registradoEm;
 }
 
+class HistoricoRegistro {
+  const HistoricoRegistro({
+    required this.id,
+    required this.acao,
+    required this.tipoEntidade,
+    required this.entidadeId,
+    required this.usuarioNome,
+    required this.criadoEm,
+    required this.itemNome,
+    required this.dadosNovos,
+    required this.dadosAnteriores,
+    this.usuarioId,
+  });
+
+  factory HistoricoRegistro.fromJson(Map<String, dynamic> json) {
+    return HistoricoRegistro(
+      id: json['id']?.toString() ?? '',
+      acao: json['acao']?.toString() ?? '',
+      tipoEntidade: json['tipoEntidade']?.toString() ??
+          json['tipo_entidade']?.toString() ??
+          '',
+      entidadeId: json['entidadeId']?.toString() ??
+          json['entidade_id']?.toString() ??
+          '',
+      usuarioId:
+          json['usuarioId']?.toString() ?? json['usuario_id']?.toString(),
+      usuarioNome: json['usuarioNome']?.toString() ??
+          json['usuario_nome']?.toString() ??
+          'Usuario',
+      criadoEm: DateTime.tryParse(
+            json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
+          ) ??
+          DateTime.now(),
+      itemNome: json['itemNome']?.toString() ??
+          json['item_nome']?.toString() ??
+          'Registro',
+      dadosNovos: _mapOrEmpty(json['dadosNovos'] ?? json['dados_novos']),
+      dadosAnteriores:
+          _mapOrEmpty(json['dadosAnteriores'] ?? json['dados_anteriores']),
+    );
+  }
+
+  final String id;
+  final String acao;
+  final String tipoEntidade;
+  final String entidadeId;
+  final String? usuarioId;
+  final String usuarioNome;
+  final DateTime criadoEm;
+  final String itemNome;
+  final Map<String, dynamic> dadosNovos;
+  final Map<String, dynamic> dadosAnteriores;
+}
+
 class _ApiMemoryCache<T> {
   const _ApiMemoryCache({
     required this.value,
@@ -750,6 +804,43 @@ class ApiClient {
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao entrar.');
+    }
+  }
+
+  Future<Map<String, dynamic>> loginGoogle({
+    required String idToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.loginGoogle,
+        data: {'idToken': idToken},
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao entrar com Google.');
+    }
+  }
+
+  Future<Map<String, dynamic>> cadastrarGoogle({
+    required String idToken,
+    required String nome,
+    required String telefone,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.cadastroGoogle,
+        data: {
+          'idToken': idToken,
+          'nome': nome,
+          'telefone': telefone,
+        },
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao cadastrar com Google.',
+      );
     }
   }
 
@@ -1348,6 +1439,38 @@ class ApiClient {
     }
   }
 
+  Future<List<HistoricoRegistro>> listarHistorico({
+    required String tipo,
+    required String idosoId,
+    required String inicio,
+    required String fim,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.historico,
+        queryParameters: {
+          'tipo': tipo,
+          'idosoId': idosoId,
+          'inicio': inicio,
+          'fim': fim,
+          'limite': 200,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(HistoricoRegistro.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar historico.');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> listarCompromissos({
     String? idosoId,
   }) async {
@@ -1807,4 +1930,12 @@ DateTime? _dateOnlyOrNull(Object? value) {
   final text = value?.toString();
   if (text == null || text.isEmpty) return null;
   return DateTime.tryParse(text.length > 10 ? text.substring(0, 10) : text);
+}
+
+Map<String, dynamic> _mapOrEmpty(Object? value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    return value.map((key, data) => MapEntry(key.toString(), data));
+  }
+  return const <String, dynamic>{};
 }

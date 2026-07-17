@@ -1,12 +1,9 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
-import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 
 class HumorPage extends ConsumerStatefulWidget {
@@ -191,9 +188,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                       onBack: () => context.go('/monitoramento'),
                       onProfile: () => context.go('/perfil?from=humor'),
                     ),
-                    const SizedBox(height: 10),
-                    _IdosoCard(idoso: idoso),
-                    const SizedBox(height: 19),
+                    const SizedBox(height: 24),
                     Text(
                       'Como ${_firstName(idoso?.nome ?? 'o idoso')} esta hoje?',
                       style: const TextStyle(
@@ -280,6 +275,31 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    Center(
+                      child: SizedBox(
+                        width: 286,
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: () => context.push('/historico/humor'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF073248),
+                            side: const BorderSide(
+                              color: Color(0xFF38AFC0),
+                              width: 1.4,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: const Text('Ver Historico'),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -337,89 +357,6 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _IdosoCard extends StatelessWidget {
-  const _IdosoCard({required this.idoso});
-
-  final IdosoResumo? idoso;
-
-  @override
-  Widget build(BuildContext context) {
-    final bytes = _dataImageBytes(idoso?.urlFoto);
-
-    return Container(
-      height: 129,
-      padding: const EdgeInsets.fromLTRB(13, 13, 17, 13),
-      decoration: BoxDecoration(
-        color: const Color(0xFF3CAAB6),
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 48,
-            backgroundColor: const Color(0xFFD1F2F6),
-            backgroundImage: bytes != null
-                ? MemoryImage(bytes)
-                : idoso?.urlFoto != null && idoso!.urlFoto!.startsWith('http')
-                    ? NetworkImage(idoso!.urlFoto!) as ImageProvider
-                    : null,
-            child: bytes == null &&
-                    (idoso?.urlFoto == null ||
-                        !idoso!.urlFoto!.startsWith('http'))
-                ? const Icon(
-                    Icons.person_outline_rounded,
-                    color: Color(0xFF238FA1),
-                    size: 58,
-                  )
-                : null,
-          ),
-          const SizedBox(width: 22),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _firstName(idoso?.nome ?? 'Selecione'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Container(width: 94, height: 1.4, color: Colors.white),
-                const SizedBox(height: 9),
-                if (idoso != null)
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.cake_outlined,
-                        color: Colors.white,
-                        size: 17,
-                      ),
-                      const SizedBox(width: 9),
-                      Text(
-                        '${idoso!.idade} anos',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -660,17 +597,6 @@ String _firstName(String nome) {
   final trimmed = nome.trim();
   if (trimmed.isEmpty) return 'Idoso';
   return trimmed.split(RegExp(r'\s+')).first;
-}
-
-Uint8List? _dataImageBytes(String? value) {
-  if (value == null || !value.startsWith('data:image')) return null;
-  final commaIndex = value.indexOf(',');
-  if (commaIndex == -1) return null;
-  try {
-    return base64Decode(value.substring(commaIndex + 1));
-  } catch (_) {
-    return null;
-  }
 }
 
 String _formatBrazilianDate(DateTime date) {

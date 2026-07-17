@@ -237,6 +237,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                   onRetry: _load,
                   onSaveWeight: _saveWeight,
                   onAddWater: _addWater,
+                  onHistory: () => context.push('/historico/alimentacao'),
                   onAdd: () => setState(() {
                     _editing = null;
                     _view = _AlimentacaoView.form;
@@ -284,6 +285,7 @@ class _AlimentacaoListView extends StatelessWidget {
     required this.onRetry,
     required this.onSaveWeight,
     required this.onAddWater,
+    required this.onHistory,
     required this.onAdd,
     required this.onDetails,
     required this.onEdit,
@@ -300,6 +302,7 @@ class _AlimentacaoListView extends StatelessWidget {
   final VoidCallback onRetry;
   final ValueChanged<double> onSaveWeight;
   final VoidCallback onAddWater;
+  final VoidCallback onHistory;
   final VoidCallback onAdd;
   final ValueChanged<RefeicaoResumo> onDetails;
   final ValueChanged<RefeicaoResumo> onEdit;
@@ -387,24 +390,50 @@ class _AlimentacaoListView extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-          child: SizedBox(
-            height: 52,
-            child: OutlinedButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_rounded, size: 27),
-              label: const Text('Adicionar Refeicao'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF1897AA),
-                side: const BorderSide(color: Color(0xFF1897AA), width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
+          child: Column(
+            children: [
+              SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add_rounded, size: 27),
+                  label: const Text('Adicionar Refeicao'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1897AA),
+                    side:
+                        const BorderSide(color: Color(0xFF1897AA), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 9),
+              SizedBox(
+                height: 46,
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: onHistory,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF073248),
+                    side:
+                        const BorderSide(color: Color(0xFF1897AA), width: 1.3),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: const Text('Ver Historico'),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -1174,19 +1203,19 @@ class _FoodChip extends StatelessWidget {
 }
 
 class _AcceptanceOption {
-  const _AcceptanceOption(this.id, this.label, this.icon);
+  const _AcceptanceOption(this.id, this.label, this.fraction);
 
   final String id;
   final String label;
-  final IconData icon;
+  final double? fraction;
 }
 
 const _acceptanceOptions = [
-  _AcceptanceOption('comeu_tudo', 'Comeu tudo', Icons.circle),
-  _AcceptanceOption('comeu_bem', 'Comeu bem', Icons.pie_chart),
-  _AcceptanceOption('comeu_metade', 'Comeu metade', Icons.circle_outlined),
-  _AcceptanceOption('comeu_pouco', 'Comeu pouco', Icons.timelapse),
-  _AcceptanceOption('nao_comeu', 'Nao comeu', Icons.close),
+  _AcceptanceOption('comeu_tudo', 'Comeu tudo', 1),
+  _AcceptanceOption('comeu_bem', 'Comeu bem', .75),
+  _AcceptanceOption('comeu_metade', 'Comeu metade', .5),
+  _AcceptanceOption('comeu_pouco', 'Comeu pouco', .25),
+  _AcceptanceOption('nao_comeu', 'Nao comeu', null),
 ];
 
 class _AcceptanceButton extends StatelessWidget {
@@ -1216,7 +1245,7 @@ class _AcceptanceButton extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(option.icon, color: const Color(0xFF2A99AB), size: 19),
+            _AcceptanceIcon(option: option),
             const SizedBox(height: 5),
             Text(
               option.label,
@@ -1233,6 +1262,65 @@ class _AcceptanceButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _AcceptanceIcon extends StatelessWidget {
+  const _AcceptanceIcon({required this.option});
+
+  final _AcceptanceOption option;
+
+  @override
+  Widget build(BuildContext context) {
+    if (option.fraction == null) {
+      return const Icon(Icons.close, color: Color(0xFF2A99AB), size: 24);
+    }
+
+    return CustomPaint(
+      size: const Size.square(21),
+      painter: _AcceptanceIconPainter(option.fraction!),
+    );
+  }
+}
+
+class _AcceptanceIconPainter extends CustomPainter {
+  const _AcceptanceIconPainter(this.fraction);
+
+  final double fraction;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const color = Color(0xFF2A99AB);
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    if (fraction >= 1) {
+      canvas.drawCircle(center, radius, paint);
+      return;
+    }
+
+    canvas.drawArc(
+      rect,
+      -1.5708,
+      6.28318 * fraction,
+      true,
+      paint,
+    );
+
+    final outline = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, radius - 1, outline);
+  }
+
+  @override
+  bool shouldRepaint(covariant _AcceptanceIconPainter oldDelegate) {
+    return oldDelegate.fraction != fraction;
   }
 }
 

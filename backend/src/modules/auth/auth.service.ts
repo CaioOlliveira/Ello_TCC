@@ -4,10 +4,16 @@ import {
   scryptSync,
   timingSafeEqual,
 } from "node:crypto";
+import { OAuth2Client } from "google-auth-library";
 
 import { AppError } from "../../common/errors/app-error.js";
 import { getPool } from "../../database/pool.js";
-import type { CadastroInput, LoginInput } from "./auth.schemas.js";
+import type {
+  CadastroInput,
+  GoogleCadastroInput,
+  GoogleLoginInput,
+  LoginInput,
+} from "./auth.schemas.js";
 
 type UsuarioAuthRow = {
   id: string;
@@ -22,6 +28,7 @@ type UsuarioAuthRow = {
 };
 
 const senhaPrefixo = "scrypt";
+const googleClient = new OAuth2Client();
 
 const toUsuarioPublico = (usuario: UsuarioAuthRow) => ({
   id: usuario.id,
@@ -80,6 +87,59 @@ const buscarUsuarioPorEmail = async (email: string) => {
   return result.rows[0];
 };
 
+const googleAudiences = () => {
+  const raw =
+    process.env.GOOGLE_CLIENT_IDS ??
+    process.env.GOOGLE_CLIENT_ID ??
+    process.env.GOOGLE_WEB_CLIENT_ID ??
+    "";
+
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+};
+
+const validarGoogleToken = async (idToken: string) => {
+  const audiences = googleAudiences();
+
+  if (audiences.length === 0) {
+    throw new AppError(
+      "GOOGLE_OAUTH_NAO_CONFIGURADO",
+      "Login com Google ainda nao foi configurado no servidor.",
+      500,
+    );
+  }
+
+  const ticket = await googleClient.verifyIdToken({
+    idToken,
+    audience: audiences,
+  });
+  const payload = ticket.getPayload();
+
+  if (!payload?.email) {
+    throw new AppError(
+      "GOOGLE_TOKEN_INVALIDO",
+      "Nao foi possivel validar a conta Google.",
+      401,
+    );
+  }
+
+  if (payload.email_verified !== true) {
+    throw new AppError(
+      "GOOGLE_EMAIL_NAO_VERIFICADO",
+      "A conta Google precisa ter e-mail verificado.",
+      401,
+    );
+  }
+
+  return {
+    email: payload.email.trim().toLowerCase(),
+    nome: payload.name?.trim() || payload.email.split("@")[0],
+    fotoUrl: payload.picture ?? null,
+  };
+};
+
 export const authService = {
   status() {
     return {
@@ -125,6 +185,64 @@ export const authService = {
         input.telefone?.trim() || null,
         input.tipoUsuario,
         criarHashSenha(input.senha),
+      ],
+    );
+
+    return {
+      usuario: toUsuarioPublico(result.rows[0]),
+    };
+  },
+
+  async loginGoogle(input: GoogleLoginInput) {
+    const google = await validarGoogleToken(input.idToken);
+    const usuarioExistente = await buscarUsuarioPorEmail(google.email);
+
+    if (usuarioExistente) {
+      if (google.fotoUrl && !usuarioExistente.url_foto) {
+        const atualizado = await getPool().query<UsuarioAuthRow>(
+          `
+            update usuarios
+            set url_foto = $1
+            where id = $2
+            returning *
+          `,
+          [google.fotoUrl, usuarioExistente.id],
+        );
+        return { usuario: toUsuarioPublico(atualizado.rows[0]) };
+      }
+
+      return { usuario: toUsuarioPublico(usuarioExistente) };
+    }
+
+    return {
+      precisaCadastro: true,
+      google: {
+        email: google.email,
+        nome: google.nome,
+        urlFoto: google.fotoUrl,
+      },
+    };
+  },
+
+  async cadastrarGoogle(input: GoogleCadastroInput) {
+    const google = await validarGoogleToken(input.idToken);
+    const usuarioExistente = await buscarUsuarioPorEmail(google.email);
+
+    if (usuarioExistente) {
+      return { usuario: toUsuarioPublico(usuarioExistente) };
+    }
+
+    const result = await getPool().query<UsuarioAuthRow>(
+      `insert into usuarios (nome, email, telefone, url_foto, tipo_usuario, senha)
+       values ($1, $2, $3, $4, $5, $6)
+       returning *`,
+      [
+        input.nome.trim(),
+        google.email,
+        input.telefone?.trim() || null,
+        google.fotoUrl,
+        "cuidador",
+        "google-auth",
       ],
     );
 
