@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 import 'agenda_form_page.dart';
 import 'agenda_models.dart';
 import 'agenda_utils.dart';
@@ -482,43 +483,59 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                       )
                     else
                       Expanded(
-                        child: _view == _AgendaView.dia
-                            ? _DayView(
-                                selectedDay: _selectedDay,
-                                items: _itemsForSelectedDay,
-                                onDaySelected: (day) {
-                                  setState(() {
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 240),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.03),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          ),
+                          child: _view == _AgendaView.dia
+                              ? _DayView(
+                                  selectedDay: _selectedDay,
+                                  items: _itemsForSelectedDay,
+                                  onDaySelected: (day) {
+                                    setState(() {
+                                      _selectedDay = day;
+                                      _visibleMonth =
+                                          DateTime(day.year, day.month);
+                                    });
+                                  },
+                                  onEdit: (item) => _openForm(item: item),
+                                  onDelete: _delete,
+                                  onStatusChanged: _toggleStatus,
+                                  onCancel: _cancel,
+                                )
+                              : _MonthView(
+                                  month: _visibleMonth,
+                                  selectedDay: _selectedDay,
+                                  items: _items,
+                                  onPrevious: () => setState(() {
+                                    _visibleMonth = DateTime(
+                                      _visibleMonth.year,
+                                      _visibleMonth.month - 1,
+                                    );
+                                  }),
+                                  onNext: () => setState(() {
+                                    _visibleMonth = DateTime(
+                                      _visibleMonth.year,
+                                      _visibleMonth.month + 1,
+                                    );
+                                  }),
+                                  onDaySelected: (day) => setState(() {
                                     _selectedDay = day;
-                                    _visibleMonth =
-                                        DateTime(day.year, day.month);
-                                  });
-                                },
-                                onEdit: (item) => _openForm(item: item),
-                                onDelete: _delete,
-                                onStatusChanged: _toggleStatus,
-                                onCancel: _cancel,
-                              )
-                            : _MonthView(
-                                month: _visibleMonth,
-                                selectedDay: _selectedDay,
-                                items: _items,
-                                onPrevious: () => setState(() {
-                                  _visibleMonth = DateTime(
-                                    _visibleMonth.year,
-                                    _visibleMonth.month - 1,
-                                  );
-                                }),
-                                onNext: () => setState(() {
-                                  _visibleMonth = DateTime(
-                                    _visibleMonth.year,
-                                    _visibleMonth.month + 1,
-                                  );
-                                }),
-                                onDaySelected: (day) => setState(() {
-                                  _selectedDay = day;
-                                  _view = _AgendaView.dia;
-                                }),
-                              ),
+                                    _view = _AgendaView.dia;
+                                  }),
+                                ),
+                        ),
                       ),
                   ],
                 ),
@@ -703,12 +720,15 @@ class _DayView extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 11),
                   itemBuilder: (context, index) {
                     final item = items[index];
-                    return _TimelineItem(
-                      item: item,
-                      onEdit: () => onEdit(item),
-                      onDelete: () => onDelete(item),
-                      onStatusChanged: () => onStatusChanged(item),
-                      onCancel: () => onCancel(item),
+                    return StaggeredEntry(
+                      index: index,
+                      child: _TimelineItem(
+                        item: item,
+                        onEdit: () => onEdit(item),
+                        onDelete: () => onDelete(item),
+                        onStatusChanged: () => onStatusChanged(item),
+                        onCancel: () => onCancel(item),
+                      ),
                     );
                   },
                 ),

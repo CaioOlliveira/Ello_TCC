@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 import 'monitoramento_catalog.dart';
 
 class MonitoramentoPage extends ConsumerStatefulWidget {
@@ -204,9 +205,12 @@ class _MonitoramentoGrid extends StatelessWidget {
           ),
           itemBuilder: (context, index) {
             final option = options[index];
-            return _MonitoramentoTile(
-              option: option,
-              onTap: () => context.go(option.route),
+            return StaggeredEntry(
+              index: index,
+              child: _MonitoramentoTile(
+                option: option,
+                onTap: () => context.go(option.route),
+              ),
             );
           },
         );
@@ -215,8 +219,42 @@ class _MonitoramentoGrid extends StatelessWidget {
   }
 }
 
-class _MonitoramentoTile extends StatelessWidget {
+class _MonitoramentoTile extends StatefulWidget {
   const _MonitoramentoTile({
+    required this.option,
+    required this.onTap,
+  });
+
+  final MonitoramentoOption option;
+  final VoidCallback onTap;
+
+  @override
+  State<_MonitoramentoTile> createState() => _MonitoramentoTileState();
+}
+
+class _MonitoramentoTileState extends State<_MonitoramentoTile> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final option = widget.option;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: _MonitoramentoTileContent(option: option, onTap: widget.onTap),
+      ),
+    );
+  }
+}
+
+class _MonitoramentoTileContent extends StatelessWidget {
+  const _MonitoramentoTileContent({
     required this.option,
     required this.onTap,
   });
@@ -491,19 +529,22 @@ class _PickerOptionTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color:
                   selected ? const Color(0xFF38AFC0) : const Color(0xFFE3ECEE),
-              width: 1,
+              width: selected ? 1.6 : 1,
             ),
           ),
           child: Row(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
@@ -530,12 +571,16 @@ class _PickerOptionTile extends StatelessWidget {
                   ),
                 ),
               ),
-              if (selected)
-                const Icon(
+              AnimatedScale(
+                scale: selected ? 1 : 0,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutBack,
+                child: const Icon(
                   Icons.check_circle_rounded,
                   color: Color(0xFF38AFC0),
                   size: 20,
                 ),
+              ),
             ],
           ),
         ),

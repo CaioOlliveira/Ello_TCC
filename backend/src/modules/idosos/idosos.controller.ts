@@ -15,6 +15,18 @@ export const listarIdosos: RequestHandler = asyncHandler(async (req, res) => {
   res.json({ dados, meta: { total: dados.length } });
 });
 
+export const listarIdososAdministrados: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { usuarioId } = listarIdososQuerySchema.parse(req.query);
+    if (!usuarioId) {
+      res.json({ dados: [], meta: { total: 0 } });
+      return;
+    }
+    const dados = await idososService.listarAdministrados(usuarioId);
+    res.json({ dados, meta: { total: dados.length } });
+  },
+);
+
 export const buscarIdoso: RequestHandler = asyncHandler(async (req, res) => {
   const { idosoId } = idosoParamsSchema.parse(req.params);
   res.json({ dados: await idososService.buscarPorId(idosoId) });

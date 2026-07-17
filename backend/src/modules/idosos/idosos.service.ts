@@ -194,7 +194,17 @@ export const idososService = {
           monitoramentos
         from fichas_idosos
         where ativo = true
-          and ($1::uuid is null or criado_por_id = $1::uuid)
+          and (
+            $1::uuid is null
+            or criado_por_id = $1::uuid
+            or exists (
+              select 1
+              from membros_ficha mf
+              where mf.idoso_id = fichas_idosos.id
+                and mf.usuario_id = $1::uuid
+                and mf.status = 'ativo'
+            )
+          )
         order by nome_completo
       `,
         [filtros.usuarioId ?? null],
@@ -204,6 +214,58 @@ export const idososService = {
     }
 
     return idosos;
+  },
+
+  async listarAdministrados(usuarioId: string): Promise<Idoso[]> {
+    if (!isDatabaseEnabled) return idosos;
+
+    const result = await getPool().query<IdosoRow>(
+      `
+        select
+          id,
+          nome_completo as nome,
+          url_foto,
+          peso_kg,
+          tipo_sanguineo,
+          data_nascimento,
+          sexo,
+          case
+            when data_nascimento is null then null
+            else extract(year from age(current_date, data_nascimento))::int
+          end as idade,
+          observacoes_saude,
+          (
+            select conteudo
+            from observacoes_gerais og
+            where og.idoso_id = fichas_idosos.id
+            order by registrado_em desc
+            limit 1
+          ) as observacoes_gerais,
+          limitacoes,
+          alergias_restricoes,
+          contato_emergencia_nome,
+          contato_emergencia_telefone,
+          contato_emergencia_parentesco,
+          monitoramentos
+        from fichas_idosos
+        where ativo = true
+          and (
+            criado_por_id = $1::uuid
+            or exists (
+              select 1
+              from membros_ficha mf
+              where mf.idoso_id = fichas_idosos.id
+                and mf.usuario_id = $1::uuid
+                and mf.status = 'ativo'
+                and mf.e_administrador = true
+            )
+          )
+        order by nome_completo
+      `,
+      [usuarioId],
+    );
+
+    return result.rows.map(mapearIdoso);
   },
 
   async buscarPorId(idosoId: string): Promise<Idoso> {

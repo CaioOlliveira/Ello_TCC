@@ -291,6 +291,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      // resizeToAvoidBottomInset (default true) already shrinks the body
+      // for the keyboard; adding extra bottom padding on top of that
+      // double-reserves space and pushes content off-screen.
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(

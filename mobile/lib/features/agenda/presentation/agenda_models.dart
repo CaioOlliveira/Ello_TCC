@@ -50,9 +50,8 @@ class AgendaCompromisso {
       ocorrenciasStatus: _parseOcorrenciasStatus(
         json['ocorrencias_status'] ?? json['ocorrenciasStatus'],
       ),
-      criadoPorNome: (json['criado_por_nome'] ?? json['criadoPorNome'])
-          ?.toString()
-          .trim(),
+      criadoPorNome:
+          (json['criado_por_nome'] ?? json['criadoPorNome'])?.toString().trim(),
       criadoPorId: (json['criado_por_id'] ?? json['criadoPorId'])?.toString(),
     );
   }

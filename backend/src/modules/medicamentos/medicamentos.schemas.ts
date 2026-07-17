@@ -34,6 +34,29 @@ export const registrarAdministracaoSchema = z.object({
   observacoes: z.string().optional(),
 });
 
+export const substituirHorariosMedicamentoSchema = z.object({
+  frequenciaTipo: z.enum(["diaria", "semanal", "alternado"]).default("diaria"),
+  diasSemana: z.array(z.string().min(1)).optional(),
+  horarios: z.array(
+    z.object({
+      horario: z.string().min(1),
+      quantidadeDose: z.number().positive().optional(),
+      unidadeDose: z.string().optional(),
+    }),
+  ),
+  registradoPorId: z.string().uuid().optional(),
+});
+
+export const resumoMedicamentosQuerySchema = z.object({
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
+});
+
+export const historicoMedicamentosQuerySchema = z.object({
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  dataReferencia: z.string().date().optional(),
+  periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
+});
+
 export type CriarMedicamentoInput = z.infer<typeof criarMedicamentoSchema>;
 export type AtualizarMedicamentoInput = z.infer<
   typeof atualizarMedicamentoSchema
@@ -43,4 +66,13 @@ export type CriarHorarioMedicamentoInput = z.infer<
 >;
 export type RegistrarAdministracaoInput = z.infer<
   typeof registrarAdministracaoSchema
+>;
+export type SubstituirHorariosMedicamentoInput = z.infer<
+  typeof substituirHorariosMedicamentoSchema
+>;
+export type ResumoMedicamentosQuery = z.infer<
+  typeof resumoMedicamentosQuerySchema
+>;
+export type HistoricoMedicamentosQuery = z.infer<
+  typeof historicoMedicamentosQuerySchema
 >;

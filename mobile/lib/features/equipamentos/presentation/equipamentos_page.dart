@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 
 part 'equipamentos_formularios.dart';
 part 'equipamentos_modelos.dart';
@@ -380,7 +381,28 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _BackButton(onTap: _back),
-                    Expanded(child: child),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 260),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (transitionChild, animation) =>
+                            FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.03),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: transitionChild,
+                          ),
+                        ),
+                        child: KeyedSubtree(
+                          key: ValueKey(_view),
+                          child: child,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -440,9 +462,12 @@ class _EquipamentosList extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final item = equipamentos[index];
-                        return _EquipamentoCard(
-                          equipamento: item,
-                          onTap: () => onOpen(item),
+                        return StaggeredEntry(
+                          index: index,
+                          child: _EquipamentoCard(
+                            equipamento: item,
+                            onTap: () => onOpen(item),
+                          ),
                         );
                       },
                     ),

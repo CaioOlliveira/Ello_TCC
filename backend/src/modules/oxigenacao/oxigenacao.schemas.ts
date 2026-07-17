@@ -1,0 +1,41 @@
+import { z } from "zod";
+
+const valorSaturacaoSchema = z
+  .number()
+  .int("Valor deve ser um numero inteiro.")
+  .min(0, "Valor minimo permitido e 0%.")
+  .max(100, "Valor maximo permitido e 100%.");
+
+const valorPulsoSchema = z
+  .number()
+  .int("Valor deve ser um numero inteiro.")
+  .min(20, "Valor minimo permitido e 20 bpm.")
+  .max(250, "Valor maximo permitido e 250 bpm.");
+
+export const criarOxigenacaoSchema = z.object({
+  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  saturacao: valorSaturacaoSchema,
+  pulso: valorPulsoSchema.optional(),
+  medidoEm: z.string().datetime("Data deve estar em formato ISO."),
+  observacoes: z.string().optional(),
+  registradoPorId: z.string().uuid().optional(),
+});
+
+export const atualizarOxigenacaoSchema = criarOxigenacaoSchema.partial();
+
+export const resumoOxigenacaoQuerySchema = z.object({
+  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  dataReferencia: z.string().date().optional(),
+  periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
+});
+
+export const historicoOxigenacaoQuerySchema = resumoOxigenacaoQuerySchema;
+
+export type CriarOxigenacaoInput = z.infer<typeof criarOxigenacaoSchema>;
+export type AtualizarOxigenacaoInput = z.infer<
+  typeof atualizarOxigenacaoSchema
+>;
+export type ResumoOxigenacaoQuery = z.infer<typeof resumoOxigenacaoQuerySchema>;
+export type HistoricoOxigenacaoQuery = z.infer<
+  typeof historicoOxigenacaoQuerySchema
+>;

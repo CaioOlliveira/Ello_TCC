@@ -73,6 +73,19 @@ final idososDoUsuarioProvider = FutureProvider.autoDispose<List<IdosoResumo>>((
   return ref.watch(apiClientProvider).listarIdosos(usuarioId: usuario.id);
 });
 
+final fichasAdministradasProvider =
+    FutureProvider.autoDispose<List<IdosoResumo>>((ref) {
+  final usuario = ref.watch(authSessionProvider);
+
+  if (usuario == null || usuario.id.isEmpty) {
+    return Future.value(const []);
+  }
+
+  return ref
+      .watch(apiClientProvider)
+      .listarIdososAdministrados(usuarioId: usuario.id);
+});
+
 final healthCheckProvider = FutureProvider<Map<String, dynamic>>((ref) {
   return ref.watch(apiClientProvider).getHealth();
 });

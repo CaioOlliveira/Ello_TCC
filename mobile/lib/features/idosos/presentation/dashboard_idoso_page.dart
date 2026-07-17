@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../shared/widgets/action_icon_button.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 
@@ -83,19 +85,35 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 88),
                 children: [
-                  _DashboardHeader(onProfile: () => context.go('/perfil')),
+                  StaggeredEntry(
+                    index: 0,
+                    child:
+                        _DashboardHeader(onProfile: () => context.go('/perfil')),
+                  ),
                   const SizedBox(height: 10),
-                  _Greeting(idoso: idoso),
+                  StaggeredEntry(
+                    index: 1,
+                    child: _Greeting(idoso: idoso),
+                  ),
                   const SizedBox(height: 10),
-                  _IdosoHeroCard(
-                    nome: idoso?.nome ?? 'Selecione uma ficha',
-                    idade: idoso?.idade,
-                    foto: idoso?.urlFoto,
+                  StaggeredEntry(
+                    index: 2,
+                    child: _IdosoHeroCard(
+                      nome: idoso?.nome ?? 'Selecione uma ficha',
+                      idade: idoso?.idade,
+                      foto: idoso?.urlFoto,
+                      onEdit: idoso == null
+                          ? null
+                          : () => context.go('/idosos/editar?from=dashboard'),
+                    ),
                   ),
                   const SizedBox(height: 14),
-                  _MedicationAlert(
-                    label: _resumo.proximoMedicamentoLabel,
-                    time: _resumo.proximoMedicamentoHora,
+                  StaggeredEntry(
+                    index: 3,
+                    child: _MedicationAlert(
+                      label: _resumo.proximoMedicamentoLabel,
+                      time: _resumo.proximoMedicamentoHora,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   const Text(
@@ -108,33 +126,45 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     ),
                   ),
                   const SizedBox(height: 9),
-                  _SummaryCard(
-                    icon: Icons.medication_outlined,
-                    title: 'Medicamentos:',
-                    value: _resumo.medicamentosLabel,
-                    valueColor: const Color(0xFFFF8A00),
-                    onTap: () => context.go('/medicamentos'),
+                  StaggeredEntry(
+                    index: 4,
+                    child: _SummaryCard(
+                      icon: Icons.medication_outlined,
+                      title: 'Medicamentos:',
+                      value: _resumo.medicamentosLabel,
+                      valueColor: const Color(0xFFFF8A00),
+                      onTap: () => context.go('/medicamentos'),
+                    ),
                   ),
-                  _SummaryCard(
-                    icon: Icons.sentiment_satisfied_alt_rounded,
-                    title: 'Humor:',
-                    value: _resumo.humorLabel,
-                    valueColor: const Color(0xFF168FA1),
-                    onTap: () => context.go('/humor'),
+                  StaggeredEntry(
+                    index: 5,
+                    child: _SummaryCard(
+                      icon: Icons.sentiment_satisfied_alt_rounded,
+                      title: 'Humor:',
+                      value: _resumo.humorLabel,
+                      valueColor: const Color(0xFF168FA1),
+                      onTap: () => context.go('/humor'),
+                    ),
                   ),
-                  _SummaryCard(
-                    icon: Icons.restaurant_rounded,
-                    title: 'Ultima refeicao:',
-                    value: _resumo.ultimaRefeicaoLabel,
-                    valueColor: const Color(0xFF168FA1),
-                    onTap: () => context.go('/alimentacao'),
+                  StaggeredEntry(
+                    index: 6,
+                    child: _SummaryCard(
+                      icon: Icons.restaurant_rounded,
+                      title: 'Ultima refeicao:',
+                      value: _resumo.ultimaRefeicaoLabel,
+                      valueColor: const Color(0xFF168FA1),
+                      onTap: () => context.go('/alimentacao'),
+                    ),
                   ),
-                  _SummaryCard(
-                    icon: Icons.vaccines_outlined,
-                    title: 'Insulina:',
-                    value: _resumo.insulinaLabel,
-                    valueColor: const Color(0xFF168FA1),
-                    onTap: () => context.go('/glicemia'),
+                  StaggeredEntry(
+                    index: 7,
+                    child: _SummaryCard(
+                      icon: Icons.vaccines_outlined,
+                      title: 'Insulina:',
+                      value: _resumo.insulinaLabel,
+                      valueColor: const Color(0xFF168FA1),
+                      onTap: () => context.go('/glicemia'),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
@@ -146,13 +176,19 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  _NextAppointmentCard(
-                    title: _resumo.proximoCompromissoTitulo,
-                    details: _resumo.proximoCompromissoDetalhes,
-                    onTap: () => context.go('/agenda'),
+                  StaggeredEntry(
+                    index: 8,
+                    child: _NextAppointmentCard(
+                      title: _resumo.proximoCompromissoTitulo,
+                      details: _resumo.proximoCompromissoDetalhes,
+                      onTap: () => context.go('/agenda'),
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  _TipCard(text: _resumo.dica),
+                  StaggeredEntry(
+                    index: 9,
+                    child: _TipCard(text: _resumo.dica),
+                  ),
                   if (_loading) ...[
                     const SizedBox(height: 12),
                     const Center(
@@ -198,22 +234,10 @@ class _DashboardHeader extends StatelessWidget {
         ),
         Align(
           alignment: Alignment.centerRight,
-          child: InkWell(
+          child: ActionIconButton(
+            tooltip: 'Perfil do cuidador',
+            icon: Icons.person_rounded,
             onTap: onProfile,
-            borderRadius: BorderRadius.circular(99),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                color: Color(0xFFD1F2F6),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person_outline_rounded,
-                color: Color(0xFF238FA1),
-                size: 27,
-              ),
-            ),
           ),
         ),
       ],
@@ -262,11 +286,13 @@ class _IdosoHeroCard extends StatelessWidget {
     required this.nome,
     this.idade,
     this.foto,
+    this.onEdit,
   });
 
   final String nome;
   final int? idade;
   final String? foto;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -348,6 +374,20 @@ class _IdosoHeroCard extends StatelessWidget {
                       ],
                     ),
                 ],
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: IconButton(
+              onPressed: onEdit,
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Editar ficha',
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: Colors.white,
+                size: 22,
               ),
             ),
           ),

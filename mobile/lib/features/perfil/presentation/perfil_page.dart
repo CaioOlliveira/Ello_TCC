@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 
 class PerfilPage extends ConsumerWidget {
   const PerfilPage({super.key});
@@ -25,100 +26,102 @@ class PerfilPage extends ConsumerWidget {
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight:
-                        (constraints.maxHeight - 28).clamp(0, double.infinity),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                StaggeredEntry(
+                  index: 0,
+                  child: _PerfilHeader(onBack: () => context.go(backRoute)),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Perfil e configurações',
+                  style: TextStyle(
+                    color: Color(0xFF238FA1),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
                   ),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _PerfilHeader(onBack: () => context.go(backRoute)),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Perfil e configurações',
-                          style: TextStyle(
-                            color: Color(0xFF238FA1),
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
+                ),
+                const SizedBox(height: 10),
+                StaggeredEntry(
+                  index: 1,
+                  child: _UsuarioCard(
+                    usuario: usuario,
+                    onEdit: () => context.go(editRoute),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const StaggeredEntry(index: 2, child: _MenuCard()),
+                const SizedBox(height: 16),
+                const Text(
+                  'Preferências',
+                  style: TextStyle(
+                    color: Color(0xFF238FA1),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const StaggeredEntry(index: 3, child: _PreferenciasCard()),
+                const SizedBox(height: 28),
+                if (from != 'idosos') ...[
+                  StaggeredEntry(
+                    index: 4,
+                    child: SizedBox(
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.go('/idosos'),
+                        icon: const Icon(
+                          Icons.switch_account_rounded,
+                          size: 21,
+                        ),
+                        label: const Text('Trocar de ficha'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF238FA1),
+                          side: const BorderSide(color: Color(0xFF238FA1)),
+                          textStyle: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(11),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        _UsuarioCard(
-                          usuario: usuario,
-                          onEdit: () => context.go(editRoute),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                StaggeredEntry(
+                  index: 5,
+                  child: SizedBox(
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        ref.read(authSessionProvider.notifier).state = null;
+                        ref.read(selectedIdosoProvider.notifier).state = null;
+                        context.go('/login');
+                      },
+                      icon: const Icon(Icons.logout_rounded, size: 21),
+                      label: const Text('sair'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0B6985),
+                        foregroundColor: Colors.white,
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(height: 16),
-                        const _MenuCard(),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Preferências',
-                          style: TextStyle(
-                            color: Color(0xFF238FA1),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(11),
                         ),
-                        const SizedBox(height: 8),
-                        const _PreferenciasCard(),
-                        const Spacer(),
-                        SizedBox(
-                          height: 50,
-                          child: OutlinedButton.icon(
-                            onPressed: () {},
-                            icon:
-                                const Icon(Icons.group_add_outlined, size: 21),
-                            label: const Text('Adicionar conta'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF238FA1),
-                              side: const BorderSide(color: Color(0xFF238FA1)),
-                              textStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(11),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 52,
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              ref.read(authSessionProvider.notifier).state =
-                                  null;
-                              ref.read(selectedIdosoProvider.notifier).state =
-                                  null;
-                              context.go('/login');
-                            },
-                            icon: const Icon(Icons.logout_rounded, size: 21),
-                            label: const Text('sair'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0B6985),
-                              foregroundColor: Colors.white,
-                              textStyle: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(11),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              );
-            },
+              ],
+            ),
           ),
         ),
       ),
@@ -425,11 +428,15 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (Icons.person_outline_rounded, 'Informações pessoais'),
-      (Icons.shield_outlined, 'Segurança'),
-      (Icons.info_outline_rounded, 'Sobre o app'),
-      (Icons.tune_rounded, 'Permissões'),
+    final items = [
+      (Icons.person_outline_rounded, 'Informações pessoais', null),
+      (Icons.shield_outlined, 'Segurança', null),
+      (Icons.info_outline_rounded, 'Sobre o app', null),
+      (
+        Icons.tune_rounded,
+        'Permissões',
+        () => context.go('/permissoes'),
+      ),
     ];
 
     return _Panel(
@@ -440,6 +447,7 @@ class _MenuCard extends StatelessWidget {
             _MenuItem(
               icon: items[index].$1,
               label: items[index].$2,
+              onTap: items[index].$3,
               showDivider: index < items.length - 1,
             ),
         ],
@@ -479,29 +487,34 @@ class _MenuItem extends StatelessWidget {
   const _MenuItem({
     required this.icon,
     required this.label,
+    this.onTap,
     this.showDivider = true,
   });
 
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
   final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SizedBox(
-          height: 52,
-          child: Row(
-            children: [
-              const SizedBox(width: 13),
-              _SmallIcon(icon),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Text(label, style: const TextStyle(fontSize: 15))),
-              const Icon(Icons.chevron_right_rounded, size: 22),
-              const SizedBox(width: 10),
-            ],
+        InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: 52,
+            child: Row(
+              children: [
+                const SizedBox(width: 13),
+                _SmallIcon(icon),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Text(label, style: const TextStyle(fontSize: 15))),
+                const Icon(Icons.chevron_right_rounded, size: 22),
+                const SizedBox(width: 10),
+              ],
+            ),
           ),
         ),
         if (showDivider) const Divider(height: 1, indent: 52),

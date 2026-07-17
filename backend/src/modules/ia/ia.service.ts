@@ -131,10 +131,12 @@ export const iaService = {
     );
 
     const historico = await buscarMensagens(conversa.id);
-    const contextoIdoso = await obterContextoInternoComFallback(
-      input.idosoId ?? conversa.idoso_id,
-      2500,
-    );
+    const idosoId = input.idosoId ?? conversa.idoso_id;
+    const [usuarioNome, idosoNome, contextoIdoso] = await Promise.all([
+      buscarNomeUsuario(input.usuarioId),
+      idosoId ? buscarNomeIdoso(idosoId) : Promise.resolve(null),
+      obterContextoInternoComFallback(idosoId, 2500),
+    ]);
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
     try {
@@ -147,7 +149,8 @@ export const iaService = {
               {
                 text: montarPrompt(
                   historico,
-                  input.idosoId ?? conversa.idoso_id,
+                  usuarioNome,
+                  idosoNome,
                   compactarContextoParaPrompt(contextoIdoso),
                   Boolean(input.anexos?.length),
                 ),
@@ -292,6 +295,22 @@ async function garantirTabelasIa() {
   `);
 }
 
+async function buscarNomeUsuario(usuarioId: string) {
+  const result = await getPool().query<{ nome: string }>(
+    "select nome from usuarios where id = $1 limit 1",
+    [usuarioId],
+  );
+  return result.rows[0]?.nome ?? null;
+}
+
+async function buscarNomeIdoso(idosoId: string) {
+  const result = await getPool().query<{ nome: string }>(
+    "select nome_completo as nome from fichas_idosos where id = $1 limit 1",
+    [idosoId],
+  );
+  return result.rows[0]?.nome ?? null;
+}
+
 async function buscarConversaDoUsuario(conversaId: string, usuarioId: string) {
   const result = await getPool().query<ConversaIaRow>(
     `
@@ -387,14 +406,18 @@ function gerarTitulo(mensagem: string) {
 
 function montarPrompt(
   mensagens: MensagemIaRow[],
-  idosoId?: string | null,
+  usuarioNome: string | null,
+  idosoNome: string | null,
   contextoInterno?: Record<string, unknown> | null,
   temImagem = false,
 ) {
+  const remetenteUsuario = usuarioNome
+    ? `Cuidador/familiar (${usuarioNome})`
+    : "Cuidador/familiar";
   const historico = mensagens
     .map((mensagem) => {
       const remetente =
-        mensagem.remetente === "usuario" ? "Cuidador/familiar" : "Assistente";
+        mensagem.remetente === "usuario" ? remetenteUsuario : "Assistente";
       return `${remetente}: ${mensagem.conteudo}`;
     })
     .join("\n\n");
@@ -403,10 +426,15 @@ function montarPrompt(
     personalidade,
     "Responda em portugues do Brasil.",
     "Nao comece toda resposta com 'Ola'. Cumprimente apenas quando fizer sentido natural no inicio de uma conversa.",
+    usuarioNome
+      ? `Voce esta conversando com o cuidador/familiar chamado ${usuarioNome}. Trate-o pelo primeiro nome quando fizer sentido, nunca por um identificador tecnico ou codigo.`
+      : "Nao foi informado o nome do cuidador/familiar; nao invente um nome nem use codigos ou identificadores para se referir a ele.",
+    idosoNome
+      ? `A conversa esta relacionada ao idoso chamado ${idosoNome}.`
+      : "",
     temImagem
       ? "A mensagem atual tem uma imagem anexada. Analise visualmente apenas o que for visivel, descreva com cautela e nao de diagnostico por imagem. Se houver risco, oriente procurar um profissional."
       : "",
-    idosoId ? `Contexto: a conversa esta relacionada ao idoso ${idosoId}.` : "",
     contextoInterno
       ? [
           "Contexto interno do app Ello, em JSON. Use estes dados para responder perguntas do cuidador, mas nao diga que recebeu um JSON e nao exponha IDs internos.",

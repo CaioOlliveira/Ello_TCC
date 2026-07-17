@@ -7,6 +7,11 @@ class ApiEndpoints {
   static const cadastroGoogle = '/auth/google/cadastro';
   static const cadastro = '/auth/cadastro';
   static const idosos = '/idosos';
+  static const idososAdministrados = '/idosos/administrados';
+  static const convites = '/convites';
+  static const convitesAceitar = '/convites/aceitar';
+  static const membrosParticipantes = '/membros/participantes';
+  static const membrosPendentes = '/membros/pendentes';
   static const humores = '/registros/humores';
   static const hidratacoes = '/registros/hidratacoes';
   static const agenda = '/agenda';
@@ -21,8 +26,18 @@ class ApiEndpoints {
   static const iaConversas = '/ia/conversas';
   static const iaRelatorioInicial = '/ia/relatorio-inicial';
   static const glicemiaResumo = '/glicemias/resumo';
+  static const glicemiaHistorico = '/glicemias/historico';
   static const glicemiaInsulinas = '/glicemias/insulinas';
   static const historico = '/historico';
+  static const medicamentos = '/medicamentos';
+  static const medicamentosResumo = '/medicamentos/resumo';
+  static const medicamentosHistorico = '/medicamentos/historico';
+  static const pressao = '/pressao';
+  static const pressaoResumo = '/pressao/resumo';
+  static const pressaoHistorico = '/pressao/historico';
+  static const oxigenacao = '/oxigenacao';
+  static const oxigenacaoResumo = '/oxigenacao/resumo';
+  static const oxigenacaoHistorico = '/oxigenacao/historico';
   static String dicaDashboard(String idosoId) =>
       '/dashboard/idosos/$idosoId/dica';
   static String compromisso(String id) => '/agenda/$id';
@@ -38,4 +53,12 @@ class ApiEndpoints {
   static String usuario(String id) => '/usuarios/$id';
   static String iaMensagens(String conversaId) =>
       '/ia/conversas/$conversaId/mensagens';
+  static String membro(String id) => '/membros/$id';
+  static String membroAprovar(String id) => '/membros/$id/aprovar';
+  static String membroNegar(String id) => '/membros/$id/negar';
+  static String membroRevogar(String id) => '/membros/$id/revogar';
+  static String medicamento(String id) => '/medicamentos/$id';
+  static String horariosMedicamento(String id) => '/medicamentos/$id/horarios';
+  static String administracoesMedicamento(String id) =>
+      '/medicamentos/$id/administracoes';
 }

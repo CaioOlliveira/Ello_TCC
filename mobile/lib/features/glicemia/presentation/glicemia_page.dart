@@ -8,10 +8,24 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/staggered_entry.dart';
 
-enum _GlicemiaMode { resumo, registrarGlicemia, registrarInsulina }
+enum _GlicemiaMode { resumo, registrarGlicemia, registrarInsulina, historico }
 
 enum _ChartPeriod { dia, semanal, mes }
+
+const _kInsulinas = [
+  'Insulina Glargina',
+  'Insulina Regular',
+  'Insulina NPH',
+  'Insulina Lispro',
+  'Insulina Asparte',
+  'Insulina Detemir',
+  'Insulina Degludeca',
+  'Outra',
+];
+
+const _kLocaisAplicacao = ['Abdômen', 'Braço', 'Coxa', 'Glúteo', 'Outro'];
 
 class GlicemiaPage extends ConsumerStatefulWidget {
   const GlicemiaPage({super.key});
@@ -31,6 +45,12 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
   Future<GlicemiaResumo>? _resumoFuture;
   String? _loadedIdosoId;
   _ChartPeriod? _loadedPeriod;
+
+  Future<List<GlicemiaHistoricoEntrada>>? _historicoFuture;
+  String? _historicoLoadedIdosoId;
+  _ChartPeriod? _historicoLoadedPeriod;
+  _ChartPeriod _historicoPeriod = _ChartPeriod.dia;
+
   _GlicemiaMode _mode = _GlicemiaMode.resumo;
   _ChartPeriod _period = _ChartPeriod.dia;
   DateTime _referenceDate = DateTime.now();
@@ -39,7 +59,9 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
   DateTime _insulinaDate = DateTime.now();
   TimeOfDay _insulinaTime = TimeOfDay.now();
   String _contexto = 'Jejum';
-  String _tipoInsulina = 'Rápida';
+  String _nomeInsulina = _kInsulinas.first;
+  String _tipoInsulina = 'Basal';
+  String _localAplicacao = _kLocaisAplicacao.first;
   bool _saving = false;
 
   @override
@@ -78,6 +100,33 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
     });
   }
 
+  void _ensureHistorico(String idosoId) {
+    if (_historicoLoadedIdosoId == idosoId &&
+        _historicoLoadedPeriod == _historicoPeriod &&
+        _historicoFuture != null) {
+      return;
+    }
+    _historicoLoadedIdosoId = idosoId;
+    _historicoLoadedPeriod = _historicoPeriod;
+    _historicoFuture = ref.read(apiClientProvider).getHistoricoGlicemia(
+          idosoId: idosoId,
+          dataReferencia: _referenceDate,
+          periodo: _historicoPeriod.apiValue,
+        );
+  }
+
+  void _reloadHistorico(String idosoId) {
+    setState(() {
+      _historicoLoadedIdosoId = idosoId;
+      _historicoLoadedPeriod = _historicoPeriod;
+      _historicoFuture = ref.read(apiClientProvider).getHistoricoGlicemia(
+            idosoId: idosoId,
+            dataReferencia: _referenceDate,
+            periodo: _historicoPeriod.apiValue,
+          );
+    });
+  }
+
   Future<void> _openCalendar(String idosoId) async {
     final selected = await showDatePicker(
       context: _pickerContext,
@@ -90,6 +139,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
     if (selected == null) return;
     setState(() => _referenceDate = selected);
     _reloadResumo(idosoId);
+    _reloadHistorico(idosoId);
   }
 
   Future<void> _selectGlicemiaDate() async {
@@ -156,6 +206,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
       _observacoesController.clear();
       setState(() => _mode = _GlicemiaMode.resumo);
       _reloadResumo(idoso.id);
+      _reloadHistorico(idoso.id);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Glicemia registrada.')),
       );
@@ -187,9 +238,11 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
       final aplicadoEm = _combine(_insulinaDate, _insulinaTime);
       await ref.read(apiClientProvider).criarRegistroInsulina(
             idosoId: idoso.id,
+            nomeInsulina: _nomeInsulina,
             tipoInsulina: _tipoInsulina,
             doseUnidades: dose,
             aplicadoEm: aplicadoEm,
+            localAplicacao: _localAplicacao,
             observacoes: _observacoesInsulinaController.text.trim(),
             registradoPorId: ref.read(authSessionProvider)?.id,
           );
@@ -241,79 +294,136 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
 
   Widget _buildContent(IdosoResumo idoso) {
     _ensureResumo(idoso.id);
+    _ensureHistorico(idoso.id);
 
-    return switch (_mode) {
-      _GlicemiaMode.registrarGlicemia => _RegistrarGlicemiaView(
-          formKey: _glicemiaFormKey,
-          valorController: _valorController,
-          observacoesController: _observacoesController,
-          selectedDate: _glicemiaDate,
-          selectedTime: _glicemiaTime,
-          contexto: _contexto,
-          saving: _saving,
-          onContextoChanged: (value) {
-            if (value != null) setState(() => _contexto = value);
-          },
-          onSelectDate: _selectGlicemiaDate,
-          onSelectTime: _selectGlicemiaTime,
-          onSave: () => _saveGlicemia(idoso),
-          onCancel: () => setState(() => _mode = _GlicemiaMode.resumo),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 260),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
         ),
-      _GlicemiaMode.registrarInsulina => _RegistrarInsulinaView(
-          formKey: _insulinaFormKey,
-          doseController: _doseController,
-          observacoesController: _observacoesInsulinaController,
-          selectedDate: _insulinaDate,
-          selectedTime: _insulinaTime,
-          tipoInsulina: _tipoInsulina,
-          saving: _saving,
-          onTipoChanged: (value) {
-            if (value != null) setState(() => _tipoInsulina = value);
-          },
-          onSelectDate: _selectInsulinaDate,
-          onSelectTime: _selectInsulinaTime,
-          onSave: () => _saveInsulina(idoso),
-          onCancel: () => setState(() => _mode = _GlicemiaMode.resumo),
-        ),
-      _GlicemiaMode.resumo => FutureBuilder<GlicemiaResumo>(
-          future: _resumoFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFF2FA8B8)),
-              );
-            }
-
-            if (snapshot.hasError) {
-              return _ErrorState(
-                onBack: () => context.go('/monitoramento'),
-                onRetry: () => _reloadResumo(idoso.id),
-              );
-            }
-
-            final resumo = snapshot.data ?? GlicemiaResumo.fromJson(const {});
-
-            return _ResumoGlicemiaView(
-              idoso: idoso,
-              resumo: resumo,
-              period: _period,
-              referenceDate: _referenceDate,
-              onBack: () => context.go('/monitoramento'),
-              onRegisterGlicemia: () {
-                setState(() => _mode = _GlicemiaMode.registrarGlicemia);
+      ),
+      child: KeyedSubtree(
+        key: ValueKey(_mode),
+        child: switch (_mode) {
+          _GlicemiaMode.registrarGlicemia => _RegistrarGlicemiaView(
+              formKey: _glicemiaFormKey,
+              valorController: _valorController,
+              observacoesController: _observacoesController,
+              selectedDate: _glicemiaDate,
+              selectedTime: _glicemiaTime,
+              contexto: _contexto,
+              saving: _saving,
+              onContextoChanged: (value) {
+                if (value != null) setState(() => _contexto = value);
               },
-              onRegisterInsulina: () {
-                setState(() => _mode = _GlicemiaMode.registrarInsulina);
+              onSelectDate: _selectGlicemiaDate,
+              onSelectTime: _selectGlicemiaTime,
+              onSave: () => _saveGlicemia(idoso),
+              onCancel: () => setState(() => _mode = _GlicemiaMode.resumo),
+            ),
+          _GlicemiaMode.registrarInsulina => _RegistrarInsulinaView(
+              formKey: _insulinaFormKey,
+              doseController: _doseController,
+              observacoesController: _observacoesInsulinaController,
+              selectedDate: _insulinaDate,
+              selectedTime: _insulinaTime,
+              nomeInsulina: _nomeInsulina,
+              tipoInsulina: _tipoInsulina,
+              localAplicacao: _localAplicacao,
+              saving: _saving,
+              onNomeChanged: (value) {
+                if (value != null) setState(() => _nomeInsulina = value);
               },
-              onCalendar: () => _openCalendar(idoso.id),
-              onPeriodChanged: (period) {
-                setState(() => _period = period);
-                _reloadResumo(idoso.id);
+              onTipoChanged: (value) => setState(() => _tipoInsulina = value),
+              onLocalChanged: (value) {
+                if (value != null) setState(() => _localAplicacao = value);
               },
-            );
-          },
-        ),
-    };
+              onSelectDate: _selectInsulinaDate,
+              onSelectTime: _selectInsulinaTime,
+              onSave: () => _saveInsulina(idoso),
+              onCancel: () => setState(() => _mode = _GlicemiaMode.resumo),
+            ),
+          _GlicemiaMode.historico =>
+            FutureBuilder<List<GlicemiaHistoricoEntrada>>(
+              future: _historicoFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF2FA8B8)),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return _ErrorState(
+                    onBack: () => setState(() => _mode = _GlicemiaMode.resumo),
+                    onRetry: () => _reloadHistorico(idoso.id),
+                  );
+                }
+
+                return _HistoricoGlicemiaView(
+                  entradas: snapshot.data ?? const [],
+                  period: _historicoPeriod,
+                  onBack: () => setState(() => _mode = _GlicemiaMode.resumo),
+                  onPeriodChanged: (period) {
+                    setState(() => _historicoPeriod = period);
+                    _reloadHistorico(idoso.id);
+                  },
+                );
+              },
+            ),
+          _GlicemiaMode.resumo => FutureBuilder<GlicemiaResumo>(
+              future: _resumoFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF2FA8B8)),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return _ErrorState(
+                    onBack: () => context.go('/monitoramento'),
+                    onRetry: () => _reloadResumo(idoso.id),
+                  );
+                }
+
+                final resumo =
+                    snapshot.data ?? GlicemiaResumo.fromJson(const {});
+
+                return _ResumoGlicemiaView(
+                  idoso: idoso,
+                  resumo: resumo,
+                  period: _period,
+                  referenceDate: _referenceDate,
+                  onBack: () => context.go('/monitoramento'),
+                  onRegisterGlicemia: () {
+                    setState(() => _mode = _GlicemiaMode.registrarGlicemia);
+                  },
+                  onRegisterInsulina: () {
+                    setState(() => _mode = _GlicemiaMode.registrarInsulina);
+                  },
+                  onViewHistorico: () {
+                    setState(() => _mode = _GlicemiaMode.historico);
+                  },
+                  onCalendar: () => _openCalendar(idoso.id),
+                  onPeriodChanged: (period) {
+                    setState(() => _period = period);
+                    _reloadResumo(idoso.id);
+                  },
+                );
+              },
+            ),
+        },
+      ),
+    );
   }
 }
 
@@ -336,6 +446,7 @@ class _ResumoGlicemiaView extends StatelessWidget {
     required this.onBack,
     required this.onRegisterGlicemia,
     required this.onRegisterInsulina,
+    required this.onViewHistorico,
     required this.onCalendar,
     required this.onPeriodChanged,
   });
@@ -347,6 +458,7 @@ class _ResumoGlicemiaView extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onRegisterGlicemia;
   final VoidCallback onRegisterInsulina;
+  final VoidCallback onViewHistorico;
   final VoidCallback onCalendar;
   final ValueChanged<_ChartPeriod> onPeriodChanged;
 
@@ -357,30 +469,18 @@ class _ResumoGlicemiaView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _GlicemiaHeader(onBack: onBack),
-          const SizedBox(height: 5),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _SmallActionButton(
-                label: 'Registrar Glicemia',
-                icon: Icons.add_rounded,
-                onTap: onRegisterGlicemia,
+          _GlicemiaHeader(
+            onBack: onBack,
+            trailing: IconButton(
+              onPressed: onCalendar,
+              icon: const Icon(
+                Icons.calendar_month_rounded,
+                color: Color(0xFF2A9CAE),
               ),
-              _SmallActionButton(
-                label: 'Uso insulina',
-                icon: Icons.add_rounded,
-                onTap: onRegisterInsulina,
-              ),
-              _SmallActionButton(
-                label: 'Calendário',
-                icon: Icons.calendar_month_rounded,
-                onTap: onCalendar,
-              ),
-            ],
+              tooltip: 'Selecionar data',
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
           Expanded(
             child: resumo.totalRegistros == 0
                 ? _PrimeiraMedicaoState(
@@ -391,43 +491,92 @@ class _ResumoGlicemiaView extends StatelessWidget {
                 : ListView(
                     padding: EdgeInsets.zero,
                     children: [
-                      _UltimaGlicemiaCard(resumo: resumo),
+                      StaggeredEntry(
+                        index: 0,
+                        child: _MediaGlicemiaCard(resumo: resumo),
+                      ),
                       const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _MetricCard(
-                              icon: Icons.trending_down_rounded,
-                              label: 'Média do Dia',
-                              value: resumo.mediaDia == null
-                                  ? '--'
-                                  : resumo.mediaDia!.round().toString(),
-                              suffix: 'mg/dl',
+                      StaggeredEntry(
+                        index: 1,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _MetricCard(
+                                icon: Icons.trending_up_rounded,
+                                label: 'Média 7 dias',
+                                value: resumo.analise.mediaUltimos7Dias == null
+                                    ? '--'
+                                    : resumo.analise.mediaUltimos7Dias!
+                                        .round()
+                                        .toString(),
+                                suffix: 'mg/dl',
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 26),
-                          Expanded(
-                            child: _MetricCard(
-                              icon: Icons.calendar_month_rounded,
-                              label: 'Próxima medição',
-                              value: resumo.proximaMedicao == null
-                                  ? '--:--'
-                                  : _formatTime(resumo.proximaMedicao!),
+                            const SizedBox(width: 26),
+                            Expanded(
+                              child: _MetricCard(
+                                icon: Icons.calendar_month_rounded,
+                                label: 'Próxima medição',
+                                value: resumo.proximaMedicao == null
+                                    ? '--:--'
+                                    : _formatTime(resumo.proximaMedicao!),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      _ChartCard(
-                        period: period,
-                        series: resumo.serie,
-                        onChanged: onPeriodChanged,
+                      StaggeredEntry(
+                        index: 2,
+                        child: _ChartCard(
+                          period: period,
+                          series: resumo.serie,
+                          onChanged: onPeriodChanged,
+                        ),
                       ),
                       const SizedBox(height: 14),
-                      _AnalysisCard(resumo: resumo),
+                      StaggeredEntry(
+                        index: 3,
+                        child: _AnalysisCard(resumo: resumo),
+                      ),
+                      const SizedBox(height: 16),
+                      StaggeredEntry(
+                        index: 4,
+                        child: _NavRow(
+                          icon: Icons.water_drop_rounded,
+                          iconColor: const Color(0xFFFF4657),
+                          title: 'Registrar glicemia',
+                          onTap: onRegisterGlicemia,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      StaggeredEntry(
+                        index: 5,
+                        child: _NavRow(
+                          icon: Icons.medication_liquid_rounded,
+                          iconColor: const Color(0xFF087B8D),
+                          title: 'Registrar uso de insulina',
+                          onTap: onRegisterInsulina,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      StaggeredEntry(
+                        index: 6,
+                        child: _NavRow(
+                          icon: Icons.history_rounded,
+                          iconColor: const Color(0xFF25A1B2),
+                          title: 'Ver histórico de glicemia',
+                          onTap: onViewHistorico,
+                        ),
+                      ),
                       if (resumo.insulinaRecente != null) ...[
                         const SizedBox(height: 12),
-                        _InsulinaResumoCard(insulina: resumo.insulinaRecente!),
+                        StaggeredEntry(
+                          index: 7,
+                          child: _InsulinaResumoCard(
+                            insulina: resumo.insulinaRecente!,
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -439,42 +588,74 @@ class _ResumoGlicemiaView extends StatelessWidget {
 }
 
 class _GlicemiaHeader extends StatelessWidget {
-  const _GlicemiaHeader({required this.onBack});
+  const _GlicemiaHeader({
+    required this.onBack,
+    this.title = 'Resumo da glicemia',
+    this.showWordmark = false,
+    this.trailing,
+  });
 
   final VoidCallback onBack;
+  final String title;
+  final bool showWordmark;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
-          onTap: onBack,
-          borderRadius: BorderRadius.circular(12),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.chevron_left_rounded,
-                color: Color(0xFF2A9CAE),
-                size: 30,
-              ),
-              SizedBox(width: 1),
-              Text(
-                'Voltar',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+        Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: onBack,
+                borderRadius: BorderRadius.circular(12),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.chevron_left_rounded,
+                      color: Color(0xFF2A9CAE),
+                      size: 30,
+                    ),
+                    SizedBox(width: 1),
+                    Text(
+                      'Voltar',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            if (trailing != null) trailing!,
+          ],
         ),
+        if (showWordmark) ...[
+          const SizedBox(height: 2),
+          const Center(
+            child: Text(
+              'ello',
+              style: TextStyle(
+                color: Color(0xFF0E6F7E),
+                fontSize: 28,
+                fontWeight: FontWeight.w300,
+                letterSpacing: 0,
+                height: 1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
         const SizedBox(height: 2),
-        const Text(
-          'Resumo da glicemia',
-          style: TextStyle(
+        Text(
+          title,
+          textAlign: showWordmark ? TextAlign.center : TextAlign.start,
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 23,
             fontWeight: FontWeight.w800,
@@ -486,35 +667,59 @@ class _GlicemiaHeader extends StatelessWidget {
   }
 }
 
-class _SmallActionButton extends StatelessWidget {
-  const _SmallActionButton({
-    required this.label,
+class _NavRow extends StatelessWidget {
+  const _NavRow({
     required this.icon,
+    required this.iconColor,
+    required this.title,
     required this.onTap,
   });
 
-  final String label;
   final IconData icon;
+  final Color iconColor;
+  final String title;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 28,
-      child: FilledButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 16),
-        label: Text(label),
-        style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF2FA3B5),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 7),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
-          textStyle: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(11),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(11),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF9AA0A6),
+                size: 24,
+              ),
+            ],
           ),
         ),
       ),
@@ -611,13 +816,45 @@ class _PrimeiraMedicaoState extends StatelessWidget {
   }
 }
 
-class _UltimaGlicemiaCard extends StatelessWidget {
-  const _UltimaGlicemiaCard({required this.resumo});
+class _AnimatedGlicemiaValue extends StatelessWidget {
+  const _AnimatedGlicemiaValue({required this.value});
+
+  final double? value;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: value ?? 0),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutCubic,
+      builder: (context, animatedValue, child) {
+        final text = value == null ? '--' : animatedValue.round().toString();
+        return RichText(
+          text: TextSpan(
+            style: const TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.w400,
+            ),
+            children: [
+              TextSpan(
+                  text: text, style: const TextStyle(fontSize: 39, height: 1)),
+              const TextSpan(text: ' mg/dL', style: TextStyle(fontSize: 25)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MediaGlicemiaCard extends StatelessWidget {
+  const _MediaGlicemiaCard({required this.resumo});
 
   final GlicemiaResumo resumo;
 
   @override
   Widget build(BuildContext context) {
+    final media = resumo.mediaDia ?? resumo.analise.mediaUltimos7Dias;
     final ultima = resumo.ultima;
     final alertColor = _alertColor(resumo.alerta.cor);
 
@@ -631,7 +868,7 @@ class _UltimaGlicemiaCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Última glicemia registrada',
+                  'Média da glicemia',
                   style: TextStyle(
                     color: Color(0xFF727272),
                     fontSize: 13,
@@ -639,29 +876,12 @@ class _UltimaGlicemiaCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: ultima?.valor.toString() ?? '--',
-                        style: const TextStyle(fontSize: 39, height: 1),
-                      ),
-                      const TextSpan(
-                        text: ' mg/dL',
-                        style: TextStyle(fontSize: 25),
-                      ),
-                    ],
-                  ),
-                ),
+                _AnimatedGlicemiaValue(value: media),
                 const SizedBox(height: 4),
                 Text(
                   ultima == null
                       ? 'Sem medição'
-                      : 'Última medição: ${_formatTime(ultima.medidoEm)}',
+                      : 'Última medição: ${_formatTime(ultima.medidoEm)} · ${ultima.valor} mg/dL',
                   style: const TextStyle(
                     color: Color(0xFF808080),
                     fontSize: 11,
@@ -815,34 +1035,42 @@ class _ChartCard extends StatelessWidget {
         children: [
           _PeriodSelector(period: period, onChanged: onChanged),
           const SizedBox(height: 14),
-          SizedBox(
-            height: 174,
-            child: CustomPaint(
-              painter: _GlicemiaChartPainter(series),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    for (final point in series)
-                      Expanded(
-                        child: Text(
-                          point.rotulo,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: point.valor == null
-                                ? const Color(0xFFADB3BB)
-                                : const Color(0xFF8E95A1),
-                            fontSize: 10,
+          TweenAnimationBuilder<double>(
+            key: ValueKey(series.length),
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOutCubic,
+            builder: (context, animatedValue, child) {
+              return SizedBox(
+                height: 174,
+                child: CustomPaint(
+                  painter: _GlicemiaChartPainter(series, animatedValue),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        for (final point in series)
+                          Expanded(
+                            child: Text(
+                              point.rotulo,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: point.valor == null
+                                    ? const Color(0xFFADB3BB)
+                                    : const Color(0xFF8E95A1),
+                                fontSize: 10,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -926,9 +1154,10 @@ class _PeriodItem extends StatelessWidget {
 }
 
 class _GlicemiaChartPainter extends CustomPainter {
-  const _GlicemiaChartPainter(this.series);
+  const _GlicemiaChartPainter(this.series, [this.progress = 1]);
 
   final List<GlicemiaSeriePonto> series;
+  final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -955,7 +1184,7 @@ class _GlicemiaChartPainter extends CustomPainter {
           : (entry.key / (series.length - 1)) * graphWidth;
       final y = topPadding +
           (1 - ((entry.value - minValue) / range)) * (graphHeight - 18);
-      return Offset(x, y);
+      return Offset(x, bottom - (bottom - y) * progress);
     }
 
     final fillPaint = Paint()
@@ -1015,7 +1244,7 @@ class _GlicemiaChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _GlicemiaChartPainter oldDelegate) {
-    return oldDelegate.series != series;
+    return oldDelegate.series != series || oldDelegate.progress != progress;
   }
 }
 
@@ -1026,60 +1255,72 @@ class _AnalysisCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(6, 9, 11, 9),
-      decoration: BoxDecoration(
-        color: const Color(0xFFC9E7ED),
+    return Material(
+      color: const Color(0xFFC9E7ED),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
         borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 53,
-            height: 53,
-            decoration: const BoxDecoration(
-              color: Color(0xFF25A1B2),
-              shape: BoxShape.circle,
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'A análise detalhada por IA ainda está em treinamento.',
+              ),
             ),
-            child: const Icon(
-              Icons.water_drop_outlined,
-              color: Colors.white,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Análise de glicemia',
-                  style: TextStyle(
-                    color: Color(0xFF2F4853),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 9, 11, 9),
+          child: Row(
+            children: [
+              Container(
+                width: 53,
+                height: 53,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF25A1B2),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  resumo.analise.texto,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF2F4853),
-                    fontSize: 10,
-                    height: 1.08,
-                  ),
+                child: const Icon(
+                  Icons.water_drop_outlined,
+                  color: Colors.white,
+                  size: 32,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Análise de glicemia',
+                      style: TextStyle(
+                        color: Color(0xFF2F4853),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      resumo.analise.texto,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF2F4853),
+                        fontSize: 10,
+                        height: 1.08,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF073248),
+                size: 30,
+              ),
+            ],
           ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: Color(0xFF073248),
-            size: 30,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1135,6 +1376,193 @@ class _InsulinaResumoCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoricoGlicemiaView extends StatelessWidget {
+  const _HistoricoGlicemiaView({
+    required this.entradas,
+    required this.period,
+    required this.onBack,
+    required this.onPeriodChanged,
+  });
+
+  final List<GlicemiaHistoricoEntrada> entradas;
+  final _ChartPeriod period;
+  final VoidCallback onBack;
+  final ValueChanged<_ChartPeriod> onPeriodChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _GlicemiaHeader(
+            onBack: onBack,
+            title: 'Histórico da glicemia',
+            showWordmark: true,
+          ),
+          const SizedBox(height: 12),
+          _PeriodSelector(period: period, onChanged: onPeriodChanged),
+          const SizedBox(height: 14),
+          Expanded(
+            child: entradas.isEmpty
+                ? const _HistoricoVazio()
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: entradas.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) => StaggeredEntry(
+                      index: index,
+                      child: _HistoricoItemCard(entrada: entradas[index]),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoricoVazio extends StatelessWidget {
+  const _HistoricoVazio();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.history_rounded,
+              color: Color(0xFF2FA3B5),
+              size: 48,
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Nenhum registro neste período',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF073248),
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Altere o período ou registre uma nova medição.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF607178), fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoricoItemCard extends StatelessWidget {
+  const _HistoricoItemCard({required this.entrada});
+
+  final GlicemiaHistoricoEntrada entrada;
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeColor = _badgeColor(entrada.badge.cor);
+    final isEdicao = entrada.descricao == 'editou observação';
+    final icon = isEdicao ? Icons.edit_rounded : Icons.water_drop_rounded;
+    final iconColor =
+        isEdicao ? const Color(0xFF2FA3B5) : const Color(0xFFFF4657);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: _cardDecoration(radius: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${entrada.usuarioNome} ${entrada.descricao}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  entrada.valor != null
+                      ? '${entrada.valor} mg/dL'
+                      : 'Sem valor registrado',
+                  style: const TextStyle(
+                    color: Color(0xFF808080),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _formatDate(entrada.dataHora),
+                style: const TextStyle(
+                  color: Color(0xFF9AA0A6),
+                  fontSize: 10,
+                ),
+              ),
+              Text(
+                _formatTime(entrada.dataHora),
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  entrada.badge.texto,
+                  style: TextStyle(
+                    color: badgeColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1235,9 +1663,13 @@ class _RegistrarInsulinaView extends StatelessWidget {
     required this.observacoesController,
     required this.selectedDate,
     required this.selectedTime,
+    required this.nomeInsulina,
     required this.tipoInsulina,
+    required this.localAplicacao,
     required this.saving,
+    required this.onNomeChanged,
     required this.onTipoChanged,
+    required this.onLocalChanged,
     required this.onSelectDate,
     required this.onSelectTime,
     required this.onSave,
@@ -1249,9 +1681,13 @@ class _RegistrarInsulinaView extends StatelessWidget {
   final TextEditingController observacoesController;
   final DateTime selectedDate;
   final TimeOfDay selectedTime;
+  final String nomeInsulina;
   final String tipoInsulina;
+  final String localAplicacao;
   final bool saving;
-  final ValueChanged<String?> onTipoChanged;
+  final ValueChanged<String?> onNomeChanged;
+  final ValueChanged<String> onTipoChanged;
+  final ValueChanged<String?> onLocalChanged;
   final VoidCallback onSelectDate;
   final VoidCallback onSelectTime;
   final VoidCallback onSave;
@@ -1266,13 +1702,11 @@ class _RegistrarInsulinaView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _DoseInput(controller: doseController),
-            const SizedBox(height: 12),
             _DropdownCard(
-              title: 'Tipo de insulina',
-              value: tipoInsulina,
-              options: const ['Rápida', 'Regular', 'NPH', 'Basal', 'Outro'],
-              onChanged: saving ? null : onTipoChanged,
+              title: 'Insulina',
+              value: nomeInsulina,
+              options: _kInsulinas,
+              onChanged: saving ? null : onNomeChanged,
             ),
             const SizedBox(height: 12),
             _PickerCard(
@@ -1289,10 +1723,24 @@ class _RegistrarInsulinaView extends StatelessWidget {
               onTap: saving ? null : onSelectTime,
             ),
             const SizedBox(height: 12),
+            _TipoInsulinaSelector(
+              value: tipoInsulina,
+              onChanged: saving ? (_) {} : onTipoChanged,
+            ),
+            const SizedBox(height: 12),
+            _DoseInput(controller: doseController),
+            const SizedBox(height: 12),
+            _DropdownCard(
+              title: 'Local de aplicação',
+              value: localAplicacao,
+              options: _kLocaisAplicacao,
+              onChanged: saving ? null : onLocalChanged,
+            ),
+            const SizedBox(height: 12),
             _ObservationCard(
               controller: observacoesController,
               title: 'Observações',
-              hintText: 'Ex: aplicação após orientação médica',
+              hintText: 'Como o idoso está se sentindo?',
             ),
             const SizedBox(height: 22),
             _SaveCancelButtons(
@@ -1301,6 +1749,97 @@ class _RegistrarInsulinaView extends StatelessWidget {
               onCancel: onCancel,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TipoInsulinaSelector extends StatelessWidget {
+  const _TipoInsulinaSelector({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(11, 8, 11, 11),
+      decoration: _cardDecoration(radius: 9),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tipo de insulina',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _TipoInsulinaOption(
+                  label: 'Basal\n(longa ação)',
+                  selected: value == 'Basal',
+                  onTap: () => onChanged('Basal'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _TipoInsulinaOption(
+                  label: 'Rápida\n(bolus)',
+                  selected: value == 'Rápida',
+                  onTap: () => onChanged('Rápida'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TipoInsulinaOption extends StatelessWidget {
+  const _TipoInsulinaOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF2FA3B5) : Colors.white,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
+            color: const Color(0xFF2FA3B5),
+            width: selected ? 0 : 1.2,
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: selected ? Colors.white : const Color(0xFF17324D),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            height: 1.15,
+          ),
         ),
       ),
     );
@@ -1349,59 +1888,17 @@ class _GlicemiaValueInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 126),
-      padding: const EdgeInsets.fromLTRB(24, 18, 16, 18),
-      decoration: _cardDecoration(),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.water_drop_rounded,
-            color: Color(0xFFFF4657),
-            size: 62,
-          ),
-          const SizedBox(width: 22),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Valor da glicemia',
-                  style: TextStyle(
-                    color: Color(0xFF6F636B),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                TextFormField(
-                  controller: controller,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: _validateGlicemia,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 36,
-                    height: 1.05,
-                  ),
-                  decoration: const InputDecoration(
-                    suffixText: 'mg/dL',
-                    suffixStyle: TextStyle(
-                      color: Colors.black,
-                      fontSize: 24,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.only(top: 2, bottom: 4),
-                    errorStyle: TextStyle(fontSize: 11, height: 0.9),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return _NumericValueCard(
+      icon: Icons.water_drop_rounded,
+      iconColor: const Color(0xFFFF4657),
+      label: 'Valor da glicemia',
+      controller: controller,
+      keyboardType: TextInputType.number,
+      inputFormatters: const [],
+      digitsOnly: true,
+      hintText: '000',
+      suffixText: 'mg/dL',
+      validator: _validateGlicemia,
     );
   }
 }
@@ -1413,57 +1910,149 @@ class _DoseInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _NumericValueCard(
+      icon: Icons.medication_liquid_rounded,
+      iconColor: const Color(0xFF2FA3B5),
+      label: 'Dose aplicada',
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}([,.]\d{0,2})?$')),
+      ],
+      hintText: '0,0',
+      suffixText: 'UI',
+      captionBelow: 'Unidades Internacionais',
+      validator: _validateDose,
+    );
+  }
+}
+
+class _NumericValueCard extends StatelessWidget {
+  const _NumericValueCard({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.controller,
+    required this.keyboardType,
+    required this.inputFormatters,
+    required this.hintText,
+    required this.suffixText,
+    required this.validator,
+    this.digitsOnly = false,
+    this.captionBelow,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+  final List<TextInputFormatter> inputFormatters;
+  final String hintText;
+  final String suffixText;
+  final String? captionBelow;
+  final FormFieldValidator<String> validator;
+  final bool digitsOnly;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 126),
-      padding: const EdgeInsets.fromLTRB(24, 18, 16, 18),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: _cardDecoration(),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.medication_liquid_rounded,
-            color: Color(0xFF2FA3B5),
-            size: 58,
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 26),
           ),
-          const SizedBox(width: 22),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Dose aplicada',
-                  style: TextStyle(
-                    color: Color(0xFF6F636B),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                TextFormField(
-                  controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d{0,3}([,.]\d{0,2})?$'),
-                    ),
-                  ],
-                  validator: _validateDose,
-                  maxLines: 1,
+                Text(
+                  label,
                   style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 36,
-                    height: 1.05,
-                  ),
-                  decoration: const InputDecoration(
-                    suffixText: 'un',
-                    suffixStyle: TextStyle(color: Colors.black, fontSize: 24),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.only(top: 2, bottom: 4),
-                    errorStyle: TextStyle(fontSize: 11, height: 0.9),
+                    color: Color(0xFF6F636B),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2FBFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF2FA3B5),
+                      width: 1.4,
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller,
+                          keyboardType: keyboardType,
+                          inputFormatters: digitsOnly
+                              ? [FilteringTextInputFormatter.digitsOnly]
+                              : inputFormatters,
+                          validator: validator,
+                          maxLines: 1,
+                          textAlignVertical: TextAlignVertical.center,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w700,
+                            height: 1.1,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: hintText,
+                            hintStyle: const TextStyle(
+                              color: Color(0xFFBFCBCE),
+                              fontSize: 30,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
+                            errorStyle: const TextStyle(
+                              fontSize: 11,
+                              height: 0.9,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        suffixText,
+                        style: const TextStyle(
+                          color: Color(0xFF087B8D),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (captionBelow != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    captionBelow!,
+                    style: const TextStyle(
+                      color: Color(0xFF8D8D8D),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1841,6 +2430,15 @@ Color _alertColor(String cor) {
     'atencao' => const Color(0xFFE49A20),
     'critico' => const Color(0xFFD73A3A),
     'alerta' => const Color(0xFFD73A3A),
+    _ => const Color(0xFF607178),
+  };
+}
+
+Color _badgeColor(String cor) {
+  return switch (cor) {
+    'normal' => const Color(0xFF28A745),
+    'alerta' => const Color(0xFFE49A20),
+    'atualizado' => const Color(0xFF7C5CD6),
     _ => const Color(0xFF607178),
   };
 }

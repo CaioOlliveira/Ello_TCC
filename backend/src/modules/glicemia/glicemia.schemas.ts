@@ -28,15 +28,19 @@ export const resumoGlicemiaQuerySchema = z.object({
   periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
 });
 
+export const historicoGlicemiaQuerySchema = resumoGlicemiaQuerySchema;
+
 export const criarInsulinaSchema = z.object({
   idosoId: z.string().min(1, "Idoso e obrigatorio."),
   glicemiaId: z.string().uuid().optional(),
+  nomeInsulina: z.string().optional(),
   tipoInsulina: z.string().min(1, "Tipo de insulina e obrigatorio."),
   doseUnidades: z
     .number()
     .positive("Dose deve ser positiva.")
     .max(200, "Dose maxima permitida e 200 unidades."),
   aplicadoEm: z.string().datetime("Data deve estar em formato ISO."),
+  localAplicacao: z.string().optional(),
   observacoes: z.string().optional(),
   registradoPorId: z.string().uuid().optional(),
 });
@@ -44,4 +48,7 @@ export const criarInsulinaSchema = z.object({
 export type CriarGlicemiaInput = z.infer<typeof criarGlicemiaSchema>;
 export type AtualizarGlicemiaInput = z.infer<typeof atualizarGlicemiaSchema>;
 export type ResumoGlicemiaQuery = z.infer<typeof resumoGlicemiaQuerySchema>;
+export type HistoricoGlicemiaQuery = z.infer<
+  typeof historicoGlicemiaQuerySchema
+>;
 export type CriarInsulinaInput = z.infer<typeof criarInsulinaSchema>;

@@ -9,6 +9,7 @@ import {
   atualizarGlicemiaSchema,
   criarInsulinaSchema,
   criarGlicemiaSchema,
+  historicoGlicemiaQuerySchema,
   resumoGlicemiaQuerySchema,
 } from "./glicemia.schemas.js";
 import { glicemiaService } from "./glicemia.service.js";
@@ -39,6 +40,17 @@ export const obterResumoGlicemia: RequestHandler = asyncHandler(
     );
     res.json({
       dados: await glicemiaService.resumo(idosoId, dataReferencia, periodo),
+    });
+  },
+);
+
+export const obterHistoricoGlicemia: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { idosoId, dataReferencia, periodo } = historicoGlicemiaQuerySchema.parse(
+      req.query,
+    );
+    res.json({
+      dados: await glicemiaService.historico(idosoId, dataReferencia, periodo),
     });
   },
 );

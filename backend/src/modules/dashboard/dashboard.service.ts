@@ -189,7 +189,14 @@ async function buscarContextoIdoso(idosoId: string) {
     limitacoes: string | null;
   }>(
     `
-      select nome, idade, condicoes, limitacoes
+      select
+        nome_completo as nome,
+        case
+          when data_nascimento is null then null
+          else extract(year from age(current_date, data_nascimento))::int
+        end as idade,
+        observacoes_saude as condicoes,
+        limitacoes
       from fichas_idosos
       where id = $1
       limit 1

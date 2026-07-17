@@ -49,41 +49,47 @@ class _InsumoDetailView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 26),
-          Row(
-            children: [
-              _ProductImage(value: item.fotoUrl, size: 72),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.nome,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+          StaggeredEntry(
+            index: 0,
+            child: Row(
+              children: [
+                _ProductImage(value: item.fotoUrl, size: 72),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.nome,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 11),
-                    _StatusBadge(status: status),
-                  ],
+                      const SizedBox(height: 11),
+                      _StatusBadge(status: status),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 22),
-          _DetailPanel(insumo: item),
+          StaggeredEntry(index: 1, child: _DetailPanel(insumo: item)),
           const Spacer(),
-          SizedBox(
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: onAtualizar,
-              icon: const Icon(Icons.change_circle_rounded, size: 20),
-              label: const Text('Atualizar estoque'),
-              style: _primaryButtonStyle(),
+          StaggeredEntry(
+            index: 2,
+            child: SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: onAtualizar,
+                icon: const Icon(Icons.change_circle_rounded, size: 20),
+                label: const Text('Atualizar estoque'),
+                style: _primaryButtonStyle(),
+              ),
             ),
           ),
           const SizedBox(height: 10),
