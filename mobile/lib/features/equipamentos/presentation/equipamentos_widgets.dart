@@ -416,14 +416,12 @@ class _LabeledField extends StatelessWidget {
     required this.controller,
     this.keyboardType,
     this.maxLines = 1,
-    this.suffix,
   });
 
   final String label;
   final TextEditingController controller;
   final TextInputType? keyboardType;
   final int maxLines;
-  final Widget? suffix;
 
   @override
   Widget build(BuildContext context) {
@@ -441,7 +439,7 @@ class _LabeledField extends StatelessWidget {
               keyboardType: keyboardType,
               maxLines: maxLines,
               style: const TextStyle(fontSize: 15),
-              decoration: _inputDecoration(suffix: suffix),
+              decoration: _inputDecoration(),
             ),
           ),
         ],
@@ -479,6 +477,44 @@ class _DateField extends StatelessWidget {
               style: const TextStyle(fontSize: 15),
               decoration: _inputDecoration(
                 suffix: const Icon(Icons.calendar_month_rounded, size: 20),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OptionField extends StatelessWidget {
+  const _OptionField({
+    required this.label,
+    required this.controller,
+    required this.onTap,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF333333))),
+          SizedBox(
+            height: 40,
+            child: TextField(
+              controller: controller,
+              readOnly: true,
+              onTap: onTap,
+              style: const TextStyle(fontSize: 15),
+              decoration: _inputDecoration(
+                suffix: const Icon(Icons.keyboard_arrow_down_rounded),
               ),
             ),
           ),
@@ -647,6 +683,41 @@ String isoDate(DateTime date) {
 }
 
 String emptyDash(String value) => value.trim().isEmpty ? '-' : value;
+
+class MaintenanceFrequencyOption {
+  const MaintenanceFrequencyOption(this.label, this.days);
+
+  final String label;
+  final int days;
+}
+
+const maintenanceFrequencyOptions = [
+  MaintenanceFrequencyOption('Diariamente', 1),
+  MaintenanceFrequencyOption('Semanal', 7),
+  MaintenanceFrequencyOption('Mensal', 30),
+  MaintenanceFrequencyOption('Bimestral', 60),
+  MaintenanceFrequencyOption('Semestral', 180),
+  MaintenanceFrequencyOption('Anual', 365),
+];
+
+String maintenanceFrequencyLabel(int? days) {
+  if (days == null) return '';
+  for (final option in maintenanceFrequencyOptions) {
+    if (option.days == days) return option.label;
+  }
+  return 'A cada $days dias';
+}
+
+String manualDisplayName(String value) {
+  final text = value.trim();
+  if (text.toLowerCase() == 'manual.pdf') return '';
+  final nameMatch = RegExp(r'name=([^;]+)').firstMatch(text);
+  if (nameMatch != null) {
+    return Uri.decodeComponent(nameMatch.group(1)!);
+  }
+  if (text.startsWith('data:application/pdf')) return 'Manual anexado.pdf';
+  return text;
+}
 
 DateTime? nextMaintenanceDate(DateTime date, int? frequencyDays) {
   if (frequencyDays == null || frequencyDays <= 0) return null;

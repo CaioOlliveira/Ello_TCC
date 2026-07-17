@@ -4,6 +4,7 @@ import {
   atualizarEquipamento,
   buscarEquipamento,
   criarEquipamento,
+  listarHistoricoEquipamentos,
   listarManutencoesEquipamento,
   listarEquipamentos,
   registrarManutencaoEquipamento,
@@ -13,6 +14,7 @@ import {
 export const equipamentosRoutes = Router();
 
 equipamentosRoutes.get("/", listarEquipamentos);
+equipamentosRoutes.get("/historico", listarHistoricoEquipamentos);
 equipamentosRoutes.post("/", criarEquipamento);
 equipamentosRoutes.get("/:id", buscarEquipamento);
 equipamentosRoutes.patch("/:id", atualizarEquipamento);

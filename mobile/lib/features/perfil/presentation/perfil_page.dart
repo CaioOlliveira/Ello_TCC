@@ -730,6 +730,7 @@ String _routeFromOrigin(String? from) {
     'equipamentos' => '/equipamentos',
     'insumos' => '/insumos',
     'relatorios' => '/relatorios',
+    'idoso-perfil' => '/idoso/perfil',
     _ => '/dashboard',
   };
 }

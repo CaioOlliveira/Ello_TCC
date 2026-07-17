@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
@@ -15,12 +19,19 @@ class CorgiaPage extends ConsumerStatefulWidget {
 
 class _CorgiaPageState extends ConsumerState<CorgiaPage> {
   final _questionController = TextEditingController();
+  final _imagePicker = ImagePicker();
+  final _speech = stt.SpeechToText();
   final _messages = <_ChatMessage>[];
   var _conversations = <AiConversa>[];
   AiConversa? _activeConversation;
+  AiRelatorioInicial? _initialReport;
+  int? _initialReportIndex;
+  _PendingImage? _pendingImage;
   var _loading = false;
   var _loadingHistory = false;
   var _openingConversation = false;
+  var _loadingReport = false;
+  var _listening = false;
 
   @override
   void initState() {
@@ -30,6 +41,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
 
   @override
   void dispose() {
+    _speech.stop();
     _questionController.dispose();
     super.dispose();
   }
@@ -76,10 +88,13 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
   }
 
   Future<void> _startNewChat() async {
-    if (_loading || _openingConversation) return;
+    if (_loading || _openingConversation || _loadingReport) return;
 
     setState(() {
       _messages.clear();
+      _initialReport = null;
+      _initialReportIndex = null;
+      _pendingImage = null;
       _activeConversation = null;
     });
   }
@@ -92,6 +107,9 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
     setState(() {
       _openingConversation = true;
       _activeConversation = conversa;
+      _initialReport = null;
+      _initialReportIndex = null;
+      _pendingImage = null;
       _messages.clear();
     });
 
@@ -126,7 +144,19 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
 
   Future<void> _sendMessage() async {
     final text = _questionController.text.trim();
-    if (text.isEmpty || _loading || _openingConversation) return;
+    if ((text.isEmpty && _pendingImage == null) ||
+        _loading ||
+        _openingConversation ||
+        _loadingReport) {
+      return;
+    }
+
+    if (_shouldShowInitialPrompt && _isAffirmative(text)) {
+      _questionController.clear();
+      await _loadInitialReport(userText: text);
+      return;
+    }
+    final wasInitialPrompt = _shouldShowInitialPrompt;
 
     final usuario = ref.read(authSessionProvider);
     if (usuario == null || usuario.id.isEmpty) {
@@ -135,7 +165,17 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
     }
 
     setState(() {
-      _messages.add(_ChatMessage(text: text, fromUser: true));
+      if (wasInitialPrompt) {
+        _messages
+            .add(_ChatMessage(text: _initialPromptText(), fromUser: false));
+      }
+      _messages.add(
+        _ChatMessage(
+          text: text.isEmpty ? 'Analise esta imagem.' : text,
+          fromUser: true,
+          imageDataUrl: _pendingImage?.dataUrl,
+        ),
+      );
       _questionController.clear();
       _loading = true;
     });
@@ -149,11 +189,18 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
             usuarioId: usuario.id,
             conversaId: conversa.id,
             idosoId: idoso?.id,
-            mensagem: text,
+            mensagem: text.isEmpty ? 'Analise esta imagem.' : text,
+            imagem: _pendingImage == null
+                ? null
+                : {
+                    'mimeType': _pendingImage!.mimeType,
+                    'base64': _pendingImage!.base64Data,
+                  },
           );
       if (!mounted) return;
 
       setState(() {
+        _pendingImage = null;
         _messages.add(
           _ChatMessage(
             text: resultado.resposta.isEmpty
@@ -176,6 +223,152 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       _addErrorMessage('Nao foi possivel falar com a IA agora.');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    if (_loading || _openingConversation || _loadingReport) return;
+
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 72,
+        maxWidth: 1280,
+      );
+      if (image == null) return;
+
+      final bytes = await image.readAsBytes();
+      final mimeType = _mimeTypeFromPath(image.name);
+      if (!mounted) return;
+      setState(() {
+        _pendingImage = _PendingImage(
+          mimeType: mimeType,
+          base64Data: base64Encode(bytes),
+        );
+      });
+    } catch (_) {
+      if (!mounted) return;
+      _addErrorMessage('Nao foi possivel anexar a imagem.');
+    }
+  }
+
+  Future<void> _showImageOptions() async {
+    if (_loading || _openingConversation || _loadingReport) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(
+                    Icons.photo_camera_rounded,
+                    color: Color(0xFF087F8C),
+                  ),
+                  title: const Text('Tirar foto'),
+                  onTap: () => Navigator.of(context).pop(ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.photo_library_rounded,
+                    color: Color(0xFF087F8C),
+                  ),
+                  title: const Text('Escolher da galeria'),
+                  onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (source != null) await _pickImage(source);
+  }
+
+  Future<void> _toggleListening() async {
+    if (_loading || _openingConversation || _loadingReport) return;
+
+    if (_listening) {
+      await _speech.stop();
+      if (mounted) setState(() => _listening = false);
+      return;
+    }
+
+    final available = await _speech.initialize();
+    if (!available) {
+      _addErrorMessage('Nao foi possivel iniciar o microfone.');
+      return;
+    }
+
+    setState(() => _listening = true);
+    await _speech.listen(
+      listenOptions: stt.SpeechListenOptions(
+        localeId: 'pt_BR',
+        listenMode: stt.ListenMode.dictation,
+      ),
+      onResult: (result) {
+        _questionController.text = result.recognizedWords;
+        _questionController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _questionController.text.length),
+        );
+        if (result.finalResult && mounted) {
+          setState(() => _listening = false);
+        }
+      },
+    );
+  }
+
+  Future<void> _loadInitialReport({String userText = 'Ola, quero sim!'}) async {
+    if (_loading || _openingConversation || _loadingReport) return;
+
+    final usuario = ref.read(authSessionProvider);
+    final idoso = ref.read(selectedIdosoProvider);
+    if (usuario == null || usuario.id.isEmpty) {
+      _addErrorMessage('Entre na sua conta para usar a IA.');
+      return;
+    }
+    if (idoso == null || idoso.id.isEmpty) {
+      _addErrorMessage('Selecione um idoso para gerar o relatorio.');
+      return;
+    }
+
+    setState(() {
+      if (_messages.isEmpty) {
+        _messages
+            .add(_ChatMessage(text: _initialPromptText(), fromUser: false));
+      }
+      _messages.add(_ChatMessage(text: userText, fromUser: true));
+      _loadingReport = true;
+    });
+
+    try {
+      final relatorio =
+          await ref.read(apiClientProvider).obterRelatorioInicialIa(
+                usuarioId: usuario.id,
+                idosoId: idoso.id,
+              );
+      if (!mounted) return;
+      setState(() {
+        _initialReport = relatorio;
+        _initialReportIndex = _messages.length;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      _addErrorMessage(error.message);
+    } catch (_) {
+      if (!mounted) return;
+      _addErrorMessage('Nao foi possivel carregar o relatorio da IA.');
+    } finally {
+      if (mounted) setState(() => _loadingReport = false);
     }
   }
 
@@ -227,6 +420,14 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
   @override
   Widget build(BuildContext context) {
     final title = _activeConversation?.titulo ?? 'CoraIA';
+    final idoso = ref.watch(selectedIdosoProvider);
+    final showInitialPrompt = _shouldShowInitialPrompt;
+    final showBusy = _loading || _openingConversation || _loadingReport;
+    final reportVisible = _initialReport != null && _initialReportIndex != null;
+    final reportIndex =
+        reportVisible ? _initialReportIndex!.clamp(0, _messages.length) : null;
+    final reportExtra = reportVisible ? 1 : 0;
+    final itemCount = _messages.length + reportExtra + (showBusy ? 1 : 0);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -245,36 +446,68 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
                     onNewChat: _startNewChat,
                   ),
                   Expanded(
-                    child: _messages.isEmpty &&
-                            !_loading &&
-                            !_openingConversation
-                        ? const _EmptyChat()
+                    child: showInitialPrompt
+                        ? _InitialAnalysisPrompt(
+                            idosoName: idoso?.nome,
+                          )
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                            itemCount: _messages.length +
-                                (_loading || _openingConversation ? 1 : 0),
+                            itemCount: itemCount,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 10),
                             itemBuilder: (context, index) {
-                              if ((_loading || _openingConversation) &&
-                                  index == _messages.length) {
+                              if (showBusy && index == itemCount - 1) {
                                 return const _TypingBubble();
                               }
 
-                              return _MessagePopIn(
-                                child: _MessageBubble(
-                                  message: _messages[index],
-                                ),
-                              );
+                              if (reportVisible && index == reportIndex) {
+                                return _MessagePopIn(
+                                  child: _InitialReportCard(
+                                    report: _initialReport!,
+                                  ),
+                                );
+                              }
+
+                              final messageIndex = reportVisible &&
+                                      reportIndex != null &&
+                                      index > reportIndex
+                                  ? index - 1
+                                  : index;
+
+                              if (messageIndex >= 0 &&
+                                  messageIndex < _messages.length) {
+                                return _MessagePopIn(
+                                  child: _MessageBubble(
+                                    message: _messages[messageIndex],
+                                  ),
+                                );
+                              }
+
+                              return const SizedBox.shrink();
                             },
                           ),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
-                    child: _QuestionInput(
-                      controller: _questionController,
-                      loading: _loading || _openingConversation,
-                      onSubmitted: _sendMessage,
+                    child: Column(
+                      children: [
+                        if (_pendingImage != null)
+                          _PendingImagePreview(
+                            imageDataUrl: _pendingImage!.dataUrl,
+                            onRemove: () => setState(() {
+                              _pendingImage = null;
+                            }),
+                          ),
+                        _QuestionInput(
+                          controller: _questionController,
+                          loading: showBusy,
+                          listening: _listening,
+                          hasImage: _pendingImage != null,
+                          onImage: _showImageOptions,
+                          onMic: _toggleListening,
+                          onSubmitted: _sendMessage,
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -284,6 +517,60 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
         ),
       ),
     );
+  }
+
+  bool get _shouldShowInitialPrompt =>
+      _messages.isEmpty &&
+      _initialReport == null &&
+      !_loading &&
+      !_openingConversation &&
+      !_loadingReport;
+
+  String _initialPromptText() {
+    final idoso = ref.read(selectedIdosoProvider);
+    final name = idoso == null || idoso.nome.trim().isEmpty
+        ? 'o idoso selecionado'
+        : idoso.nome.trim();
+    return 'Ola, cuidador! Analisei os dados de $name nos ultimos dias e preparei o relatorio de saude geral. Quer dar uma olhada?';
+  }
+}
+
+bool _isAffirmative(String text) {
+  final normalized = text
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^\w\sáàâãéêíóôõúç]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  return normalized == 'sim' ||
+      normalized == 'quero' ||
+      normalized == 'quero sim' ||
+      normalized == 'olá quero sim' ||
+      normalized == 'ola quero sim' ||
+      normalized.contains('quero sim') ||
+      normalized.contains('pode mostrar') ||
+      normalized.contains('mostrar resumo') ||
+      normalized.contains('ver resumo') ||
+      normalized.contains('ver relatorio') ||
+      normalized.contains('ver relatório');
+}
+
+String _mimeTypeFromPath(String path) {
+  final lower = path.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
+}
+
+Uint8List? _decodeDataUrl(String? value) {
+  if (value == null || value.isEmpty) return null;
+  final commaIndex = value.indexOf(',');
+  if (commaIndex == -1) return null;
+
+  try {
+    return base64Decode(value.substring(commaIndex + 1));
+  } catch (_) {
+    return null;
   }
 }
 
@@ -482,33 +769,148 @@ class _HistoryTile extends StatelessWidget {
   }
 }
 
-class _EmptyChat extends StatelessWidget {
-  const _EmptyChat();
+class _InitialAnalysisPrompt extends StatelessWidget {
+  const _InitialAnalysisPrompt({
+    required this.idosoName,
+  });
+
+  final String? idosoName;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _CoraAvatar(size: 74),
-            SizedBox(height: 16),
-            Text(
-              'Como posso ajudar no cuidado hoje?',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF003B4F),
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                height: 1.2,
+    final name = idosoName == null || idosoName!.trim().isEmpty
+        ? 'o idoso selecionado'
+        : idosoName!.trim();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _CoraAvatar(size: 44),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD9E0E3),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    'Ola, cuidador! Analisei os dados de $name nos ultimos dias e preparei o relatorio de saude geral. Quer dar uma olhada?',
+                    style: const TextStyle(
+                      color: Color(0xFF101820),
+                      fontSize: 14,
+                      height: 1.3,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InitialReportCard extends StatelessWidget {
+  const _InitialReportCard({required this.report});
+
+  final AiRelatorioInicial report;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFF33A7BA)),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          children: [
+            for (var index = 0; index < report.secoes.length; index++) ...[
+              _ReportSection(section: report.secoes[index]),
+              if (index < report.secoes.length - 1)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0xFF79C6D2),
+                  ),
+                ),
+            ],
           ],
         ),
       ),
     );
+  }
+}
+
+class _ReportSection extends StatelessWidget {
+  const _ReportSection({required this.section});
+
+  final AiRelatorioSecao section;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 52,
+          child: Icon(
+            _sectionIcon(section.tipo),
+            color: const Color(0xFF087F8C),
+            size: 42,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                color: Color(0xFF101820),
+                fontSize: 12.4,
+                height: 1.24,
+                fontWeight: FontWeight.w500,
+              ),
+              children: [
+                TextSpan(
+                  text: '${section.titulo}: ',
+                  style: const TextStyle(
+                    color: Color(0xFF087F8C),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                TextSpan(text: section.texto),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+IconData _sectionIcon(String tipo) {
+  switch (tipo) {
+    case 'glicemia':
+      return Icons.water_drop_rounded;
+    case 'humor':
+      return Icons.sentiment_satisfied_alt_rounded;
+    default:
+      return Icons.tips_and_updates_rounded;
   }
 }
 
@@ -517,11 +919,13 @@ class _ChatMessage {
     required this.text,
     required this.fromUser,
     this.isError = false,
+    this.imageDataUrl,
   });
 
   final String text;
   final bool fromUser;
   final bool isError;
+  final String? imageDataUrl;
 }
 
 class _MessagePopIn extends StatelessWidget {
@@ -565,6 +969,7 @@ class _MessageBubble extends StatelessWidget {
             : const Color(0xFFD9E0E3);
     final textColor = message.fromUser ? Colors.white : const Color(0xFF101820);
 
+    final imageBytes = _decodeDataUrl(message.imageDataUrl);
     final bubble = Container(
       constraints: const BoxConstraints(maxWidth: 270),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
@@ -574,14 +979,32 @@ class _MessageBubble extends StatelessWidget {
         border:
             message.isError ? Border.all(color: const Color(0xFFD95B4F)) : null,
       ),
-      child: Text(
-        message.text,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 14,
-          height: 1.3,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (imageBytes != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.memory(
+                imageBytes,
+                width: 230,
+                height: 150,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          Text(
+            message.text,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 14,
+              height: 1.3,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
 
@@ -598,6 +1021,72 @@ class _MessageBubble extends StatelessWidget {
           const _CoraAvatar(size: 44),
           const SizedBox(width: 8),
           Flexible(child: bubble),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingImage {
+  const _PendingImage({
+    required this.mimeType,
+    required this.base64Data,
+  });
+
+  final String mimeType;
+  final String base64Data;
+
+  String get dataUrl => 'data:$mimeType;base64,$base64Data';
+}
+
+class _PendingImagePreview extends StatelessWidget {
+  const _PendingImagePreview({
+    required this.imageDataUrl,
+    required this.onRemove,
+  });
+
+  final String imageDataUrl;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final bytes = _decodeDataUrl(imageDataUrl);
+    if (bytes == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF9BD3DC)),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.memory(
+              bytes,
+              width: 54,
+              height: 54,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Imagem anexada para analise',
+              style: TextStyle(
+                color: Color(0xFF003B4F),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Remover imagem',
+            onPressed: onRemove,
+            icon: const Icon(Icons.close_rounded, color: Color(0xFF003B4F)),
+          ),
         ],
       ),
     );
@@ -711,11 +1200,19 @@ class _QuestionInput extends StatelessWidget {
   const _QuestionInput({
     required this.controller,
     required this.loading,
+    required this.listening,
+    required this.hasImage,
+    required this.onImage,
+    required this.onMic,
     required this.onSubmitted,
   });
 
   final TextEditingController controller;
   final bool loading;
+  final bool listening;
+  final bool hasImage;
+  final VoidCallback onImage;
+  final VoidCallback onMic;
   final VoidCallback onSubmitted;
 
   @override
@@ -729,6 +1226,17 @@ class _QuestionInput extends StatelessWidget {
       ),
       child: Row(
         children: [
+          IconButton(
+            tooltip: 'Enviar foto',
+            onPressed: loading ? null : onImage,
+            icon: Icon(
+              hasImage
+                  ? Icons.image_rounded
+                  : Icons.add_photo_alternate_rounded,
+              color: const Color(0xFF111111),
+              size: 21,
+            ),
+          ),
           Expanded(
             child: TextField(
               controller: controller,
@@ -748,6 +1256,17 @@ class _QuestionInput extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: listening ? 'Parar ditado' : 'Falar',
+            onPressed: loading ? null : onMic,
+            icon: Icon(
+              listening ? Icons.mic_rounded : Icons.mic_none_rounded,
+              color:
+                  listening ? const Color(0xFF087F8C) : const Color(0xFF111111),
+              size: 21,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Enviar',
             onPressed: loading ? null : onSubmitted,
             icon: Icon(
               loading ? Icons.hourglass_top_rounded : Icons.send_rounded,

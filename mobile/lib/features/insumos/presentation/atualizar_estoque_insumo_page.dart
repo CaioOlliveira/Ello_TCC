@@ -95,14 +95,14 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
-    final firstDate = DateTime(now.year - 10);
+    final firstDate = DateTime(now.year, now.month, now.day);
     final currentDate = _parseBrazilianDate(_validadeController.text);
     final selected = await showDatePicker(
       context: context,
       locale: const Locale('pt', 'BR'),
       firstDate: firstDate,
       lastDate: DateTime(now.year + 10),
-      initialDate: currentDate != null && currentDate.isAfter(firstDate)
+      initialDate: currentDate != null && !currentDate.isBefore(firstDate)
           ? currentDate
           : now,
     );
@@ -129,14 +129,19 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
       setState(() => _error = 'Adicao e subtracao nao podem ser negativas.');
       return;
     }
-    if (subtracao > insumo.quantidadeUnidades + adicao) {
+    if (subtracao >= insumo.quantidadeUnidades + adicao) {
       setState(
-        () => _error = 'A subtracao nao pode deixar o estoque negativo.',
+        () => _error = 'A subtracao precisa deixar estoque acima de zero.',
       );
       return;
     }
     if (diasAlerta == null || diasAlerta < 0 || diasAlerta > 3650) {
       setState(() => _error = 'Informe um prazo de vencimento valido.');
+      return;
+    }
+    final validade = _parseBrazilianDate(_validadeController.text);
+    if (validade != null && _isBeforeToday(validade)) {
+      setState(() => _error = 'A validade nao pode ser anterior a hoje.');
       return;
     }
     if (consumo != null && consumo > 0 && _frequenciaUso == null) {
@@ -224,7 +229,13 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(18, 34, 18, 22),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.fromLTRB(
+        18,
+        34,
+        18,
+        22 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

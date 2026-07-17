@@ -91,6 +91,11 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
       setState(() => _error = 'Informe um prazo de vencimento valido.');
       return;
     }
+    final validade = _parseBrazilianDate(_validadeController.text);
+    if (validade != null && _isBeforeToday(validade)) {
+      setState(() => _error = 'A validade nao pode ser anterior a hoje.');
+      return;
+    }
     if (consumo != null && consumo > 0 && _frequenciaUso == null) {
       setState(() => _error = 'Selecione a frequencia do consumo.');
       return;
@@ -145,7 +150,13 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 28, 12, 22),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.fromLTRB(
+        12,
+        28,
+        12,
+        22 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

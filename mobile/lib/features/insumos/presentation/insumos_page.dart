@@ -129,6 +129,53 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
     await _load();
   }
 
+  Future<void> _deleteSelected() async {
+    final insumo = _selected;
+    if (insumo == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir insumo'),
+        content: Text('Deseja excluir "${insumo.nome}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC0392B),
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(apiClientProvider).removerInsumo(id: insumo.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Insumo excluido com sucesso.')),
+      );
+      _showList();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao foi possivel excluir o insumo.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final idoso = ref.watch(selectedIdosoProvider);
@@ -178,6 +225,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
                         insumo: _selected,
                         onBack: _showList,
                         onAtualizar: _showAtualizar,
+                        onDelete: _deleteSelected,
                       ),
                     _InsumosView.atualizar => _InsumoStockView(
                         insumo: _selected,
@@ -223,7 +271,7 @@ class _InsumosListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(13, 22, 13, 14),
+      padding: const EdgeInsets.fromLTRB(14, 22, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -256,7 +304,7 @@ class _InsumosListView extends StatelessWidget {
             padding: EdgeInsets.only(left: 50),
             child: Text(
               'Controle de estoque dos produtos usados no cuidado',
-              style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 10.5),
+              style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 11.5),
             ),
           ),
           const SizedBox(height: 7),
@@ -280,9 +328,9 @@ class _InsumosListView extends StatelessWidget {
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
-                              mainAxisSpacing: 13,
-                              crossAxisSpacing: 12,
-                              mainAxisExtent: 126,
+                              mainAxisSpacing: 14,
+                              crossAxisSpacing: 13,
+                              mainAxisExtent: 142,
                             ),
                             itemBuilder: (context, index) {
                               final insumo = insumos[index];
@@ -300,7 +348,7 @@ class _InsumosListView extends StatelessWidget {
             height: 52,
             child: FilledButton.icon(
               onPressed: onAdd,
-              icon: const Icon(Icons.add_circle_rounded, size: 17),
+              icon: const Icon(Icons.add_circle_rounded, size: 20),
               label: const Text('Adicionar Insumo'),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF3BA7B8),
@@ -309,7 +357,7 @@ class _InsumosListView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 textStyle: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -349,7 +397,7 @@ class _StatusFilters extends StatelessWidget {
                 onTap: () => onChanged(filter.$1),
                 borderRadius: BorderRadius.circular(999),
                 child: Container(
-                  height: 36,
+                  height: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     border: Border.all(
@@ -363,8 +411,8 @@ class _StatusFilters extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(filter.$4, color: filter.$3, size: 12),
-                      const SizedBox(width: 4),
+                      Icon(filter.$4, color: filter.$3, size: 14),
+                      const SizedBox(width: 5),
                       Flexible(
                         child: Text(
                           filter.$2,
@@ -373,7 +421,7 @@ class _StatusFilters extends StatelessWidget {
                             color: selected == filter.$1
                                 ? const Color(0xFF006B7E)
                                 : const Color(0xFF6A6A6A),
-                            fontSize: 10.5,
+                            fontSize: 11.2,
                             fontWeight: selected == filter.$1
                                 ? FontWeight.w800
                                 : FontWeight.w500,
@@ -412,11 +460,11 @@ class _InsumoCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(5, 6, 5, 7),
+          padding: const EdgeInsets.fromLTRB(6, 7, 6, 8),
           child: Column(
             children: [
               Expanded(
-                child: _ProductImage(value: insumo.fotoUrl, size: 51),
+                child: _ProductImage(value: insumo.fotoUrl, size: 61),
               ),
               Text(
                 insumo.nome,
@@ -425,7 +473,7 @@ class _InsumoCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.black,
-                  fontSize: 10.5,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -434,9 +482,9 @@ class _InsumoCard extends StatelessWidget {
                 _stockLabel(insumo.quantidadeUnidades),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.black, fontSize: 8.5),
+                style: const TextStyle(color: Colors.black, fontSize: 9.5),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 5),
               _StatusBadge(status: status, compact: true),
             ],
           ),
@@ -568,13 +616,13 @@ class _StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(status.icon, color: status.color, size: compact ? 8 : 11),
-          SizedBox(width: compact ? 2 : 5),
+          Icon(status.icon, color: status.color, size: compact ? 9 : 11),
+          SizedBox(width: compact ? 3 : 5),
           Text(
             status.label,
             style: TextStyle(
               color: status.color,
-              fontSize: compact ? 7 : 10,
+              fontSize: compact ? 7.8 : 10,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -850,6 +898,13 @@ DateTime? _parseBrazilianDate(String value) {
   final year = int.tryParse(parts[2]);
   if (day == null || month == null || year == null) return null;
   return DateTime(year, month, day);
+}
+
+bool _isBeforeToday(DateTime date) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final normalized = DateTime(date.year, date.month, date.day);
+  return normalized.isBefore(today);
 }
 
 String? _toIsoDate(String value) {

@@ -3,13 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/agenda/presentation/agenda_page.dart';
+import '../features/agenda/presentation/agenda_history_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
+import '../features/coraia/presentation/coraia_page.dart';
+import '../features/equipamentos/presentation/equipamentos_history_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
 import '../features/humor/presentation/humor_page.dart';
 import '../features/idosos/presentation/cadastro_idoso_page.dart';
 import '../features/idosos/presentation/dashboard_idoso_page.dart';
+import '../features/idosos/presentation/perfil_idoso_page.dart';
 import '../features/idosos/presentation/selecionar_idoso_page.dart';
 import '../features/insumos/presentation/insumos_page.dart';
 import '../features/ia/presentation/corgia_page.dart';
@@ -28,6 +32,21 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/agenda', builder: (context, state) => const AgendaPage()),
+      GoRoute(
+        path: '/agenda/historico',
+        builder: (context, state) => const AgendaHistoryPage(),
+      ),
+      GoRoute(
+        path: '/equipamentos',
+        builder: (context, state) => const EquipamentosPage(),
+        routes: [
+          GoRoute(
+            path: 'historico',
+            builder: (context, state) => const EquipamentosHistoryPage(),
+          ),
+        ],
+      ),
       GoRoute(
         path: '/idosos',
         builder: (context, state) => const SelecionarIdosoPage(),
@@ -39,6 +58,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/idosos/cadastro',
         builder: (context, state) => const CadastroIdosoPage(),
+      ),
+      GoRoute(
+        path: '/idosos/editar',
+        builder: (context, state) => CadastroIdosoPage(
+          edicao: true,
+          from: state.uri.queryParameters['from'],
+        ),
       ),
       GoRoute(path: '/perfil', builder: (context, state) => const PerfilPage()),
       GoRoute(
@@ -73,12 +99,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const MedicamentosPage(),
           ),
           GoRoute(
-              path: '/agenda', builder: (context, state) => const AgendaPage()),
-          GoRoute(
-            path: '/equipamentos',
-            builder: (context, state) => const EquipamentosPage(),
-          ),
-          GoRoute(
               path: '/insumos',
               builder: (context, state) => const InsumosPage()),
           GoRoute(
@@ -88,6 +108,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/humor',
             builder: (context, state) => const HumorPage(),
+          ),
+          GoRoute(
+            path: '/coraia',
+            builder: (context, state) => const CoraIAPage(),
           ),
           GoRoute(
             path: '/agua',
@@ -109,8 +133,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/idoso/perfil',
-            builder: (context, state) =>
-                const ModulePlaceholderPage(title: 'Perfil do idoso'),
+            builder: (context, state) => const PerfilIdosoPage(),
+          ),
+          GoRoute(
+            path: '/idoso/acessos',
+            builder: (context, state) => const AcessosIdosoPage(),
           ),
         ],
       ),
@@ -138,7 +165,7 @@ class AppShell extends StatelessWidget {
         location == '/sono') {
       return 1;
     }
-    if (location == '/corgia') return 2;
+    if (location == '/corgia' || location == '/coraia') return 2;
     if (location == '/relatorios') return 3;
     if (location == '/idoso/perfil') return 3;
     return 0;
@@ -148,44 +175,50 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     final selectedIndex = _currentIndex(location);
+    final hideBottomNav = location == '/agenda' ||
+        location == '/agenda/historico' ||
+        location == '/equipamentos' ||
+        location == '/equipamentos/historico';
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: _AppNavBar(
-            selectedIndex: selectedIndex,
-            items: [
-              _NavItemData(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home_rounded,
-                label: 'Início',
-                onTap: () => context.go('/dashboard'),
+      bottomNavigationBar: hideBottomNav
+          ? null
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: _AppNavBar(
+                  selectedIndex: selectedIndex,
+                  items: [
+                    _NavItemData(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Início',
+                      onTap: () => context.go('/dashboard'),
+                    ),
+                    _NavItemData(
+                      icon: Icons.monitor_heart_outlined,
+                      activeIcon: Icons.monitor_heart_rounded,
+                      label: 'Monitorar',
+                      onTap: () => context.go('/monitoramento'),
+                    ),
+                    _NavItemData(
+                      icon: Icons.auto_awesome_outlined,
+                      activeIcon: Icons.auto_awesome_rounded,
+                      label: 'CoraIA',
+                      onTap: () => context.go('/corgia'),
+                    ),
+                    _NavItemData(
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: 'Perfil',
+                      onTap: () => context.go('/idoso/perfil'),
+                    ),
+                  ],
+                ),
               ),
-              _NavItemData(
-                icon: Icons.monitor_heart_outlined,
-                activeIcon: Icons.monitor_heart_rounded,
-                label: 'Monitorar',
-                onTap: () => context.go('/monitoramento'),
-              ),
-              _NavItemData(
-                icon: Icons.auto_awesome_outlined,
-                activeIcon: Icons.auto_awesome_rounded,
-                label: 'CoraIA',
-                onTap: () => context.go('/corgia'),
-              ),
-              _NavItemData(
-                icon: Icons.person_outline_rounded,
-                activeIcon: Icons.person_rounded,
-                label: 'Perfil',
-                onTap: () => context.go('/idoso/perfil'),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

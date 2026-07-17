@@ -5,7 +5,10 @@ import {
   getPagination,
   idParamSchema,
 } from "../../common/utils/request-query.js";
-import { criarRefeicaoSchema } from "./alimentacao.schemas.js";
+import {
+  atualizarRefeicaoSchema,
+  criarRefeicaoSchema,
+} from "./alimentacao.schemas.js";
 import { alimentacaoService } from "./alimentacao.service.js";
 
 export const listarRefeicoes: RequestHandler = asyncHandler(
@@ -27,10 +30,33 @@ export const buscarRefeicao: RequestHandler = asyncHandler(async (req, res) => {
   res.json({ dados: await alimentacaoService.buscarPorId(id) });
 });
 
+export const buscarDicaAlimentacao: RequestHandler = asyncHandler(
+  async (_req, res) => {
+    res.json({ dados: await alimentacaoService.buscarDica() });
+  },
+);
+
 export const criarRefeicao: RequestHandler = asyncHandler(async (req, res) => {
   const input = criarRefeicaoSchema.parse(req.body);
   res.status(201).json({ dados: await alimentacaoService.criar(input) });
 });
+
+export const atualizarRefeicao: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const input = atualizarRefeicaoSchema.parse(req.body);
+    res.json({ dados: await alimentacaoService.atualizar(id, input) });
+  },
+);
+
+export const concluirRefeicao: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const usuarioId =
+      typeof req.body?.usuarioId === "string" ? req.body.usuarioId : undefined;
+    res.json({ dados: await alimentacaoService.concluir(id, usuarioId) });
+  },
+);
 
 export const removerRefeicao: RequestHandler = asyncHandler(
   async (req, res) => {

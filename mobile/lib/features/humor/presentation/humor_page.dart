@@ -90,6 +90,16 @@ class _HumorPageState extends ConsumerState<HumorPage> {
       return;
     }
 
+    final today = DateTime.now();
+    final todayIso = '${today.year.toString().padLeft(4, '0')}-'
+        '${today.month.toString().padLeft(2, '0')}-'
+        '${today.day.toString().padLeft(2, '0')}';
+
+    if (dataHumor == todayIso) {
+      final shouldContinue = await _confirmDuplicateToday(idoso.id, todayIso);
+      if (!shouldContinue) return;
+    }
+
     setState(() {
       _saving = true;
       _errorMessage = null;
@@ -120,6 +130,44 @@ class _HumorPageState extends ConsumerState<HumorPage> {
       });
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<bool> _confirmDuplicateToday(String idosoId, String todayIso) async {
+    try {
+      final humores =
+          await ref.read(apiClientProvider).listarHumores(idosoId: idosoId);
+      final alreadyRegistered = humores.any((item) {
+        final value = item['dataHumor'] ?? item['data_humor'];
+        return value?.toString().startsWith(todayIso) == true;
+      });
+
+      if (!alreadyRegistered || !mounted) return true;
+
+      return await showDialog<bool>(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: const Text('Humor ja cadastrado'),
+                content: const Text(
+                  'Voce ja cadastrou um humor hoje. Certeza que deseja adicionar outro?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Adicionar'),
+                  ),
+                ],
+              );
+            },
+          ) ??
+          false;
+    } catch (_) {
+      return true;
     }
   }
 
