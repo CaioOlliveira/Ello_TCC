@@ -195,6 +195,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
                     onRetry: _load,
                     onBack: () => context.go('/monitoramento'),
                     onAdd: _showCadastro,
+                    onHistory: () => context.push('/historico/insumos'),
                     onOpen: _showDetalhe,
                     selectedFilter: _selectedFilter,
                     onFilterChanged: _selectFilter,
@@ -233,6 +234,7 @@ class _InsumosListView extends StatelessWidget {
     required this.onRetry,
     required this.onBack,
     required this.onAdd,
+    required this.onHistory,
     required this.onOpen,
     required this.selectedFilter,
     required this.onFilterChanged,
@@ -245,6 +247,7 @@ class _InsumosListView extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onBack;
   final VoidCallback onAdd;
+  final VoidCallback onHistory;
   final ValueChanged<InsumoResumo> onOpen;
   final String selectedFilter;
   final ValueChanged<String> onFilterChanged;
@@ -339,6 +342,25 @@ class _InsumosListView extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 46,
+            child: OutlinedButton(
+              onPressed: onHistory,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF073248),
+                side: const BorderSide(color: Color(0xFF2CA0B4), width: 1.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              child: const Text('Ver Historico'),
             ),
           ),
         ],

@@ -58,7 +58,9 @@ export const insumosService = {
         "alerta_minimo_unidades is not null and quantidade_unidades <= alerta_minimo_unidades",
       );
     } else if (filtro === "vencidos") {
-      clauses.push("data_validade is not null and data_validade < current_date");
+      clauses.push(
+        "data_validade is not null and data_validade < current_date",
+      );
     } else if (filtro === "vencendo") {
       clauses.push(
         "data_validade is not null and data_validade >= current_date and data_validade <= current_date + dias_alerta_validade",
@@ -79,12 +81,14 @@ export const insumosService = {
   },
 
   async criar(input: CriarInsumoInput) {
+    const { usuarioId: _usuarioId, ...dadosInsumo } = input;
     const insumo = await insertRow<CriarInsumoInput, Record<string, unknown>>(
       table,
-      input,
+      dadosInsumo,
       fields,
     );
     await registrarHistorico({
+      usuarioId: input.usuarioId,
       idosoId: input.idosoId,
       acao: "criar",
       tipoEntidade: table,
@@ -95,11 +99,12 @@ export const insumosService = {
   },
 
   async atualizar(id: string, input: AtualizarInsumoInput) {
+    const { usuarioId: _usuarioId, ...dadosInsumo } = input;
     const anterior = await this.buscarPorId(id);
     const atualizado = await updateRow<
       AtualizarInsumoInput,
       Record<string, unknown>
-    >(table, id, input, fields, ...notFound);
+    >(table, id, dadosInsumo, fields, ...notFound);
     if (
       isDatabaseEnabled &&
       (input.frequenciaUso !== undefined ||
@@ -111,6 +116,7 @@ export const insumosService = {
       );
     }
     await registrarHistorico({
+      usuarioId: input.usuarioId,
       idosoId: String(atualizado.idoso_id ?? ""),
       acao: "atualizar",
       tipoEntidade: table,

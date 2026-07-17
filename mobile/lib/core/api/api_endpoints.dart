@@ -3,6 +3,8 @@ class ApiEndpoints {
 
   static const health = '/health';
   static const login = '/auth/login';
+  static const loginGoogle = '/auth/google';
+  static const cadastroGoogle = '/auth/google/cadastro';
   static const cadastro = '/auth/cadastro';
   static const idosos = '/idosos';
   static const humores = '/registros/humores';
@@ -17,6 +19,7 @@ class ApiEndpoints {
   static const iaConversas = '/ia/conversas';
   static const glicemiaResumo = '/glicemias/resumo';
   static const glicemiaInsulinas = '/glicemias/insulinas';
+  static const historico = '/historico';
   static String compromisso(String id) => '/agenda/$id';
   static String ocorrenciaCompromisso(String id) => '/agenda/$id/ocorrencias';
   static String equipamento(String id) => '/equipamentos/$id';

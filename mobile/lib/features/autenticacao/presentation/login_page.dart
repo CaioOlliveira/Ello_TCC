@@ -5,12 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/auth/google_auth_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/app_text_field.dart';
 
-enum AuthView { landing, login, cadastro }
+enum AuthView { landing, login, cadastro, cadastroGoogle }
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -32,6 +33,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _loading = false;
   bool _aceitouTermos = false;
   String? _errorMessage;
+  GoogleAuthResult? _googleCadastro;
 
   @override
   void dispose() {
@@ -136,6 +138,128 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Future<void> _submitGoogleLogin() async {
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final googleAuth = await ref.read(googleAuthServiceProvider).signIn();
+      if (googleAuth == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+
+      final response = await ref.read(apiClientProvider).loginGoogle(
+            idToken: googleAuth.idToken,
+          );
+      final dados = response['dados'];
+      final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
+
+      if (usuario is Map<String, dynamic>) {
+        ref.read(authSessionProvider.notifier).state =
+            UsuarioSessao.fromJson(usuario);
+        if (mounted) context.go('/idosos');
+        return;
+      }
+
+      final precisaCadastro =
+          dados is Map<String, dynamic> && dados['precisaCadastro'] == true;
+
+      if (precisaCadastro && mounted) {
+        _googleCadastro = googleAuth;
+        _nomeController.text = googleAuth.nome ?? '';
+        _emailController.text = googleAuth.email;
+        _telefoneController.clear();
+        setState(() {
+          _view = AuthView.cadastroGoogle;
+          _aceitouTermos = false;
+          _errorMessage =
+              'Essa conta Google ainda nao esta cadastrada no Ello. Complete seu cadastro para continuar.';
+        });
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _errorMessage =
+              'Nao foi possivel encontrar os dados da conta Google.';
+        });
+      }
+    } on GoogleAuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = error.message);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = error.message);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Nao foi possivel entrar com Google: $error';
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _submitGoogleCadastro() async {
+    FocusScope.of(context).unfocus();
+
+    final google = _googleCadastro;
+    if (google == null) {
+      setState(() {
+        _view = AuthView.landing;
+        _errorMessage = 'Entre com Google novamente para continuar.';
+      });
+      return;
+    }
+
+    if (!(_cadastroFormKey.currentState?.validate() ?? false)) return;
+
+    if (!_aceitouTermos) {
+      setState(() {
+        _errorMessage =
+            'Aceite os termos de uso e a politica de privacidade para continuar.';
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await ref.read(apiClientProvider).cadastrarGoogle(
+            idToken: google.idToken,
+            nome: _nomeController.text.trim(),
+            telefone: _telefoneController.text.trim(),
+          );
+      final dados = response['dados'];
+      final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
+
+      if (usuario is Map<String, dynamic>) {
+        ref.read(authSessionProvider.notifier).state =
+            UsuarioSessao.fromJson(usuario);
+      }
+
+      if (mounted) context.go('/idosos');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = error.message);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Nao foi possivel cadastrar com Google: $error';
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   void _goTo(AuthView view) {
     FocusScope.of(context).unfocus();
     setState(() {
@@ -178,9 +302,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               AuthView.landing => _LandingView(
                   key: const ValueKey('landing-view'),
                   onApplePressed: () => _showPendingProviderMessage('Apple'),
-                  onGooglePressed: () => _showPendingProviderMessage('Google'),
+                  onGooglePressed: _loading ? null : _submitGoogleLogin,
                   onEmailPressed: () => _goTo(AuthView.login),
                   onCadastroPressed: () => _goTo(AuthView.cadastro),
+                  errorMessage: _errorMessage,
+                  loading: _loading,
                 ),
               AuthView.login => _LoginFormView(
                   key: const ValueKey('login-view'),
@@ -213,6 +339,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   },
                   confirmarSenhaValidator: _confirmarSenhaValidator,
                 ),
+              AuthView.cadastroGoogle => _GoogleCadastroView(
+                  key: const ValueKey('google-cadastro-view'),
+                  formKey: _cadastroFormKey,
+                  nomeController: _nomeController,
+                  emailController: _emailController,
+                  telefoneController: _telefoneController,
+                  loading: _loading,
+                  errorMessage: _errorMessage,
+                  aceitouTermos: _aceitouTermos,
+                  fotoUrl: _googleCadastro?.fotoUrl,
+                  onBack: () => _goTo(AuthView.landing),
+                  onSubmit: _submitGoogleCadastro,
+                  onAceitouTermosChanged: (value) {
+                    setState(() {
+                      _aceitouTermos = value ?? false;
+                      _errorMessage = null;
+                    });
+                  },
+                ),
             },
           ),
         ),
@@ -227,13 +372,17 @@ class _LandingView extends StatelessWidget {
     required this.onGooglePressed,
     required this.onEmailPressed,
     required this.onCadastroPressed,
+    this.errorMessage,
+    this.loading = false,
     super.key,
   });
 
   final VoidCallback onApplePressed;
-  final VoidCallback onGooglePressed;
+  final VoidCallback? onGooglePressed;
   final VoidCallback onEmailPressed;
   final VoidCallback onCadastroPressed;
+  final String? errorMessage;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -269,6 +418,10 @@ class _LandingView extends StatelessWidget {
                       height: 1.25,
                     ),
                   ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: AppSizes.lg),
+                    _ErrorBox(message: errorMessage!),
+                  ],
                 ],
               ),
             ),
@@ -279,6 +432,7 @@ class _LandingView extends StatelessWidget {
           onGooglePressed: onGooglePressed,
           onEmailPressed: onEmailPressed,
           onCadastroPressed: onCadastroPressed,
+          loadingGoogle: loading,
         ),
       ],
     );
@@ -676,6 +830,229 @@ class _CadastroFormView extends StatelessWidget {
   }
 }
 
+class _GoogleCadastroView extends StatelessWidget {
+  const _GoogleCadastroView({
+    required this.formKey,
+    required this.nomeController,
+    required this.emailController,
+    required this.telefoneController,
+    required this.loading,
+    required this.aceitouTermos,
+    required this.onBack,
+    required this.onSubmit,
+    required this.onAceitouTermosChanged,
+    this.errorMessage,
+    this.fotoUrl,
+    super.key,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final TextEditingController nomeController;
+  final TextEditingController emailController;
+  final TextEditingController telefoneController;
+  final bool loading;
+  final bool aceitouTermos;
+  final String? errorMessage;
+  final String? fotoUrl;
+  final VoidCallback onBack;
+  final VoidCallback onSubmit;
+  final ValueChanged<bool?> onAceitouTermosChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSizes.md,
+            AppSizes.md,
+            AppSizes.md,
+            0,
+          ),
+          child: Row(
+            children: [
+              TextButton.icon(
+                onPressed: loading ? null : onBack,
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF177385),
+                ),
+                icon: const Icon(Icons.chevron_left_rounded),
+                label: const Text('Voltar'),
+              ),
+              const Spacer(),
+              Text(
+                'Google',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: const Color(0xFF3C4043),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              const SizedBox(width: 72),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.lg,
+              AppSizes.lg,
+              AppSizes.lg,
+              AppSizes.xl + MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: CircleAvatar(
+                      radius: 38,
+                      backgroundColor: const Color(0xFFE8F0FE),
+                      backgroundImage: fotoUrl == null || fotoUrl!.isEmpty
+                          ? null
+                          : NetworkImage(fotoUrl!),
+                      child: fotoUrl == null || fotoUrl!.isEmpty
+                          ? const Icon(
+                              Icons.person_outline_rounded,
+                              color: Color(0xFF1A73E8),
+                              size: 42,
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.lg),
+                  Text(
+                    'Complete seu cadastro',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: const Color(0xFF202124),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  Text(
+                    'Essa conta Google ainda nao esta cadastrada no Ello. Confirme seus dados para continuar.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFF5F6368),
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.xl),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'Nome completo',
+                      controller: nomeController,
+                      validator: Validators.requiredText,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icons.person_outline,
+                      autofillHints: const [AutofillHints.name],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'E-mail Google',
+                      controller: emailController,
+                      validator: Validators.email,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icons.mail_outline,
+                      readOnly: true,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _InputWrapper(
+                    child: AppTextField(
+                      label: 'Telefone',
+                      controller: telefoneController,
+                      validator: Validators.requiredText,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.done,
+                      prefixIcon: Icons.phone_outlined,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        _PhoneInputFormatter(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  CheckboxListTile(
+                    value: aceitouTermos,
+                    onChanged: loading ? null : onAceitouTermosChanged,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    checkboxShape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    title: RichText(
+                      text: const TextSpan(
+                        style: TextStyle(
+                          color: Color(0xFF5F6368),
+                          fontSize: 12,
+                        ),
+                        children: [
+                          TextSpan(text: 'aceito os '),
+                          TextSpan(
+                            text: 'termos de uso',
+                            style: TextStyle(color: Color(0xFF1A73E8)),
+                          ),
+                          TextSpan(text: ' e a '),
+                          TextSpan(
+                            text: 'politica de privacidade',
+                            style: TextStyle(color: Color(0xFF1A73E8)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: AppSizes.md),
+                    _ErrorBox(message: errorMessage!),
+                  ],
+                  const SizedBox(height: AppSizes.xl),
+                  SizedBox(
+                    height: 54,
+                    child: FilledButton(
+                      onPressed: loading ? null : onSubmit,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF1A73E8),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Cadastrar com Google'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PhoneInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -716,12 +1093,14 @@ class _BottomChoicesPanel extends StatelessWidget {
     required this.onGooglePressed,
     required this.onEmailPressed,
     required this.onCadastroPressed,
+    this.loadingGoogle = false,
   });
 
   final VoidCallback onApplePressed;
-  final VoidCallback onGooglePressed;
+  final VoidCallback? onGooglePressed;
   final VoidCallback onEmailPressed;
   final VoidCallback onCadastroPressed;
+  final bool loadingGoogle;
 
   @override
   Widget build(BuildContext context) {
@@ -749,7 +1128,7 @@ class _BottomChoicesPanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSizes.md),
           _ProviderButton(
-            label: 'Fazer login com google',
+            label: loadingGoogle ? 'Entrando...' : 'Fazer login com google',
             icon: const _GoogleBadge(),
             onPressed: onGooglePressed,
           ),
@@ -800,7 +1179,7 @@ class _ProviderButton extends StatelessWidget {
 
   final String label;
   final Widget? icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {

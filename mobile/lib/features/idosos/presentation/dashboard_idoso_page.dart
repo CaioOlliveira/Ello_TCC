@@ -62,9 +62,6 @@ class DashboardIdosoPage extends ConsumerWidget {
                 nome: idoso?.nome ?? 'Selecione uma ficha',
                 idade: idoso?.idade,
                 foto: idoso?.urlFoto,
-                onEdit: idoso == null
-                    ? null
-                    : () => context.go('/idosos/editar?from=dashboard'),
               ),
               const Spacer(),
             ],
@@ -80,13 +77,11 @@ class _IdosoHeroCard extends StatelessWidget {
     required this.nome,
     this.idade,
     this.foto,
-    this.onEdit,
   });
 
   final String nome;
   final int? idade;
   final String? foto;
-  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -106,82 +101,64 @@ class _IdosoHeroCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
+      child: Row(
         children: [
-          Positioned(
-            right: 0,
-            top: 0,
-            child: IconButton(
-              onPressed: onEdit,
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(
-                Icons.edit_outlined,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
+          CircleAvatar(
+            radius: 43,
+            backgroundColor: const Color(0xFFD1F2F6),
+            backgroundImage: bytes != null
+                ? MemoryImage(bytes)
+                : foto != null && foto!.startsWith('http')
+                    ? NetworkImage(foto!) as ImageProvider
+                    : null,
+            child: bytes == null && (foto == null || !foto!.startsWith('http'))
+                ? const Icon(
+                    Icons.person_outline_rounded,
+                    color: Color(0xFF238FA1),
+                    size: 52,
+                  )
+                : null,
           ),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 43,
-                backgroundColor: const Color(0xFFD1F2F6),
-                backgroundImage: bytes != null
-                    ? MemoryImage(bytes)
-                    : foto != null && foto!.startsWith('http')
-                        ? NetworkImage(foto!) as ImageProvider
-                        : null,
-                child:
-                    bytes == null && (foto == null || !foto!.startsWith('http'))
-                        ? const Icon(
-                            Icons.person_outline_rounded,
-                            color: Color(0xFF238FA1),
-                            size: 52,
-                          )
-                        : null,
-              ),
-              const SizedBox(width: 22),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      nome,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(width: 92, height: 1.5, color: Colors.white),
-                    const SizedBox(height: 8),
-                    if (idade != null && idade! > 0)
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.cake_outlined,
-                            color: Colors.white,
-                            size: 17,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$idade anos',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
+          const SizedBox(width: 22),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nome,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Container(width: 92, height: 1.5, color: Colors.white),
+                const SizedBox(height: 8),
+                if (idade != null && idade! > 0)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.cake_outlined,
+                        color: Colors.white,
+                        size: 17,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$idade anos',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         ],
       ),

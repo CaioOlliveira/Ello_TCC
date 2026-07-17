@@ -6,7 +6,9 @@ export const insumoParamsSchema = z.object({
 
 export const listarInsumosQuerySchema = z.object({
   idosoId: z.string().uuid().optional(),
-  filtro: z.enum(["todos", "acabando", "vencendo", "vencidos"]).default("todos"),
+  filtro: z
+    .enum(["todos", "acabando", "vencendo", "vencidos"])
+    .default("todos"),
 });
 
 export const criarInsumoSchema = z.object({
@@ -21,11 +23,9 @@ export const criarInsumoSchema = z.object({
   diasAlertaValidade: z.number().int().nonnegative().max(3650).optional(),
   fotoUrl: z.string().nullable().optional(),
   localArmazenamento: z.string().nullable().optional(),
-  frequenciaUso: z
-    .enum(["Diario", "Semanal", "Mensal"])
-    .nullable()
-    .optional(),
+  frequenciaUso: z.enum(["Diario", "Semanal", "Mensal"]).nullable().optional(),
   observacoes: z.string().nullable().optional(),
+  usuarioId: z.string().uuid().optional(),
 });
 
 export const atualizarInsumoSchema = criarInsumoSchema.partial();

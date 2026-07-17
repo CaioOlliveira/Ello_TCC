@@ -13,5 +13,16 @@ export const cadastroSchema = z.object({
   tipoUsuario: z.string().min(1).default("cuidador"),
 });
 
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(1, "Token do Google e obrigatorio."),
+});
+
+export const googleCadastroSchema = googleLoginSchema.extend({
+  nome: z.string().min(1, "Nome e obrigatorio."),
+  telefone: z.string().optional(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CadastroInput = z.infer<typeof cadastroSchema>;
+export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
+export type GoogleCadastroInput = z.infer<typeof googleCadastroSchema>;
