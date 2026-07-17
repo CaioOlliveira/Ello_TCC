@@ -18,6 +18,12 @@ class ApiEndpoints {
   static const medicamentos = '/medicamentos';
   static const medicamentosResumo = '/medicamentos/resumo';
   static const medicamentosHistorico = '/medicamentos/historico';
+  static const pressao = '/pressao';
+  static const pressaoResumo = '/pressao/resumo';
+  static const pressaoHistorico = '/pressao/historico';
+  static const oxigenacao = '/oxigenacao';
+  static const oxigenacaoResumo = '/oxigenacao/resumo';
+  static const oxigenacaoHistorico = '/oxigenacao/historico';
   static String compromisso(String id) => '/agenda/$id';
   static String ocorrenciaCompromisso(String id) => '/agenda/$id/ocorrencias';
   static String equipamento(String id) => '/equipamentos/$id';

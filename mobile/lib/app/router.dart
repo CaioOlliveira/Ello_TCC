@@ -13,9 +13,11 @@ import '../features/idosos/presentation/dashboard_idoso_page.dart';
 import '../features/idosos/presentation/selecionar_idoso_page.dart';
 import '../features/insumos/presentation/insumos_page.dart';
 import '../features/ia/presentation/corgia_page.dart';
+import '../features/oxigenacao/presentation/oxigenacao_page.dart';
 import '../features/medicamentos/presentation/medicamentos_page.dart';
 import '../features/monitoramento/presentation/monitoramento_page.dart';
 import '../features/perfil/presentation/perfil_page.dart';
+import '../features/pressao/presentation/pressao_page.dart';
 import '../features/relatorios/presentation/relatorios_page.dart';
 import '../features/splash/presentation/splash_page.dart';
 import '../shared/widgets/module_placeholder_page.dart';
@@ -94,13 +96,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/pressao',
-            builder: (context, state) =>
-                const ModulePlaceholderPage(title: 'Pressao arterial'),
+            builder: (context, state) => const PressaoPage(),
           ),
           GoRoute(
             path: '/oxigenacao',
-            builder: (context, state) =>
-                const ModulePlaceholderPage(title: 'Oxigenacao'),
+            builder: (context, state) => const OxigenacaoPage(),
           ),
           GoRoute(
             path: '/sono',

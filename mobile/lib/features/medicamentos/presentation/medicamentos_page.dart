@@ -304,18 +304,21 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     }
   }
 
-  Future<void> _registrarDose(String status) async {
+  Future<void> _registrarDose() async {
     final idoso = ref.read(selectedIdosoProvider);
     final medicamento = _selecionado;
     if (idoso == null || medicamento == null) return;
 
     setState(() => _saving = true);
     try {
+      final agora = DateTime.now();
       await ref.read(apiClientProvider).registrarAdministracaoMedicamento(
             medicamentoId: medicamento.id,
             idosoId: idoso.id,
-            horarioPrevisto: DateTime.now(),
-            status: status,
+            horarioPrevisto:
+                _horarioPrevistoParaAgora(medicamento.proximoHorario, agora),
+            administradoEm: agora,
+            status: 'tomado',
             registradoPorId: ref.read(authSessionProvider)?.id,
           );
       if (!mounted) return;
@@ -668,6 +671,16 @@ class _ProximoMedicamentoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final atrasado = medicamento.proximoAtrasado;
+    final corDestaque =
+        atrasado ? const Color(0xFFD73A3A) : const Color(0xFF148A9C);
+    final corFundoIcone =
+        atrasado ? const Color(0xFFF6D3D3) : const Color(0xFFD8F1F4);
+    final corBadgeFundo =
+        atrasado ? const Color(0xFFF6D3D3) : const Color(0xFFF3E3C4);
+    final corBadgeTexto =
+        atrasado ? const Color(0xFFB13030) : const Color(0xFF8A6420);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: _cardDecoration(),
@@ -677,13 +690,15 @@ class _ProximoMedicamentoCard extends StatelessWidget {
           Container(
             width: 46,
             height: 46,
-            decoration: const BoxDecoration(
-              color: Color(0xFFD8F1F4),
+            decoration: BoxDecoration(
+              color: corFundoIcone,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.access_time_filled_rounded,
-              color: Color(0xFF148A9C),
+            child: Icon(
+              atrasado
+                  ? Icons.warning_rounded
+                  : Icons.access_time_filled_rounded,
+              color: corDestaque,
               size: 24,
             ),
           ),
@@ -692,9 +707,12 @@ class _ProximoMedicamentoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Próximo medicamento',
-                  style: TextStyle(color: Color(0xFF727272), fontSize: 12.5),
+                Text(
+                  atrasado ? 'Medicamento atrasado' : 'Próximo medicamento',
+                  style: const TextStyle(
+                    color: Color(0xFF727272),
+                    fontSize: 12.5,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -718,8 +736,8 @@ class _ProximoMedicamentoCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   medicamento.proximoHorario ?? '--:--',
-                  style: const TextStyle(
-                    color: Color(0xFF148A9C),
+                  style: TextStyle(
+                    color: corDestaque,
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                   ),
@@ -730,13 +748,13 @@ class _ProximoMedicamentoCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFFF3E3C4),
+              color: corBadgeFundo,
               borderRadius: BorderRadius.circular(999),
             ),
-            child: const Text(
-              'Pendente',
+            child: Text(
+              atrasado ? 'Atrasado' : 'Pendente',
               style: TextStyle(
-                color: Color(0xFF8A6420),
+                color: corBadgeTexto,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
@@ -800,19 +818,30 @@ class _MedicamentoCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(
-                                  Icons.access_time_rounded,
-                                  color: Color(0xFF8A8A8A),
+                                Icon(
+                                  medicamento.proximoAtrasado
+                                      ? Icons.warning_rounded
+                                      : Icons.access_time_rounded,
+                                  color: medicamento.proximoAtrasado
+                                      ? const Color(0xFFD73A3A)
+                                      : const Color(0xFF8A8A8A),
                                   size: 13,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   medicamento.proximoHorario == null
                                       ? 'Sem horário'
-                                      : 'Próximo horário: ${medicamento.proximoHorario}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF727272),
+                                      : medicamento.proximoAtrasado
+                                          ? 'Atrasado: ${medicamento.proximoHorario}'
+                                          : 'Próximo horário: ${medicamento.proximoHorario}',
+                                  style: TextStyle(
+                                    color: medicamento.proximoAtrasado
+                                        ? const Color(0xFFD73A3A)
+                                        : const Color(0xFF727272),
                                     fontSize: 11.5,
+                                    fontWeight: medicamento.proximoAtrasado
+                                        ? FontWeight.w700
+                                        : FontWeight.w400,
                                   ),
                                 ),
                               ],
@@ -1957,7 +1986,7 @@ class _DetalheView extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  final ValueChanged<String> onRegistrarDose;
+  final VoidCallback onRegistrarDose;
 
   @override
   Widget build(BuildContext context) {
@@ -2029,25 +2058,21 @@ class _DetalheView extends StatelessWidget {
                 const SizedBox(height: 8),
                 StaggeredEntry(
                   index: 2,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final status in _kStatusDose)
-                        OutlinedButton.icon(
-                          onPressed:
-                              saving ? null : () => onRegistrarDose(status.$1),
-                          icon: Icon(status.$3, color: status.$4, size: 17),
-                          label: Text(status.$2),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: status.$4,
-                            side: BorderSide(color: status.$4),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                          ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: saving ? null : onRegistrarDose,
+                      icon: const Icon(Icons.check_circle_rounded, size: 18),
+                      label: const Text('Remédio dado'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF28A745),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
                         ),
-                    ],
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -2134,14 +2159,22 @@ class _AdministracaoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = (dado['status'] ?? '').toString();
+    final administradoEm = DateTime.tryParse(
+      (dado['administrado_em'] ?? '').toString(),
+    );
+    final horarioPrevisto = DateTime.tryParse(
+      (dado['horario_previsto'] ?? '').toString(),
+    );
+    final statusEfetivo =
+        status == 'tomado' && administradoEm != null && horarioPrevisto != null
+            ? _statusComAtraso(administradoEm, horarioPrevisto)
+            : status;
     final info = _kStatusDose.firstWhere(
-      (item) => item.$1 == status,
+      (item) => item.$1 == statusEfetivo,
       orElse: () =>
           ('', status, Icons.medication_rounded, const Color(0xFF8A8A8A)),
     );
-    final dataTexto =
-        (dado['administrado_em'] ?? dado['horario_previsto'])?.toString();
-    final data = dataTexto == null ? null : DateTime.tryParse(dataTexto);
+    final data = (administradoEm ?? horarioPrevisto)?.toLocal();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -2295,6 +2328,24 @@ Color _badgeColor(String cor) {
 String _formatNumber(double value) {
   if (value == value.roundToDouble()) return value.round().toString();
   return value.toStringAsFixed(1).replaceAll('.', ',');
+}
+
+const _kToleranciaAtrasoMinutos = 30;
+
+String _statusComAtraso(DateTime administradoEm, DateTime horarioPrevisto) {
+  final atrasoMinutos =
+      administradoEm.difference(horarioPrevisto).inMinutes;
+  return atrasoMinutos > _kToleranciaAtrasoMinutos ? 'atrasado' : 'tomado';
+}
+
+DateTime _horarioPrevistoParaAgora(String? proximoHorario, DateTime agora) {
+  if (proximoHorario == null) return agora;
+  final partes = proximoHorario.split(':');
+  if (partes.length < 2) return agora;
+  final hora = int.tryParse(partes[0]);
+  final minuto = int.tryParse(partes[1]);
+  if (hora == null || minuto == null) return agora;
+  return DateTime(agora.year, agora.month, agora.day, hora, minuto);
 }
 
 String _formatDate(DateTime date) {

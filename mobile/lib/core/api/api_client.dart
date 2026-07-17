@@ -171,8 +171,9 @@ class GlicemiaRegistro {
       idosoId: json['idosoId']?.toString() ?? '',
       valor: json['valor'] is num ? (json['valor'] as num).toInt() : 0,
       contexto: json['contexto']?.toString() ?? '',
-      medidoEm: DateTime.tryParse(json['medidoEm']?.toString() ?? '') ??
-          DateTime.now(),
+      medidoEm: (DateTime.tryParse(json['medidoEm']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
       observacoes: json['observacoes']?.toString(),
       sintomas: json['sintomas']?.toString(),
     );
@@ -210,8 +211,9 @@ class InsulinaRegistro {
       doseUnidades: json['doseUnidades'] is num
           ? (json['doseUnidades'] as num).toDouble()
           : double.tryParse(json['doseUnidades']?.toString() ?? '') ?? 0,
-      aplicadoEm: DateTime.tryParse(json['aplicadoEm']?.toString() ?? '') ??
-          DateTime.now(),
+      aplicadoEm: (DateTime.tryParse(json['aplicadoEm']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
       localAplicacao: json['localAplicacao']?.toString(),
       observacoes: json['observacoes']?.toString(),
     );
@@ -262,8 +264,9 @@ class GlicemiaHistoricoEntrada {
       acao: json['acao']?.toString() ?? 'criar',
       descricao: json['descricao']?.toString() ?? '',
       valor: valor is num ? valor.toInt() : null,
-      dataHora: DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
-          DateTime.now(),
+      dataHora: (DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
       badge: GlicemiaHistoricoBadge.fromJson(
         json['badge'] is Map<String, dynamic> ? json['badge'] : null,
       ),
@@ -383,8 +386,9 @@ class GlicemiaResumo {
           ? (json['totalRegistros'] as num).toInt()
           : 0,
       mediaDia: mediaDia is num ? mediaDia.toDouble() : null,
-      proximaMedicao:
-          proximaMedicao == null ? null : DateTime.tryParse(proximaMedicao),
+      proximaMedicao: proximaMedicao == null
+          ? null
+          : DateTime.tryParse(proximaMedicao)?.toLocal(),
       alerta: GlicemiaAlerta.fromJson(
         json['alerta'] is Map<String, dynamic> ? json['alerta'] : null,
       ),
@@ -415,6 +419,438 @@ class GlicemiaResumo {
   final List<GlicemiaSeriePonto> serie;
   final InsulinaRegistro? insulinaRecente;
   final int totalInsulinas;
+}
+
+class PressaoRegistro {
+  const PressaoRegistro({
+    required this.id,
+    required this.idosoId,
+    required this.sistolica,
+    required this.diastolica,
+    required this.medidoEm,
+    this.batimentos,
+    this.observacoes,
+  });
+
+  factory PressaoRegistro.fromJson(Map<String, dynamic> json) {
+    final batimentos = json['batimentos'];
+
+    return PressaoRegistro(
+      id: json['id']?.toString() ?? '',
+      idosoId: json['idosoId']?.toString() ?? '',
+      sistolica:
+          json['sistolica'] is num ? (json['sistolica'] as num).toInt() : 0,
+      diastolica:
+          json['diastolica'] is num ? (json['diastolica'] as num).toInt() : 0,
+      batimentos: batimentos is num ? batimentos.toInt() : null,
+      medidoEm: (DateTime.tryParse(json['medidoEm']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
+      observacoes: json['observacoes']?.toString(),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final int sistolica;
+  final int diastolica;
+  final int? batimentos;
+  final DateTime medidoEm;
+  final String? observacoes;
+}
+
+class PressaoHistoricoEntrada {
+  const PressaoHistoricoEntrada({
+    required this.id,
+    required this.usuarioNome,
+    required this.acao,
+    required this.descricao,
+    required this.dataHora,
+    required this.badge,
+    this.sistolica,
+    this.diastolica,
+  });
+
+  factory PressaoHistoricoEntrada.fromJson(Map<String, dynamic> json) {
+    final sistolica = json['sistolica'];
+    final diastolica = json['diastolica'];
+
+    return PressaoHistoricoEntrada(
+      id: json['id']?.toString() ?? '',
+      usuarioNome: json['usuarioNome']?.toString() ?? 'Cuidador',
+      acao: json['acao']?.toString() ?? 'criar',
+      descricao: json['descricao']?.toString() ?? '',
+      sistolica: sistolica is num ? sistolica.toInt() : null,
+      diastolica: diastolica is num ? diastolica.toInt() : null,
+      dataHora: (DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
+      badge: GlicemiaHistoricoBadge.fromJson(
+        json['badge'] is Map<String, dynamic> ? json['badge'] : null,
+      ),
+    );
+  }
+
+  final String id;
+  final String usuarioNome;
+  final String acao;
+  final String descricao;
+  final int? sistolica;
+  final int? diastolica;
+  final DateTime dataHora;
+  final GlicemiaHistoricoBadge badge;
+}
+
+class PressaoSeriePonto {
+  const PressaoSeriePonto({
+    required this.data,
+    required this.rotulo,
+    this.valor,
+  });
+
+  factory PressaoSeriePonto.fromJson(Map<String, dynamic> json) {
+    final valor = json['valor'];
+
+    return PressaoSeriePonto(
+      data: json['data']?.toString() ?? '',
+      rotulo: json['rotulo']?.toString() ?? '',
+      valor: valor is num ? valor.toDouble() : null,
+    );
+  }
+
+  final String data;
+  final String rotulo;
+  final double? valor;
+}
+
+class PressaoAlerta {
+  const PressaoAlerta({
+    required this.status,
+    required this.titulo,
+    required this.mensagem,
+    required this.cor,
+  });
+
+  factory PressaoAlerta.fromJson(Map<String, dynamic>? json) {
+    return PressaoAlerta(
+      status: json?['status']?.toString() ?? 'sem_registro',
+      titulo: json?['titulo']?.toString() ?? 'Sem medicao registrada',
+      mensagem: json?['mensagem']?.toString() ??
+          'Registre a primeira pressao para gerar alertas.',
+      cor: json?['cor']?.toString() ?? 'neutro',
+    );
+  }
+
+  final String status;
+  final String titulo;
+  final String mensagem;
+  final String cor;
+}
+
+class PressaoAnalise {
+  const PressaoAnalise({
+    required this.totalMedicoes,
+    required this.totalForaDaFaixa,
+    required this.texto,
+    this.mediaUltimos7Dias,
+    this.mediaDiastolicaUltimos7Dias,
+  });
+
+  factory PressaoAnalise.fromJson(Map<String, dynamic>? json) {
+    final media = json?['mediaUltimos7Dias'];
+    final mediaDiastolica = json?['mediaDiastolicaUltimos7Dias'];
+
+    return PressaoAnalise(
+      mediaUltimos7Dias: media is num ? media.toDouble() : null,
+      mediaDiastolicaUltimos7Dias:
+          mediaDiastolica is num ? mediaDiastolica.toDouble() : null,
+      totalMedicoes: json?['totalMedicoes'] is num
+          ? (json?['totalMedicoes'] as num).toInt()
+          : 0,
+      totalForaDaFaixa: json?['totalForaDaFaixa'] is num
+          ? (json?['totalForaDaFaixa'] as num).toInt()
+          : 0,
+      texto: json?['texto']?.toString() ??
+          'Ainda nao ha medicoes suficientes para gerar uma analise.',
+    );
+  }
+
+  final double? mediaUltimos7Dias;
+  final double? mediaDiastolicaUltimos7Dias;
+  final int totalMedicoes;
+  final int totalForaDaFaixa;
+  final String texto;
+}
+
+class PressaoResumo {
+  const PressaoResumo({
+    required this.totalRegistros,
+    required this.alerta,
+    required this.analise,
+    required this.serie,
+    this.ultima,
+    this.mediaSistolicaDia,
+    this.mediaDiastolicaDia,
+    this.proximaMedicao,
+  });
+
+  factory PressaoResumo.fromJson(Map<String, dynamic> json) {
+    final ultima = json['ultima'];
+    final serie = json['serie'];
+    final proximaMedicao = json['proximaMedicao']?.toString();
+    final mediaSistolicaDia = json['mediaSistolicaDia'];
+    final mediaDiastolicaDia = json['mediaDiastolicaDia'];
+
+    return PressaoResumo(
+      ultima: ultima is Map<String, dynamic>
+          ? PressaoRegistro.fromJson(ultima)
+          : null,
+      totalRegistros: json['totalRegistros'] is num
+          ? (json['totalRegistros'] as num).toInt()
+          : 0,
+      mediaSistolicaDia:
+          mediaSistolicaDia is num ? mediaSistolicaDia.toDouble() : null,
+      mediaDiastolicaDia:
+          mediaDiastolicaDia is num ? mediaDiastolicaDia.toDouble() : null,
+      proximaMedicao: proximaMedicao == null
+          ? null
+          : DateTime.tryParse(proximaMedicao)?.toLocal(),
+      alerta: PressaoAlerta.fromJson(
+        json['alerta'] is Map<String, dynamic> ? json['alerta'] : null,
+      ),
+      analise: PressaoAnalise.fromJson(
+        json['analise'] is Map<String, dynamic> ? json['analise'] : null,
+      ),
+      serie: serie is List
+          ? serie
+              .whereType<Map<String, dynamic>>()
+              .map(PressaoSeriePonto.fromJson)
+              .toList()
+          : const [],
+    );
+  }
+
+  final PressaoRegistro? ultima;
+  final int totalRegistros;
+  final double? mediaSistolicaDia;
+  final double? mediaDiastolicaDia;
+  final DateTime? proximaMedicao;
+  final PressaoAlerta alerta;
+  final PressaoAnalise analise;
+  final List<PressaoSeriePonto> serie;
+}
+
+class OxigenacaoRegistro {
+  const OxigenacaoRegistro({
+    required this.id,
+    required this.idosoId,
+    required this.saturacao,
+    required this.medidoEm,
+    this.pulso,
+    this.observacoes,
+  });
+
+  factory OxigenacaoRegistro.fromJson(Map<String, dynamic> json) {
+    final pulso = json['pulso'];
+
+    return OxigenacaoRegistro(
+      id: json['id']?.toString() ?? '',
+      idosoId: json['idosoId']?.toString() ?? '',
+      saturacao:
+          json['saturacao'] is num ? (json['saturacao'] as num).toInt() : 0,
+      pulso: pulso is num ? pulso.toInt() : null,
+      medidoEm: (DateTime.tryParse(json['medidoEm']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
+      observacoes: json['observacoes']?.toString(),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final int saturacao;
+  final int? pulso;
+  final DateTime medidoEm;
+  final String? observacoes;
+}
+
+class OxigenacaoHistoricoEntrada {
+  const OxigenacaoHistoricoEntrada({
+    required this.id,
+    required this.usuarioNome,
+    required this.acao,
+    required this.descricao,
+    required this.dataHora,
+    required this.badge,
+    this.saturacao,
+    this.pulso,
+  });
+
+  factory OxigenacaoHistoricoEntrada.fromJson(Map<String, dynamic> json) {
+    final saturacao = json['saturacao'];
+    final pulso = json['pulso'];
+
+    return OxigenacaoHistoricoEntrada(
+      id: json['id']?.toString() ?? '',
+      usuarioNome: json['usuarioNome']?.toString() ?? 'Cuidador',
+      acao: json['acao']?.toString() ?? 'criar',
+      descricao: json['descricao']?.toString() ?? '',
+      saturacao: saturacao is num ? saturacao.toInt() : null,
+      pulso: pulso is num ? pulso.toInt() : null,
+      dataHora: (DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
+      badge: GlicemiaHistoricoBadge.fromJson(
+        json['badge'] is Map<String, dynamic> ? json['badge'] : null,
+      ),
+    );
+  }
+
+  final String id;
+  final String usuarioNome;
+  final String acao;
+  final String descricao;
+  final int? saturacao;
+  final int? pulso;
+  final DateTime dataHora;
+  final GlicemiaHistoricoBadge badge;
+}
+
+class OxigenacaoSeriePonto {
+  const OxigenacaoSeriePonto({
+    required this.data,
+    required this.rotulo,
+    this.valor,
+  });
+
+  factory OxigenacaoSeriePonto.fromJson(Map<String, dynamic> json) {
+    final valor = json['valor'];
+
+    return OxigenacaoSeriePonto(
+      data: json['data']?.toString() ?? '',
+      rotulo: json['rotulo']?.toString() ?? '',
+      valor: valor is num ? valor.toDouble() : null,
+    );
+  }
+
+  final String data;
+  final String rotulo;
+  final double? valor;
+}
+
+class OxigenacaoAlerta {
+  const OxigenacaoAlerta({
+    required this.status,
+    required this.titulo,
+    required this.mensagem,
+    required this.cor,
+  });
+
+  factory OxigenacaoAlerta.fromJson(Map<String, dynamic>? json) {
+    return OxigenacaoAlerta(
+      status: json?['status']?.toString() ?? 'sem_registro',
+      titulo: json?['titulo']?.toString() ?? 'Sem medicao registrada',
+      mensagem: json?['mensagem']?.toString() ??
+          'Registre a primeira oxigenação para gerar alertas.',
+      cor: json?['cor']?.toString() ?? 'neutro',
+    );
+  }
+
+  final String status;
+  final String titulo;
+  final String mensagem;
+  final String cor;
+}
+
+class OxigenacaoAnalise {
+  const OxigenacaoAnalise({
+    required this.totalMedicoes,
+    required this.totalForaDaFaixa,
+    required this.texto,
+    this.mediaUltimos7Dias,
+    this.mediaPulsoUltimos7Dias,
+  });
+
+  factory OxigenacaoAnalise.fromJson(Map<String, dynamic>? json) {
+    final media = json?['mediaUltimos7Dias'];
+    final mediaPulso = json?['mediaPulsoUltimos7Dias'];
+
+    return OxigenacaoAnalise(
+      mediaUltimos7Dias: media is num ? media.toDouble() : null,
+      mediaPulsoUltimos7Dias: mediaPulso is num ? mediaPulso.toDouble() : null,
+      totalMedicoes: json?['totalMedicoes'] is num
+          ? (json?['totalMedicoes'] as num).toInt()
+          : 0,
+      totalForaDaFaixa: json?['totalForaDaFaixa'] is num
+          ? (json?['totalForaDaFaixa'] as num).toInt()
+          : 0,
+      texto: json?['texto']?.toString() ??
+          'Ainda nao ha medicoes suficientes para gerar uma analise.',
+    );
+  }
+
+  final double? mediaUltimos7Dias;
+  final double? mediaPulsoUltimos7Dias;
+  final int totalMedicoes;
+  final int totalForaDaFaixa;
+  final String texto;
+}
+
+class OxigenacaoResumo {
+  const OxigenacaoResumo({
+    required this.totalRegistros,
+    required this.alerta,
+    required this.analise,
+    required this.serie,
+    this.ultima,
+    this.mediaSaturacaoDia,
+    this.mediaPulsoDia,
+    this.proximaMedicao,
+  });
+
+  factory OxigenacaoResumo.fromJson(Map<String, dynamic> json) {
+    final ultima = json['ultima'];
+    final serie = json['serie'];
+    final proximaMedicao = json['proximaMedicao']?.toString();
+    final mediaSaturacaoDia = json['mediaSaturacaoDia'];
+    final mediaPulsoDia = json['mediaPulsoDia'];
+
+    return OxigenacaoResumo(
+      ultima: ultima is Map<String, dynamic>
+          ? OxigenacaoRegistro.fromJson(ultima)
+          : null,
+      totalRegistros: json['totalRegistros'] is num
+          ? (json['totalRegistros'] as num).toInt()
+          : 0,
+      mediaSaturacaoDia:
+          mediaSaturacaoDia is num ? mediaSaturacaoDia.toDouble() : null,
+      mediaPulsoDia: mediaPulsoDia is num ? mediaPulsoDia.toDouble() : null,
+      proximaMedicao: proximaMedicao == null
+          ? null
+          : DateTime.tryParse(proximaMedicao)?.toLocal(),
+      alerta: OxigenacaoAlerta.fromJson(
+        json['alerta'] is Map<String, dynamic> ? json['alerta'] : null,
+      ),
+      analise: OxigenacaoAnalise.fromJson(
+        json['analise'] is Map<String, dynamic> ? json['analise'] : null,
+      ),
+      serie: serie is List
+          ? serie
+              .whereType<Map<String, dynamic>>()
+              .map(OxigenacaoSeriePonto.fromJson)
+              .toList()
+          : const [],
+    );
+  }
+
+  final OxigenacaoRegistro? ultima;
+  final int totalRegistros;
+  final double? mediaSaturacaoDia;
+  final double? mediaPulsoDia;
+  final DateTime? proximaMedicao;
+  final OxigenacaoAlerta alerta;
+  final OxigenacaoAnalise analise;
+  final List<OxigenacaoSeriePonto> serie;
 }
 
 class MedicamentoHorario {
@@ -467,6 +903,7 @@ class MedicamentoResumo {
     this.unidadeEstoque,
     this.alertaEstoqueBaixo,
     this.proximoHorario,
+    this.proximoAtrasado = false,
     this.totalHorarios = 0,
   });
 
@@ -483,6 +920,7 @@ class MedicamentoResumo {
       unidadeEstoque: json['unidadeEstoque']?.toString(),
       alertaEstoqueBaixo: alerta is num ? alerta.toDouble() : null,
       proximoHorario: json['proximoHorario']?.toString(),
+      proximoAtrasado: json['proximoAtrasado'] == true,
       totalHorarios: json['totalHorarios'] is num
           ? (json['totalHorarios'] as num).toInt()
           : 0,
@@ -497,6 +935,7 @@ class MedicamentoResumo {
   final String? unidadeEstoque;
   final double? alertaEstoqueBaixo;
   final String? proximoHorario;
+  final bool proximoAtrasado;
   final int totalHorarios;
 
   bool get estoqueBaixo =>
@@ -612,8 +1051,9 @@ class HistoricoMedicamentoEntrada {
       usuarioNome: json['usuarioNome']?.toString() ?? 'Cuidador',
       medicamentoNome: json['medicamentoNome']?.toString() ?? 'Medicamento',
       descricao: json['descricao']?.toString() ?? '',
-      dataHora: DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
-          DateTime.now(),
+      dataHora: (DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
       badge: GlicemiaHistoricoBadge.fromJson(
         json['badge'] is Map<String, dynamic> ? json['badge'] : null,
       ),
@@ -1403,6 +1843,208 @@ class ApiClient {
       throw _toApiException(
         error,
         fallback: 'Erro ao registrar glicemia.',
+      );
+    }
+  }
+
+  Future<PressaoResumo> getResumoPressao({
+    required String idosoId,
+    DateTime? dataReferencia,
+    String periodo = 'dia',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.pressaoResumo,
+        queryParameters: {
+          'idosoId': idosoId,
+          'periodo': periodo,
+          if (dataReferencia != null)
+            'dataReferencia': _toIsoDateOnly(dataReferencia),
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return PressaoResumo.fromJson(dados);
+      }
+
+      return PressaoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar pressão.',
+      );
+    }
+  }
+
+  Future<List<PressaoHistoricoEntrada>> getHistoricoPressao({
+    required String idosoId,
+    DateTime? dataReferencia,
+    String periodo = 'dia',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.pressaoHistorico,
+        queryParameters: {
+          'idosoId': idosoId,
+          'periodo': periodo,
+          if (dataReferencia != null)
+            'dataReferencia': _toIsoDateOnly(dataReferencia),
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is List) {
+        return dados
+            .whereType<Map<String, dynamic>>()
+            .map(PressaoHistoricoEntrada.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar histórico de pressão.',
+      );
+    }
+  }
+
+  Future<PressaoRegistro> criarPressao({
+    required String idosoId,
+    required int sistolica,
+    required int diastolica,
+    required DateTime medidoEm,
+    int? batimentos,
+    String? observacoes,
+    String? registradoPorId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.pressao,
+        data: {
+          'idosoId': idosoId,
+          'sistolica': sistolica,
+          'diastolica': diastolica,
+          'medidoEm': medidoEm.toUtc().toIso8601String(),
+          if (batimentos != null) 'batimentos': batimentos,
+          if (observacoes != null && observacoes.isNotEmpty)
+            'observacoes': observacoes,
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return PressaoRegistro.fromJson(dados);
+      }
+
+      return PressaoRegistro.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao registrar pressão.',
+      );
+    }
+  }
+
+  Future<OxigenacaoResumo> getResumoOxigenacao({
+    required String idosoId,
+    DateTime? dataReferencia,
+    String periodo = 'dia',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.oxigenacaoResumo,
+        queryParameters: {
+          'idosoId': idosoId,
+          'periodo': periodo,
+          if (dataReferencia != null)
+            'dataReferencia': _toIsoDateOnly(dataReferencia),
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return OxigenacaoResumo.fromJson(dados);
+      }
+
+      return OxigenacaoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar oxigenação.',
+      );
+    }
+  }
+
+  Future<List<OxigenacaoHistoricoEntrada>> getHistoricoOxigenacao({
+    required String idosoId,
+    DateTime? dataReferencia,
+    String periodo = 'dia',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.oxigenacaoHistorico,
+        queryParameters: {
+          'idosoId': idosoId,
+          'periodo': periodo,
+          if (dataReferencia != null)
+            'dataReferencia': _toIsoDateOnly(dataReferencia),
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is List) {
+        return dados
+            .whereType<Map<String, dynamic>>()
+            .map(OxigenacaoHistoricoEntrada.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar histórico de oxigenação.',
+      );
+    }
+  }
+
+  Future<OxigenacaoRegistro> criarOxigenacao({
+    required String idosoId,
+    required int saturacao,
+    required DateTime medidoEm,
+    int? pulso,
+    String? observacoes,
+    String? registradoPorId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.oxigenacao,
+        data: {
+          'idosoId': idosoId,
+          'saturacao': saturacao,
+          'medidoEm': medidoEm.toUtc().toIso8601String(),
+          if (pulso != null) 'pulso': pulso,
+          if (observacoes != null && observacoes.isNotEmpty)
+            'observacoes': observacoes,
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return OxigenacaoRegistro.fromJson(dados);
+      }
+
+      return OxigenacaoRegistro.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao registrar oxigenação.',
       );
     }
   }

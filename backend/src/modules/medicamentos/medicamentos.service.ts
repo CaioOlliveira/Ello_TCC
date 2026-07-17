@@ -119,13 +119,29 @@ const diaEhValido = (
   return true;
 };
 
+const jaAdministradoEm = (
+  candidata: Date,
+  administracoes: { horarioPrevisto: Date }[],
+) =>
+  administracoes.some((administracao) => {
+    const previsto = administracao.horarioPrevisto;
+    return (
+      previsto.getFullYear() === candidata.getFullYear() &&
+      previsto.getMonth() === candidata.getMonth() &&
+      previsto.getDate() === candidata.getDate() &&
+      previsto.getHours() === candidata.getHours() &&
+      previsto.getMinutes() === candidata.getMinutes()
+    );
+  });
+
 const proximaOcorrencia = (
   horaMinuto: string,
   agora: Date,
   tipoFrequencia: string,
   diasSemana: string | null,
   dataAncora: Date | null,
-): Date | null => {
+  administracoesHoje: { horarioPrevisto: Date }[],
+): { data: Date; atrasado: boolean } | null => {
   const [hora, minuto] = horaMinuto.split(":").map((parte) => Number(parte));
 
   for (let offset = 0; offset < 15; offset++) {
@@ -133,12 +149,17 @@ const proximaOcorrencia = (
     candidata.setDate(candidata.getDate() + offset);
     candidata.setHours(hora || 0, minuto || 0, 0, 0);
 
-    if (candidata.getTime() <= agora.getTime()) continue;
     if (!diaEhValido(candidata, tipoFrequencia, diasSemana, dataAncora)) {
       continue;
     }
 
-    return candidata;
+    if (candidata.getTime() > agora.getTime()) {
+      return { data: candidata, atrasado: false };
+    }
+
+    if (!jaAdministradoEm(candidata, administracoesHoje)) {
+      return { data: candidata, atrasado: true };
+    }
   }
 
   return null;
@@ -149,10 +170,33 @@ const formatarHorario = (valor: unknown) => {
   return String(valor).slice(0, 5);
 };
 
-const rotuloStatusAdministracao = (status: string) => {
+const TOLERANCIA_ATRASO_MINUTOS = 30;
+
+const rotuloStatusAdministracao = (
+  status: string,
+  administradoEm?: unknown,
+  horarioPrevisto?: unknown,
+) => {
   switch (status) {
-    case "tomado":
+    case "tomado": {
+      if (administradoEm && horarioPrevisto) {
+        const administrado = new Date(String(administradoEm));
+        const previsto = new Date(String(horarioPrevisto));
+        const atrasoMinutos =
+          (administrado.getTime() - previsto.getTime()) / 60000;
+        if (
+          !Number.isNaN(atrasoMinutos) &&
+          atrasoMinutos > TOLERANCIA_ATRASO_MINUTOS
+        ) {
+          return {
+            descricao: "deu o remédio com atraso",
+            texto: "Atrasado",
+            cor: "alerta" as const,
+          };
+        }
+      }
       return { descricao: "marcou como tomado", texto: "Tomado", cor: "normal" as const };
+    }
     case "atrasado":
       return {
         descricao: "registrou atraso na dose",
@@ -357,9 +401,11 @@ export const medicamentosService = {
     );
 
     const agora = new Date();
+    const inicioDeHoje = startOfDay(agora);
     const medicamentos = [];
     let proximoMedicamento: Record<string, unknown> | null = null;
     let proximaData: Date | null = null;
+    let proximoAtrasado = false;
 
     for (const medicamento of medicamentosResult.rows) {
       const horariosResult = await getPool().query<{
@@ -375,12 +421,25 @@ export const medicamentosService = {
         [medicamento.id],
       );
 
+      const administracoesHojeResult = await getPool().query<{
+        horarioPrevisto: Date;
+      }>(
+        `
+          select horario_previsto as "horarioPrevisto"
+          from administracoes_medicamentos
+          where medicamento_id = $1
+            and horario_previsto >= $2
+        `,
+        [medicamento.id, inicioDeHoje.toISOString()],
+      );
+
       const dataAncora = medicamento.data_inicio
         ? new Date(String(medicamento.data_inicio))
         : null;
 
       let proximoHorario: string | null = null;
       let proximaOcorrenciaMedicamento: Date | null = null;
+      let atrasado = false;
 
       for (const row of horariosResult.rows) {
         const horaFormatada = formatarHorario(row.horario);
@@ -391,14 +450,18 @@ export const medicamentosService = {
           row.tipo_frequencia ?? "diaria",
           row.dias_semana,
           dataAncora,
+          administracoesHojeResult.rows,
         );
         if (!ocorrencia) continue;
-        if (
+        const maisUrgente =
           !proximaOcorrenciaMedicamento ||
-          ocorrencia < proximaOcorrenciaMedicamento
-        ) {
-          proximaOcorrenciaMedicamento = ocorrencia;
+          (ocorrencia.atrasado && !atrasado) ||
+          (ocorrencia.atrasado === atrasado &&
+            ocorrencia.data < proximaOcorrenciaMedicamento);
+        if (maisUrgente) {
+          proximaOcorrenciaMedicamento = ocorrencia.data;
           proximoHorario = horaFormatada;
+          atrasado = ocorrencia.atrasado;
         }
       }
 
@@ -417,17 +480,23 @@ export const medicamentosService = {
             ? null
             : Number(medicamento.alerta_estoque_baixo),
         proximoHorario,
+        proximoAtrasado: atrasado,
         totalHorarios: horariosResult.rows.length,
       };
 
       medicamentos.push(item);
 
-      if (
+      const substituiProximo =
         proximaOcorrenciaMedicamento &&
-        (!proximaData || proximaOcorrenciaMedicamento < proximaData)
-      ) {
+        (!proximaData ||
+          (atrasado && !proximoAtrasado) ||
+          (atrasado === proximoAtrasado &&
+            proximaOcorrenciaMedicamento < proximaData));
+
+      if (substituiProximo && proximaOcorrenciaMedicamento) {
         proximaData = proximaOcorrenciaMedicamento;
         proximoMedicamento = item;
+        proximoAtrasado = atrasado;
       }
     }
 
@@ -513,16 +582,24 @@ export const medicamentosService = {
       const medicamentoNome = nomesPorId.get(medId) ?? "Medicamento";
 
       if (row.tipoEntidade === "administracoes_medicamentos") {
-        const status = String(
-          (row.dadosNovos ?? {}).status ?? "",
-        ).toLowerCase();
-        const rotulo = rotuloStatusAdministracao(status);
+        const dadosAdministracao = row.dadosNovos ?? {};
+        const status = String(dadosAdministracao.status ?? "").toLowerCase();
+        const administradoEm = dadosAdministracao.administrado_em;
+        const horarioPrevisto = dadosAdministracao.horario_previsto;
+        const rotulo = rotuloStatusAdministracao(
+          status,
+          administradoEm,
+          horarioPrevisto,
+        );
+        const dataHoraRegistro = administradoEm ?? horarioPrevisto;
         return {
           id: row.id,
           usuarioNome: row.usuarioNome ?? "Cuidador",
           medicamentoNome,
           descricao: rotulo.descricao,
-          dataHora: row.criadoEm.toISOString(),
+          dataHora: dataHoraRegistro
+            ? new Date(String(dataHoraRegistro)).toISOString()
+            : row.criadoEm.toISOString(),
           badge: { texto: rotulo.texto, cor: rotulo.cor },
         };
       }
