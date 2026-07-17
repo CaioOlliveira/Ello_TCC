@@ -66,29 +66,34 @@ class PerfilPage extends ConsumerWidget {
                 const SizedBox(height: 8),
                 const StaggeredEntry(index: 3, child: _PreferenciasCard()),
                 const SizedBox(height: 28),
-                StaggeredEntry(
-                  index: 4,
-                  child: SizedBox(
-                    height: 50,
-                    child: OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.group_add_outlined, size: 21),
-                      label: const Text('Adicionar conta'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF238FA1),
-                        side: const BorderSide(color: Color(0xFF238FA1)),
-                        textStyle: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                if (from != 'idosos') ...[
+                  StaggeredEntry(
+                    index: 4,
+                    child: SizedBox(
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.go('/idosos'),
+                        icon: const Icon(
+                          Icons.switch_account_rounded,
+                          size: 21,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(11),
+                        label: const Text('Trocar de ficha'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF238FA1),
+                          side: const BorderSide(color: Color(0xFF238FA1)),
+                          textStyle: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(11),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
+                  const SizedBox(height: 10),
+                ],
                 StaggeredEntry(
                   index: 5,
                   child: SizedBox(
@@ -423,11 +428,15 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (Icons.person_outline_rounded, 'Informações pessoais'),
-      (Icons.shield_outlined, 'Segurança'),
-      (Icons.info_outline_rounded, 'Sobre o app'),
-      (Icons.tune_rounded, 'Permissões'),
+    final items = [
+      (Icons.person_outline_rounded, 'Informações pessoais', null),
+      (Icons.shield_outlined, 'Segurança', null),
+      (Icons.info_outline_rounded, 'Sobre o app', null),
+      (
+        Icons.tune_rounded,
+        'Permissões',
+        () => context.go('/permissoes'),
+      ),
     ];
 
     return _Panel(
@@ -438,6 +447,7 @@ class _MenuCard extends StatelessWidget {
             _MenuItem(
               icon: items[index].$1,
               label: items[index].$2,
+              onTap: items[index].$3,
               showDivider: index < items.length - 1,
             ),
         ],
@@ -477,29 +487,34 @@ class _MenuItem extends StatelessWidget {
   const _MenuItem({
     required this.icon,
     required this.label,
+    this.onTap,
     this.showDivider = true,
   });
 
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
   final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SizedBox(
-          height: 52,
-          child: Row(
-            children: [
-              const SizedBox(width: 13),
-              _SmallIcon(icon),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Text(label, style: const TextStyle(fontSize: 15))),
-              const Icon(Icons.chevron_right_rounded, size: 22),
-              const SizedBox(width: 10),
-            ],
+        InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: 52,
+            child: Row(
+              children: [
+                const SizedBox(width: 13),
+                _SmallIcon(icon),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Text(label, style: const TextStyle(fontSize: 15))),
+                const Icon(Icons.chevron_right_rounded, size: 22),
+                const SizedBox(width: 10),
+              ],
+            ),
           ),
         ),
         if (showDivider) const Divider(height: 1, indent: 52),

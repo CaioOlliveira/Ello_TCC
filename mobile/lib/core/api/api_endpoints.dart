@@ -5,6 +5,11 @@ class ApiEndpoints {
   static const login = '/auth/login';
   static const cadastro = '/auth/cadastro';
   static const idosos = '/idosos';
+  static const idososAdministrados = '/idosos/administrados';
+  static const convites = '/convites';
+  static const convitesAceitar = '/convites/aceitar';
+  static const membrosParticipantes = '/membros/participantes';
+  static const membrosPendentes = '/membros/pendentes';
   static const humores = '/registros/humores';
   static const hidratacoes = '/registros/hidratacoes';
   static const agenda = '/agenda';
@@ -45,6 +50,10 @@ class ApiEndpoints {
   static String usuario(String id) => '/usuarios/$id';
   static String iaMensagens(String conversaId) =>
       '/ia/conversas/$conversaId/mensagens';
+  static String membro(String id) => '/membros/$id';
+  static String membroAprovar(String id) => '/membros/$id/aprovar';
+  static String membroNegar(String id) => '/membros/$id/negar';
+  static String membroRevogar(String id) => '/membros/$id/revogar';
   static String medicamento(String id) => '/medicamentos/$id';
   static String horariosMedicamento(String id) => '/medicamentos/$id/horarios';
   static String administracoesMedicamento(String id) =>

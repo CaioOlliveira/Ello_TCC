@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class SelecionarIdosoPage extends ConsumerWidget {
@@ -115,7 +117,12 @@ class ConviteIdosoPage extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 26),
+                padding: EdgeInsets.fromLTRB(
+                  14,
+                  10,
+                  14,
+                  26 + MediaQuery.viewInsetsOf(context).bottom,
+                ),
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 child: Column(
@@ -147,28 +154,57 @@ class ConviteIdosoPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Entrar com convite',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(height: 18),
+                    StaggeredEntry(
+                      index: 0,
+                      child: Center(
+                        child: Container(
+                          width: 68,
+                          height: 68,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF2BA8BA), Color(0xFF0E6F7E)],
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.mail_outline_rounded,
+                            color: Colors.white,
+                            size: 34,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const StaggeredEntry(
+                      index: 1,
+                      child: Text(
+                        'Entrar com convite',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 23,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Use o codigo enviado por outro cuidador\npara acessar uma ficha compartilhada',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF4C4C4C),
-                        fontSize: 11,
-                        height: 1.25,
+                    const StaggeredEntry(
+                      index: 2,
+                      child: Text(
+                        'Use o codigo enviado por outro cuidador\npara acessar uma ficha compartilhada',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF4C4C4C),
+                          fontSize: 12,
+                          height: 1.3,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 28),
-                    const _InviteCard(),
+                    const StaggeredEntry(index: 3, child: _InviteCard()),
                   ],
                 ),
               ),
@@ -200,22 +236,10 @@ class _Header extends StatelessWidget {
         ),
         Align(
           alignment: Alignment.centerRight,
-          child: InkWell(
+          child: ActionIconButton(
+            tooltip: 'Perfil do cuidador',
+            icon: Icons.person_rounded,
             onTap: () => context.go('/perfil?from=idosos'),
-            borderRadius: BorderRadius.circular(99),
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                color: Color(0xFFD1F2F6),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person_outline_rounded,
-                color: Color(0xFF238FA1),
-                size: 25,
-              ),
-            ),
           ),
         ),
       ],
@@ -487,15 +511,17 @@ class _OutlinedCard extends StatelessWidget {
   }
 }
 
-class _InviteCard extends StatefulWidget {
+class _InviteCard extends ConsumerStatefulWidget {
   const _InviteCard();
 
   @override
-  State<_InviteCard> createState() => _InviteCardState();
+  ConsumerState<_InviteCard> createState() => _InviteCardState();
 }
 
-class _InviteCardState extends State<_InviteCard> {
+class _InviteCardState extends ConsumerState<_InviteCard> {
   final _controller = TextEditingController();
+  bool _loading = false;
+  String? _erro;
 
   @override
   void dispose() {
@@ -503,19 +529,81 @@ class _InviteCardState extends State<_InviteCard> {
     super.dispose();
   }
 
+  Future<void> _acessarFicha() async {
+    FocusScope.of(context).unfocus();
+    final codigo = _controller.text.trim();
+    if (codigo.isEmpty) {
+      setState(() => _erro = 'Digite o codigo do convite.');
+      return;
+    }
+
+    final usuarioId = ref.read(authSessionProvider)?.id;
+    if (usuarioId == null || usuarioId.isEmpty) {
+      setState(() => _erro = 'Sessao invalida. Faca login novamente.');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _erro = null;
+    });
+
+    try {
+      await ref.read(apiClientProvider).aceitarConviteIdoso(
+            codigo: codigo,
+            usadoPorId: usuarioId,
+          );
+
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Solicitação enviada'),
+          content: const Text(
+            'O administrador dessa ficha precisa aprovar seu acesso. '
+            'Assim que for aprovado, a ficha vai aparecer na sua lista.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Entendi'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+      context.go('/idosos');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _erro = error.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _erro = 'Nao foi possivel acessar a ficha com esse codigo.';
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFF37AFC3)),
-        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFF8BD2DC)),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -527,61 +615,89 @@ class _InviteCardState extends State<_InviteCard> {
             style: TextStyle(
               color: Colors.black,
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 9),
           TextField(
             controller: _controller,
+            textAlign: TextAlign.center,
             textCapitalization: TextCapitalization.characters,
+            onChanged: (_) {
+              if (_erro != null) setState(() => _erro = null);
+            },
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 4,
+              color: Color(0xFF0D6E80),
+            ),
             decoration: InputDecoration(
-              hintText: 'Digite o codigo aqui',
+              hintText: 'CODIGO',
               hintStyle: const TextStyle(
-                color: Color(0xFF9B9B9B),
-                fontSize: 13,
+                color: Color(0xFFBFD9DD),
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 4,
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 11,
-              ),
+              filled: true,
+              fillColor: const Color(0xFFF4FBFC),
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFD0E7EA)),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFD0E7EA)),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFF37AFC3)),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF37AFC3), width: 1.4),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          if (_erro != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _erro!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFFC0392B),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
           SizedBox(
-            height: 40,
-            child: FilledButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content:
-                        Text('Entrada por convite sera liberada em breve.'),
-                  ),
-                );
-              },
+            height: 46,
+            child: FilledButton.icon(
+              onPressed: _loading ? null : _acessarFicha,
+              icon: _loading
+                  ? const SizedBox.shrink()
+                  : const Icon(Icons.login_rounded, size: 19),
+              label: _loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Acessar ficha'),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF3CB1C3),
+                backgroundColor: const Color(0xFF0E6F7E),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(13),
                 ),
                 textStyle: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              child: const Text('Acessar ficha'),
             ),
           ),
         ],

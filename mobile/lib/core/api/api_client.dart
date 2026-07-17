@@ -1387,6 +1387,104 @@ class HidratacaoRegistro {
   final DateTime registradoEm;
 }
 
+class ConviteFicha {
+  const ConviteFicha({required this.codigo, this.expiraEm});
+
+  factory ConviteFicha.fromJson(Map<String, dynamic> json) {
+    final expira = json['expira_em']?.toString() ?? json['expiraEm']?.toString();
+    return ConviteFicha(
+      codigo: json['codigo']?.toString() ?? '',
+      expiraEm: expira == null ? null : DateTime.tryParse(expira),
+    );
+  }
+
+  final String codigo;
+  final DateTime? expiraEm;
+}
+
+class MembroFicha {
+  const MembroFicha({
+    required this.usuarioId,
+    required this.nome,
+    required this.eAdministrador,
+    required this.eCriador,
+    required this.permissoesVisualizar,
+    required this.permissoesEditar,
+    this.id,
+    this.urlFoto,
+    this.telefone,
+    this.funcao,
+    this.relacao,
+  });
+
+  factory MembroFicha.fromJson(Map<String, dynamic> json) {
+    final permissoes = json['permissoes'];
+    final visualizar = permissoes is Map ? permissoes['visualizar'] : null;
+    final editar = permissoes is Map ? permissoes['editar'] : null;
+
+    return MembroFicha(
+      id: json['id']?.toString(),
+      usuarioId: json['usuario_id']?.toString() ?? '',
+      nome: json['usuario_nome']?.toString() ?? 'Sem nome',
+      urlFoto: json['usuario_foto']?.toString(),
+      telefone: json['usuario_telefone']?.toString(),
+      funcao: json['funcao']?.toString(),
+      relacao: json['relacao']?.toString(),
+      eAdministrador: json['e_administrador'] == true,
+      eCriador: json['e_criador'] == true,
+      permissoesVisualizar: visualizar is List
+          ? visualizar.map((item) => item.toString()).toList()
+          : <String>[],
+      permissoesEditar: editar is List
+          ? editar.map((item) => item.toString()).toList()
+          : <String>[],
+    );
+  }
+
+  final String? id;
+  final String usuarioId;
+  final String nome;
+  final String? urlFoto;
+  final String? telefone;
+  final String? funcao;
+  final String? relacao;
+  final bool eAdministrador;
+  final bool eCriador;
+  final List<String> permissoesVisualizar;
+  final List<String> permissoesEditar;
+}
+
+class SolicitacaoPendente {
+  const SolicitacaoPendente({
+    required this.id,
+    required this.usuarioId,
+    required this.nome,
+    required this.criadoEm,
+    this.urlFoto,
+    this.funcao,
+  });
+
+  factory SolicitacaoPendente.fromJson(Map<String, dynamic> json) {
+    return SolicitacaoPendente(
+      id: json['id']?.toString() ?? '',
+      usuarioId: json['usuario_id']?.toString() ?? '',
+      nome: json['usuario_nome']?.toString() ?? 'Sem nome',
+      urlFoto: json['usuario_foto']?.toString(),
+      funcao: json['funcao']?.toString(),
+      criadoEm:
+          DateTime.tryParse(json['criado_em']?.toString() ?? '') ??
+              DateTime.now(),
+    );
+  }
+
+  final String id;
+  final String usuarioId;
+  final String nome;
+  final String? urlFoto;
+  final String? funcao;
+  final DateTime criadoEm;
+}
+
 class _ApiMemoryCache<T> {
   const _ApiMemoryCache({
     required this.value,
@@ -1530,6 +1628,20 @@ class ApiClient {
     }
   }
 
+  Future<IdosoResumo> buscarIdoso({required String idosoId}) async {
+    try {
+      final response =
+          await _dio.get<Map<String, dynamic>>(ApiEndpoints.idoso(idosoId));
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return IdosoResumo.fromJson(dados);
+      }
+      throw const ApiException('Ficha nao encontrada.');
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao buscar ficha.');
+    }
+  }
+
   Future<Map<String, dynamic>> criarIdoso({
     required String nomeCompleto,
     String? criadoPorId,
@@ -1582,6 +1694,254 @@ class ApiClient {
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao criar ficha.');
+    }
+  }
+
+  Future<String> gerarConviteIdoso({
+    required String idosoId,
+    String? convidadoPorId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.convites,
+        data: {
+          'idosoId': idosoId,
+          if (convidadoPorId != null && convidadoPorId.isNotEmpty)
+            'convidadoPorId': convidadoPorId,
+        },
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return dados['codigo']?.toString() ?? '';
+      }
+      return '';
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao gerar codigo de convite.',
+      );
+    }
+  }
+
+  Future<String> aceitarConviteIdoso({
+    required String codigo,
+    required String usadoPorId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.convitesAceitar,
+        data: {
+          'codigo': codigo,
+          'usadoPorId': usadoPorId,
+        },
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        final convite = dados['convite'];
+        if (convite is Map<String, dynamic>) {
+          return convite['idoso_id']?.toString() ??
+              convite['idosoId']?.toString() ??
+              '';
+        }
+      }
+      return '';
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel acessar a ficha com esse codigo.',
+      );
+    }
+  }
+
+  Future<List<IdosoResumo>> listarIdososAdministrados({
+    required String usuarioId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.idososAdministrados,
+        queryParameters: {'usuarioId': usuarioId},
+      );
+      final data = response.data?['dados'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(IdosoResumo.fromJson)
+            .toList();
+      }
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao listar fichas administradas.',
+      );
+    }
+  }
+
+  Future<ConviteFicha> obterConviteFicha({
+    required String idosoId,
+    String? usuarioId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.convites,
+        data: {
+          'idosoId': idosoId,
+          if (usuarioId != null && usuarioId.isNotEmpty)
+            'convidadoPorId': usuarioId,
+        },
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return ConviteFicha.fromJson(dados);
+      }
+      return const ConviteFicha(codigo: '');
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao gerar link de compartilhamento.',
+      );
+    }
+  }
+
+  Future<List<MembroFicha>> listarParticipantes({
+    required String idosoId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.membrosParticipantes,
+        queryParameters: {'idosoId': idosoId},
+      );
+      final data = response.data?['dados'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(MembroFicha.fromJson)
+            .toList();
+      }
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao listar participantes.');
+    }
+  }
+
+  Future<List<SolicitacaoPendente>> listarSolicitacoesPendentes({
+    required String idosoId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.membrosPendentes,
+        queryParameters: {'idosoId': idosoId},
+      );
+      final data = response.data?['dados'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(SolicitacaoPendente.fromJson)
+            .toList();
+      }
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao listar solicitacoes pendentes.',
+      );
+    }
+  }
+
+  Future<void> aprovarSolicitacao({
+    required String membroId,
+    String? usuarioId,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.membroAprovar(membroId),
+        data: {
+          if (usuarioId != null && usuarioId.isNotEmpty) 'usuarioId': usuarioId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao aprovar solicitacao.');
+    }
+  }
+
+  Future<void> negarSolicitacao({
+    required String membroId,
+    String? usuarioId,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.membroNegar(membroId),
+        data: {
+          if (usuarioId != null && usuarioId.isNotEmpty) 'usuarioId': usuarioId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao negar solicitacao.');
+    }
+  }
+
+  Future<void> revogarAcessoMembro({
+    required String membroId,
+    String? usuarioId,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.membroRevogar(membroId),
+        data: {
+          if (usuarioId != null && usuarioId.isNotEmpty) 'usuarioId': usuarioId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao revogar acesso.');
+    }
+  }
+
+  Future<MembroFicha> buscarMembro({required String membroId}) async {
+    try {
+      final response =
+          await _dio.get<Map<String, dynamic>>(ApiEndpoints.membro(membroId));
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return MembroFicha.fromJson(dados);
+      }
+      throw const ApiException('Membro nao encontrado.');
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao buscar membro.');
+    }
+  }
+
+  Future<MembroFicha> atualizarMembro({
+    required String membroId,
+    String? funcao,
+    String? relacao,
+    bool? eAdministrador,
+    List<String>? visualizar,
+    List<String>? editar,
+    String? atualizadoPorId,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.membro(membroId),
+        data: {
+          if (funcao != null) 'funcao': funcao,
+          if (relacao != null) 'relacao': relacao,
+          if (eAdministrador != null) 'eAdministrador': eAdministrador,
+          if (visualizar != null || editar != null)
+            'permissoes': {
+              'visualizar': visualizar ?? const [],
+              'editar': editar ?? const [],
+            },
+          if (atualizadoPorId != null && atualizadoPorId.isNotEmpty)
+            'atualizadoPorId': atualizadoPorId,
+        },
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return MembroFicha.fromJson(dados);
+      }
+      throw const ApiException('Nao foi possivel atualizar o membro.');
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar membro.');
     }
   }
 

@@ -21,10 +21,12 @@ import '../features/oxigenacao/presentation/oxigenacao_page.dart';
 import '../features/medicamentos/presentation/medicamentos_page.dart';
 import '../features/monitoramento/presentation/monitoramento_page.dart';
 import '../features/perfil/presentation/perfil_page.dart';
+import '../features/permissoes/presentation/acessos_ficha_page.dart';
+import '../features/permissoes/presentation/permissoes_detalhadas_page.dart';
+import '../features/permissoes/presentation/permissoes_fichas_page.dart';
 import '../features/pressao/presentation/pressao_page.dart';
 import '../features/relatorios/presentation/relatorios_page.dart';
 import '../features/splash/presentation/splash_page.dart';
-import '../shared/widgets/module_placeholder_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -71,6 +73,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/perfil/editar',
         builder: (context, state) => const EditarPerfilPage(),
       ),
+      GoRoute(
+        path: '/permissoes',
+        builder: (context, state) => const PermissoesFichasPage(),
+      ),
+      GoRoute(
+        path: '/permissoes/detalhes',
+        builder: (context, state) => PermissoesDetalhadasPage(
+          membroId: state.uri.queryParameters['membroId'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: '/idoso/acessos',
+        builder: (context, state) => AcessosFichaPage(
+          idosoId: state.uri.queryParameters['idosoId'],
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
@@ -114,11 +132,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const CoraIAPage(),
           ),
           GoRoute(
-            path: '/agua',
-            builder: (context, state) =>
-                const ModulePlaceholderPage(title: 'Agua'),
-          ),
-          GoRoute(
             path: '/pressao',
             builder: (context, state) => const PressaoPage(),
           ),
@@ -127,17 +140,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const OxigenacaoPage(),
           ),
           GoRoute(
-            path: '/sono',
-            builder: (context, state) =>
-                const ModulePlaceholderPage(title: 'Sono'),
-          ),
-          GoRoute(
             path: '/idoso/perfil',
             builder: (context, state) => const PerfilIdosoPage(),
-          ),
-          GoRoute(
-            path: '/idoso/acessos',
-            builder: (context, state) => const AcessosIdosoPage(),
           ),
         ],
       ),
@@ -159,10 +163,8 @@ class AppShell extends StatelessWidget {
         location == '/equipamentos' ||
         location == '/insumos' ||
         location == '/humor' ||
-        location == '/agua' ||
         location == '/pressao' ||
-        location == '/oxigenacao' ||
-        location == '/sono') {
+        location == '/oxigenacao') {
       return 1;
     }
     if (location == '/corgia' || location == '/coraia') return 2;

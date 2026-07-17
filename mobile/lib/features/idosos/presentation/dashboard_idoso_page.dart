@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
@@ -233,22 +234,10 @@ class _DashboardHeader extends StatelessWidget {
         ),
         Align(
           alignment: Alignment.centerRight,
-          child: InkWell(
+          child: ActionIconButton(
+            tooltip: 'Perfil do cuidador',
+            icon: Icons.person_rounded,
             onTap: onProfile,
-            borderRadius: BorderRadius.circular(99),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                color: Color(0xFFD1F2F6),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person_outline_rounded,
-                color: Color(0xFF238FA1),
-                size: 27,
-              ),
-            ),
           ),
         ),
       ],

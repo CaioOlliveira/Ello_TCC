@@ -86,14 +86,6 @@ const monitoramentoOptions = [
     route: '/glicemia',
   ),
   MonitoramentoOption(
-    id: 'Agua',
-    title: 'Água',
-    selectionLabel: 'Água consumida',
-    subtitle: 'Consumo diário',
-    icon: Icons.local_drink_rounded,
-    route: '/agua',
-  ),
-  MonitoramentoOption(
     id: 'Pressao',
     title: 'Pressão',
     selectionLabel: 'Pressão arterial',
@@ -108,14 +100,6 @@ const monitoramentoOptions = [
     subtitle: 'Saturação de oxigênio',
     icon: Icons.air_rounded,
     route: '/oxigenacao',
-  ),
-  MonitoramentoOption(
-    id: 'Sono',
-    title: 'Sono',
-    selectionLabel: 'Sono',
-    subtitle: 'Rotina de descanso',
-    icon: Icons.bedtime_rounded,
-    route: '/sono',
   ),
 ];
 

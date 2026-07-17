@@ -31,6 +31,8 @@ const fields = {
 
 const gerarCodigo = () => crypto.randomBytes(4).toString("hex").toUpperCase();
 
+const seteDiasEmMs = 7 * 24 * 60 * 60 * 1000;
+
 export const convitesService = {
   async listar(limit: number, offset: number) {
     return listRows<Record<string, unknown>>(table, {
@@ -48,6 +50,24 @@ export const convitesService = {
     const convidadoPorId = await resolverUsuarioRegistroId(
       input.convidadoPorId,
     );
+
+    const existente = await getPool().query<Record<string, unknown>>(
+      `
+        select *
+        from convites
+        where idoso_id = $1
+          and status = 'ativo'
+          and (expira_em is null or expira_em > now())
+        order by criado_em desc
+        limit 1
+      `,
+      [input.idosoId],
+    );
+
+    if (existente.rows[0]) {
+      return existente.rows[0];
+    }
+
     const convite = await insertRow<
       Record<string, unknown>,
       Record<string, unknown>
@@ -58,6 +78,8 @@ export const convitesService = {
         convidadoPorId,
         codigo: input.codigo ?? gerarCodigo(),
         status: input.status ?? "ativo",
+        expiraEm:
+          input.expiraEm ?? new Date(Date.now() + seteDiasEmMs).toISOString(),
       },
       fields,
     );
@@ -106,7 +128,7 @@ export const convitesService = {
       `
         select *
         from convites
-        where codigo = $1
+        where upper(codigo) = upper($1)
         limit 1
       `,
       [input.codigo],
@@ -116,7 +138,7 @@ export const convitesService = {
     if (!convite) {
       throw new AppError(
         "CONVITE_NAO_ENCONTRADO",
-        "Convite não encontrado.",
+        "Codigo de convite nao encontrado.",
         404,
       );
     }
@@ -124,44 +146,91 @@ export const convitesService = {
     if (convite.status !== "ativo") {
       throw new AppError(
         "CONVITE_INDISPONIVEL",
-        "Convite não está ativo.",
+        "Este convite ja foi utilizado ou revogado.",
         400,
       );
     }
 
     if (convite.expira_em && new Date(String(convite.expira_em)) < new Date()) {
-      throw new AppError("CONVITE_EXPIRADO", "Convite expirado.", 400);
+      throw new AppError("CONVITE_EXPIRADO", "Este convite expirou.", 400);
     }
 
-    const membro = await insertRow<
-      Record<string, unknown>,
-      Record<string, unknown>
-    >(
-      "membros_ficha",
-      {
-        idosoId: convite.idoso_id,
-        usuarioId: input.usadoPorId,
-        funcao: convite.funcao_inicial,
-        status: "ativo",
-      },
-      {
-        idosoId: "idoso_id",
-        usuarioId: "usuario_id",
-        funcao: "funcao",
-        status: "status",
-      },
+    const ficha = await getPool().query<{ criado_por_id: string }>(
+      "select criado_por_id from fichas_idosos where id = $1 limit 1",
+      [convite.idoso_id],
     );
 
-    const atualizado = await updateRow<
-      Record<string, unknown>,
-      Record<string, unknown>
-    >(
+    if (ficha.rows[0]?.criado_por_id === input.usadoPorId) {
+      throw new AppError(
+        "CONVITE_PROPRIO",
+        "Voce ja e o responsavel por essa ficha.",
+        400,
+      );
+    }
+
+    const existente = await getPool().query<Record<string, unknown>>(
+      `
+        select *
+        from membros_ficha
+        where idoso_id = $1 and usuario_id = $2
+        limit 1
+      `,
+      [convite.idoso_id, input.usadoPorId],
+    );
+
+    const membroExistente = existente.rows[0];
+
+    if (membroExistente?.status === "ativo") {
+      throw new AppError(
+        "JA_MEMBRO",
+        "Voce ja tem acesso a essa ficha.",
+        409,
+      );
+    }
+
+    if (membroExistente?.status === "pendente") {
+      throw new AppError(
+        "SOLICITACAO_PENDENTE",
+        "Voce ja solicitou acesso a essa ficha. Aguarde a aprovacao.",
+        409,
+      );
+    }
+
+    const membro = membroExistente
+      ? await updateRow<Record<string, unknown>, Record<string, unknown>>(
+          "membros_ficha",
+          String(membroExistente.id),
+          {
+            funcao: convite.funcao_inicial,
+            status: "pendente",
+          },
+          {
+            funcao: "funcao",
+            status: "status",
+          },
+          "MEMBRO_NAO_ENCONTRADO",
+          "Membro não encontrado.",
+        )
+      : await insertRow<Record<string, unknown>, Record<string, unknown>>(
+          "membros_ficha",
+          {
+            idosoId: convite.idoso_id,
+            usuarioId: input.usadoPorId,
+            funcao: convite.funcao_inicial,
+            status: "pendente",
+          },
+          {
+            idosoId: "idoso_id",
+            usuarioId: "usuario_id",
+            funcao: "funcao",
+            status: "status",
+          },
+        );
+
+    await updateRow<Record<string, unknown>, Record<string, unknown>>(
       table,
       String(convite.id),
-      {
-        usadoPorId: input.usadoPorId,
-        status: "usado",
-      },
+      { usadoPorId: input.usadoPorId },
       fields,
       ...notFound,
     );
@@ -169,13 +238,12 @@ export const convitesService = {
     await registrarHistorico({
       usuarioId: input.usadoPorId,
       idosoId: String(convite.idoso_id),
-      acao: "aceitar",
-      tipoEntidade: table,
-      entidadeId: String(convite.id),
-      dadosAnteriores: convite,
-      dadosNovos: atualizado,
+      acao: "solicitar_acesso",
+      tipoEntidade: "membros_ficha",
+      entidadeId: String(membro.id),
+      dadosNovos: membro,
     });
 
-    return { convite: atualizado, membro };
+    return { convite, membro, status: "pendente" as const };
   },
 };

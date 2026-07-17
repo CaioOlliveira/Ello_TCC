@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class HumorPage extends ConsumerStatefulWidget {
@@ -343,21 +344,10 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
-        IconButton(
-          onPressed: onProfile,
-          icon: Container(
-            width: 25,
-            height: 25,
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFF8BD2DC)),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.person_outline_rounded,
-              color: Color(0xFF238FA1),
-              size: 19,
-            ),
-          ),
+        ActionIconButton(
+          tooltip: 'Perfil do cuidador',
+          icon: Icons.person_rounded,
+          onTap: onProfile,
         ),
       ],
     );

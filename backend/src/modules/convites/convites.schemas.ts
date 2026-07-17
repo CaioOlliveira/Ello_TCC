@@ -4,7 +4,7 @@ export const criarConviteSchema = z.object({
   idosoId: z.string().uuid("Idoso inválido."),
   convidadoPorId: z.string().uuid("Usuário que convidou inválido.").optional(),
   codigo: z.string().min(4).optional(),
-  funcaoInicial: z.string().min(1, "Função inicial é obrigatória."),
+  funcaoInicial: z.string().min(1).default("cuidador"),
   expiraEm: z.string().datetime("Data de expiração inválida.").optional(),
   status: z.string().min(1).default("ativo"),
 });
@@ -12,7 +12,10 @@ export const criarConviteSchema = z.object({
 export const atualizarConviteSchema = criarConviteSchema.partial();
 
 export const aceitarConviteSchema = z.object({
-  codigo: z.string().min(1, "Código é obrigatório."),
+  codigo: z
+    .string()
+    .min(1, "Código é obrigatório.")
+    .transform((value) => value.trim().toUpperCase()),
   usadoPorId: z.string().uuid("Usuário inválido."),
 });
 
