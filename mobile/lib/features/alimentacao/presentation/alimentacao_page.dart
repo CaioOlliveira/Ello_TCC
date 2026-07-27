@@ -580,14 +580,19 @@ class _WaterCardState extends State<_WaterCard> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        minHeight: 10,
-                        value: progress,
-                        backgroundColor: const Color(0xFFE0E0E0),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF003B4F),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: progress),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, _) => ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          minHeight: 10,
+                          value: value,
+                          backgroundColor: const Color(0xFFE0E0E0),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFF003B4F),
+                          ),
                         ),
                       ),
                     ),
@@ -626,16 +631,9 @@ class _WaterCardState extends State<_WaterCard> {
             runSpacing: 9,
             children: [
               for (var i = 0; i < cupCount; i++)
-                InkWell(
+                _WaterCup(
+                  filled: i < filledCups,
                   onTap: widget.onAddWater,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Icon(
-                    i < filledCups
-                        ? Icons.local_drink_rounded
-                        : Icons.local_drink_outlined,
-                    color: const Color(0xFF098CA1),
-                    size: 32,
-                  ),
                 ),
             ],
           ),
@@ -647,6 +645,39 @@ class _WaterCardState extends State<_WaterCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WaterCup extends StatelessWidget {
+  const _WaterCup({required this.filled, required this.onTap});
+
+  final bool filled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedScale(
+        scale: filled ? 1.0 : 0.86,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.elasticOut,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          transitionBuilder: (child, animation) => ScaleTransition(
+            scale: animation,
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+          child: Icon(
+            filled ? Icons.local_drink_rounded : Icons.local_drink_outlined,
+            key: ValueKey(filled),
+            color: const Color(0xFF098CA1),
+            size: 32,
+          ),
+        ),
       ),
     );
   }

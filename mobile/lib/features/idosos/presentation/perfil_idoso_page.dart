@@ -366,14 +366,15 @@ class _HeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bytes = _dataImageBytes(idoso.urlFoto);
     return Container(
-      padding: const EdgeInsets.fromLTRB(22, 22, 20, 22),
+      height: 122,
+      padding: const EdgeInsets.fromLTRB(24, 13, 20, 13),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF2BA8BA), Color(0xFF0E6F7E)],
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF0E6F7E).withValues(alpha: 0.32),
@@ -394,7 +395,7 @@ class _HeroCard extends StatelessWidget {
               ),
             ),
             child: CircleAvatar(
-              radius: 40,
+              radius: 42,
               backgroundColor: const Color(0xFFD1F2F6),
               backgroundImage: bytes != null
                   ? MemoryImage(bytes)
@@ -407,12 +408,12 @@ class _HeroCard extends StatelessWidget {
                   ? const Icon(
                       Icons.person_outline_rounded,
                       color: Color(0xFF238FA1),
-                      size: 48,
+                      size: 50,
                     )
                   : null,
             ),
           ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -424,9 +425,9 @@ class _HeroCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 23,
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    height: 1.1,
                   ),
                 ),
                 if (idoso.idade > 0) ...[
@@ -442,7 +443,7 @@ class _HeroCard extends StatelessWidget {
                       '${idoso.idade} anos',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -472,10 +473,10 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE4EFF1)),
         boxShadow: [
           BoxShadow(
@@ -488,8 +489,8 @@ class _InfoCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 58,
-            height: 58,
+            width: 64,
+            height: 64,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -498,7 +499,7 @@ class _InfoCard extends StatelessWidget {
               ),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: const Color(0xFF0D899D), size: 30),
+            child: Icon(icon, color: const Color(0xFF0D899D), size: 36),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -509,7 +510,7 @@ class _InfoCard extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     color: Color(0xFF249CB0),
-                    fontSize: 12.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -518,7 +519,7 @@ class _InfoCard extends StatelessWidget {
                   value,
                   style: const TextStyle(
                     color: Color(0xFF17324D),
-                    fontSize: 15.5,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                     height: 1.3,
                   ),
