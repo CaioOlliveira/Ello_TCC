@@ -101,6 +101,14 @@ const monitoramentoOptions = [
     icon: Icons.air_rounded,
     route: '/oxigenacao',
   ),
+  MonitoramentoOption(
+    id: 'Temperatura',
+    title: 'Temperatura',
+    selectionLabel: 'Temperatura',
+    subtitle: 'Histórico de temperatura',
+    icon: Icons.thermostat_rounded,
+    route: '/temperatura',
+  ),
 ];
 
 List<MonitoramentoOption> monitoramentoOptionsByIds(Iterable<String> ids) {
