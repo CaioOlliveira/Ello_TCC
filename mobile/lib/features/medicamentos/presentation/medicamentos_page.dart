@@ -282,13 +282,6 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();
       _reloadResumo(idoso.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _editando ? 'Medicamento atualizado.' : 'Medicamento registrado.',
-          ),
-        ),
-      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -297,7 +290,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível salvar o medicamento.')),
+        const SnackBar(content: Text('Nao foi possivel salvar o medicamento.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -322,9 +315,6 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
             registradoPorId: ref.read(authSessionProvider)?.id,
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dose registrada.')),
-      );
       await _openDetalhe(medicamento);
       _invalidateHistorico();
       _reloadResumo(idoso.id);
@@ -336,7 +326,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível registrar a dose.')),
+        const SnackBar(content: Text('Nao foi possivel registrar a dose.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -617,7 +607,7 @@ class _ResumoView extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              child: const Text('Ver Histórico'),
+              child: const Text('Ver Historico'),
             ),
           ),
         ],
@@ -708,7 +698,7 @@ class _ProximoMedicamentoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  atrasado ? 'Medicamento atrasado' : 'Próximo medicamento',
+                  atrasado ? 'Medicamento atrasado' : 'Proximo medicamento',
                   style: const TextStyle(
                     color: Color(0xFF727272),
                     fontSize: 12.5,
@@ -833,7 +823,7 @@ class _MedicamentoCard extends StatelessWidget {
                                       ? 'Sem horário'
                                       : medicamento.proximoAtrasado
                                           ? 'Atrasado: ${medicamento.proximoHorario}'
-                                          : 'Próximo horário: ${medicamento.proximoHorario}',
+                                          : 'Proximo horário: ${medicamento.proximoHorario}',
                                   style: TextStyle(
                                     color: medicamento.proximoAtrasado
                                         ? const Color(0xFFD73A3A)
@@ -859,7 +849,7 @@ class _MedicamentoCard extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Text(
                                   medicamento.quantidadeEstoque == null
-                                      ? 'Estoque não informado'
+                                      ? 'Estoque nao informado'
                                       : 'Estoque: ${_formatNumber(medicamento.quantidadeEstoque!)} ${medicamento.unidadeEstoque ?? ''}',
                                   style: TextStyle(
                                     color: medicamento.estoqueBaixo
@@ -1010,7 +1000,7 @@ class _MedicamentoFormView extends StatelessWidget {
     if (escolhido != null) onFormatoChanged(escolhido);
   }
 
-  /// O que mostrar como chip no campo Frequência. As tres opcoes (diaria,
+  /// O que mostrar como chip no campo Frequencia. As tres opcoes (diaria,
   /// dias especificos, alternado) sao mutuamente exclusivas.
   List<String> get _frequenciaChips {
     if (frequenciaTipo == 'alternado') return const [_kDiaAlternado];
@@ -1153,7 +1143,7 @@ class _MedicamentoFormView extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const _FieldLabel('Frequência'),
+                    const _FieldLabel('Frequencia'),
                     _ChipsField(
                       values: _frequenciaChips,
                       onAdd: () => _escolherFrequencia(context),
@@ -1567,7 +1557,7 @@ class _FrequenciaSheetState extends State<_FrequenciaSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Frequência',
+                'Frequencia',
                 style: TextStyle(
                   color: Color(0xFF073248),
                   fontSize: 16,
@@ -1727,7 +1717,7 @@ class _HistoricoView extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Histórico de Remédios',
+            'Historico de Remédios',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF073248),
@@ -2031,12 +2021,12 @@ class _DetalheView extends StatelessWidget {
                         _DetailRow(
                           'Estoque',
                           medicamento.quantidadeEstoque == null
-                              ? 'Não informado'
+                              ? 'Nao informado'
                               : '${_formatNumber(medicamento.quantidadeEstoque!)} ${medicamento.unidadeEstoque ?? ''}',
                         ),
                         if (medicamento.proximoHorario != null)
                           _DetailRow(
-                            'Próximo horário',
+                            'Proximo horário',
                             medicamento.proximoHorario!,
                           ),
                       ],
@@ -2265,7 +2255,7 @@ class _ErrorState extends StatelessWidget {
               color: Color(0xFF2FA3B5), size: 54),
           const SizedBox(height: 10),
           const Text(
-            'Não foi possível carregar',
+            'Nao foi possivel carregar',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF073248),
@@ -2275,7 +2265,7 @@ class _ErrorState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Confira a conexão com a API e tente novamente.',
+            'Confira a conexao com a API e tente novamente.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF607178), fontSize: 13),
           ),
@@ -2333,8 +2323,7 @@ String _formatNumber(double value) {
 const _kToleranciaAtrasoMinutos = 30;
 
 String _statusComAtraso(DateTime administradoEm, DateTime horarioPrevisto) {
-  final atrasoMinutos =
-      administradoEm.difference(horarioPrevisto).inMinutes;
+  final atrasoMinutos = administradoEm.difference(horarioPrevisto).inMinutes;
   return atrasoMinutos > _kToleranciaAtrasoMinutos ? 'atrasado' : 'tomado';
 }
 

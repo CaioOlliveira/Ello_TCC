@@ -74,7 +74,7 @@ class PermissoesFichasPage extends ConsumerWidget {
                     const StaggeredEntry(
                       index: 2,
                       child: Text(
-                        'Fichas em que você é administrador. Toque em uma '
+                        'Fichas em que voce é administrador. Toque em uma '
                         'para gerenciar acessos e permissões.',
                         style: TextStyle(
                           color: Color(0xFF4C4C4C),
@@ -279,8 +279,8 @@ class _EmptyAdminState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Você ainda não é administrador de nenhuma ficha. '
-              'Fichas que você criar aparecerão aqui.',
+              'Voce ainda não é administrador de nenhuma ficha. '
+              'Fichas que voce criar aparecerão aqui.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
             ),

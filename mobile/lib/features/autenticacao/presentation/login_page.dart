@@ -118,12 +118,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         _senhaController.clear();
         _confirmarSenhaController.clear();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Conta criada com sucesso. Agora entre com seu e-mail.'),
-        ),
-      );
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _errorMessage = error.message);

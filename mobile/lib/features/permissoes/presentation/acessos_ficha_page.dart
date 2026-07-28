@@ -521,7 +521,7 @@ class _CompartilharCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Qualquer pessoa com este código poderá solicitar acesso à ficha.',
+            'Qualquer pessoa com este codigo poderá solicitar acesso à ficha.',
             style: TextStyle(color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
           ),
           const SizedBox(height: 14),
@@ -575,7 +575,7 @@ class _CompartilharCard extends StatelessWidget {
             if (convite.expiraEm != null) ...[
               const SizedBox(height: 8),
               Text(
-                'O código expira em ${_formatarData(convite.expiraEm!)}.',
+                'O codigo expira em ${_formatarData(convite.expiraEm!)}.',
                 style: const TextStyle(color: Color(0xFF9B9B9B), fontSize: 11),
               ),
             ],
@@ -585,7 +585,7 @@ class _CompartilharCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onCopiar,
                 icon: const Icon(Icons.ios_share_rounded, size: 19),
-                label: const Text('Compartilhar código'),
+                label: const Text('Compartilhar codigo'),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF0E6F7E),
                   foregroundColor: Colors.white,
@@ -686,7 +686,7 @@ class _PendenteCard extends StatelessWidget {
                     Text(
                       dias <= 0
                           ? 'Solicitado hoje'
-                          : 'Aguardando há $dias ${dias == 1 ? 'dia' : 'dias'}',
+                          : 'Aguardando ha $dias ${dias == 1 ? 'dia' : 'dias'}',
                       style: const TextStyle(
                         color: Color(0xFF9B9B9B),
                         fontSize: 10.5,

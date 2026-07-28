@@ -2277,11 +2277,15 @@ class ApiClient {
   Future<List<AiMensagem>> listarMensagensIa({
     required String conversaId,
     required String usuarioId,
+    String? idosoId,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.iaMensagens(conversaId),
-        queryParameters: {'usuarioId': usuarioId},
+        queryParameters: {
+          'usuarioId': usuarioId,
+          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+        },
       );
       final data = response.data?['dados'];
 
@@ -2893,7 +2897,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao consultar histórico de glicemia.',
+        fallback: 'Erro ao consultar historico de glicemia.',
       );
     }
   }
@@ -2995,7 +2999,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao consultar histórico de pressão.',
+        fallback: 'Erro ao consultar historico de pressão.',
       );
     }
   }
@@ -3097,7 +3101,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao consultar histórico de oxigenação.',
+        fallback: 'Erro ao consultar historico de oxigenação.',
       );
     }
   }
@@ -3233,7 +3237,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao consultar histórico de medicamentos.',
+        fallback: 'Erro ao consultar historico de medicamentos.',
       );
     }
   }

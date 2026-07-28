@@ -28,8 +28,8 @@ export const criarConversaIa: RequestHandler = asyncHandler(
 export const listarMensagensIa: RequestHandler = asyncHandler(
   async (req, res) => {
     const { id } = idParamSchema.parse(req.params);
-    const { usuarioId } = listarMensagensIaSchema.parse(req.query);
-    res.json(await iaService.listarMensagens(id, usuarioId));
+    const input = listarMensagensIaSchema.parse(req.query);
+    res.json(await iaService.listarMensagens(id, input));
   },
 );
 

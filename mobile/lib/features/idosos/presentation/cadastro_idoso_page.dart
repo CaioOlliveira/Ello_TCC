@@ -306,15 +306,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
             );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEditing
-                ? 'Ficha atualizada com sucesso.'
-                : 'Ficha criada com sucesso.',
-          ),
-        ),
-      );
       ref.invalidate(idososDoUsuarioProvider);
       final dados = response['dados'];
       final idosoId = dados is Map<String, dynamic>
@@ -434,7 +425,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       case 2:
         return _dataStep(
           key: const ValueKey('step-contato'),
-          subtitle: 'Quem acionar em caso de emergencia',
+          subtitle: 'Quem acionar em caso de emergência',
           onPrimary: _goNext,
           primaryLabel: _isEditing ? 'Salvar' : 'Continuar',
           showBack: true,
@@ -698,7 +689,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _FieldLabel('Condições de saúde'),
+        const _FieldLabel('Condições de saude'),
         Wrap(
           spacing: 8,
           runSpacing: 8,

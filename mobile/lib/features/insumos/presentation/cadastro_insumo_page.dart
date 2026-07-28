@@ -134,9 +134,6 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Insumo salvo com sucesso.')),
-      );
       widget.onSaved(insumo);
     } on ApiException catch (error) {
       if (!mounted) return;

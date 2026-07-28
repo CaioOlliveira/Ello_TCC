@@ -159,9 +159,6 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
     try {
       await ref.read(apiClientProvider).removerInsumo(id: insumo.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Insumo excluido com sucesso.')),
-      );
       _showList();
     } on ApiException catch (error) {
       if (!mounted) return;
