@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import 'agenda_form_page.dart';
 import 'agenda_models.dart';
@@ -395,7 +396,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: idoso == null
           ? null
@@ -430,7 +431,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                 child: OutlinedButton(
                   onPressed: () => context.go('/agenda/historico'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF222222),
+                    foregroundColor: adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
                     side: const BorderSide(
                       color: Color(0xFF1696AA),
                       width: 1.4,
@@ -451,7 +452,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
         ),
       ),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -862,7 +863,7 @@ class _TimelineItem extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 120),
               padding: const EdgeInsets.fromLTRB(9, 7, 7, 7),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: adaptive(context, Colors.white, AppDarkColors.surface),
                 border: Border.all(color: const Color(0xFF4DB6C8)),
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -890,7 +891,7 @@ class _TimelineItem extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.black,
+                            color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             height: 0.95,
@@ -937,8 +938,10 @@ class _TimelineItem extends StatelessWidget {
                     item.local.isEmpty ? 'Local nao informado' : item.local,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(color: Color(0xFF666666), fontSize: 10),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF666666), AppDarkColors.textSecondary),
+                      fontSize: 10,
+                    ),
                   ),
                   if (item.observacoes.isNotEmpty) ...[
                     const SizedBox(height: 13),
@@ -946,8 +949,8 @@ class _TimelineItem extends StatelessWidget {
                       item.observacoes,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF073248),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                         fontSize: 13,
                       ),
                     ),
@@ -968,8 +971,8 @@ class _TimelineItem extends StatelessWidget {
                               : 'Cuidador nao informado',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF4F6B72),
+                          style: TextStyle(
+                            color: adaptive(context, const Color(0xFF4F6B72), AppDarkColors.textSecondary),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1044,8 +1047,8 @@ class _MonthView extends StatelessWidget {
           children: [
             Text(
               agendaMonthName(month.month),
-              style: const TextStyle(
-                color: Colors.black,
+              style: TextStyle(
+                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                 fontSize: 23,
                 fontWeight: FontWeight.w800,
               ),
@@ -1053,7 +1056,10 @@ class _MonthView extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '${month.year}',
-              style: const TextStyle(color: Color(0xFF555555), fontSize: 21),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF555555), AppDarkColors.textSecondary),
+                fontSize: 21,
+              ),
             ),
             const Spacer(),
             IconButton(
@@ -1112,8 +1118,8 @@ class _CalendarWeekday extends StatelessWidget {
       child: Text(
         label,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Color(0xFF4F4F4F),
+        style: TextStyle(
+          color: adaptive(context, const Color(0xFF4F4F4F), AppDarkColors.textSecondary),
           fontSize: 13,
           fontWeight: FontWeight.w800,
         ),
@@ -1186,7 +1192,9 @@ class _CalendarCell extends StatelessWidget {
               child: Text(
                 '$dayNumber',
                 style: TextStyle(
-                  color: selected ? Colors.white : Colors.black,
+                  color: selected
+                      ? Colors.white
+                      : adaptive(context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 15,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
                 ),
@@ -1252,8 +1260,8 @@ class _AgendaMessage extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF073248),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -1262,7 +1270,10 @@ class _AgendaMessage extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF666666), fontSize: 12),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF666666), AppDarkColors.textSecondary),
+              fontSize: 12,
+            ),
           ),
         ],
       ),

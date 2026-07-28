@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 enum _OxigenacaoMode { resumo, registrar, historico }
@@ -192,9 +193,9 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
+      backgroundColor: adaptive(context, const Color(0xFFF7F7F7), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -446,19 +447,19 @@ class _OxigenacaoHeader extends StatelessWidget {
               child: InkWell(
                 onTap: onBack,
                 borderRadius: BorderRadius.circular(12),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.chevron_left_rounded,
                       color: Color(0xFF2A9CAE),
                       size: 30,
                     ),
-                    SizedBox(width: 1),
+                    const SizedBox(width: 1),
                     Text(
                       'Voltar',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -490,8 +491,8 @@ class _OxigenacaoHeader extends StatelessWidget {
         Text(
           title,
           textAlign: showWordmark ? TextAlign.center : TextAlign.start,
-          style: const TextStyle(
-            color: Colors.black,
+          style: TextStyle(
+            color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
             fontSize: 23,
             fontWeight: FontWeight.w800,
             height: 1,
@@ -518,7 +519,7 @@ class _NavRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: adaptive(context, Colors.white, AppDarkColors.surface),
       borderRadius: BorderRadius.circular(11),
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.16),
@@ -542,16 +543,16 @@ class _NavRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFF9AA0A6),
+                color: adaptive(context, const Color(0xFF9AA0A6), AppDarkColors.textMuted),
                 size: 24,
               ),
             ],
@@ -583,8 +584,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               Container(
                 width: 92,
                 height: 92,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFD8F1F4),
+                decoration: BoxDecoration(
+                  color: adaptive(context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -594,11 +595,11 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Faça a primeira medição',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xFF073248),
+                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
@@ -607,8 +608,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               Text(
                 'Ainda não há registros de oxigenação para $idosoNome. Comece registrando a medição atual.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF607178),
+                style: TextStyle(
+                  color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
                   fontSize: 13,
                   height: 1.25,
                 ),
@@ -647,8 +648,8 @@ class _AnimatedOxigenacaoValue extends StatelessWidget {
         final text = value == null ? '--' : animatedValue.round().toString();
         return RichText(
           text: TextSpan(
-            style: const TextStyle(
-              color: Colors.black,
+            style: TextStyle(
+              color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
               fontWeight: FontWeight.w400,
             ),
             children: [
@@ -678,17 +679,17 @@ class _MediaOxigenacaoCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(15, 12, 15, 11),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Média da saturação',
                   style: TextStyle(
-                    color: Color(0xFF727272),
+                    color: adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -700,8 +701,8 @@ class _MediaOxigenacaoCard extends StatelessWidget {
                   mediaPulso == null
                       ? 'Sem pulso registrado'
                       : 'Pulso médio: ${mediaPulso.round()} bpm',
-                  style: const TextStyle(
-                    color: Color(0xFF808080),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
                     fontSize: 11,
                   ),
                 ),
@@ -786,7 +787,7 @@ class _ChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 7, 10, 13),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Column(
         children: [
           _PeriodSelector(period: period, onChanged: onChanged),
@@ -815,8 +816,8 @@ class _ChartCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: point.valor == null
-                                    ? const Color(0xFFADB3BB)
-                                    : const Color(0xFF8E95A1),
+                                    ? adaptive(context, const Color(0xFFADB3BB), AppDarkColors.textMuted)
+                                    : adaptive(context, const Color(0xFF8E95A1), AppDarkColors.textSecondary),
                                 fontSize: 10,
                               ),
                             ),
@@ -1012,7 +1013,7 @@ class _AnalysisCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFC9E7ED),
+      color: adaptive(context, const Color(0xFFC9E7ED), AppDarkColors.tintedInfo),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -1047,10 +1048,10 @@ class _AnalysisCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Análise da oxigenação',
                       style: TextStyle(
-                        color: Color(0xFF2F4853),
+                        color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -1060,8 +1061,8 @@ class _AnalysisCard extends StatelessWidget {
                       resumo.analise.texto,
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF2F4853),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
                         fontSize: 10,
                         height: 1.08,
                       ),
@@ -1069,9 +1070,9 @@ class _AnalysisCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFF073248),
+                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 size: 30,
               ),
             ],
@@ -1134,32 +1135,32 @@ class _HistoricoVazio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.history_rounded,
               color: Color(0xFF2FA3B5),
               size: 48,
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               'Nenhum registro neste período',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Color(0xFF073248),
+                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
             ),
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
             Text(
               'Altere o período ou registre uma nova medição.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF607178), fontSize: 13),
+              style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
             ),
           ],
         ),
@@ -1183,7 +1184,7 @@ class _HistoricoItemCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: _cardDecoration(radius: 10),
+      decoration: _cardDecoration(context, radius: 10),
       child: Row(
         children: [
           Container(
@@ -1204,8 +1205,8 @@ class _HistoricoItemCard extends StatelessWidget {
                   '${entrada.usuarioNome} ${entrada.descricao}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1215,8 +1216,8 @@ class _HistoricoItemCard extends StatelessWidget {
                   entrada.saturacao != null
                       ? '${entrada.saturacao}% SpO₂${entrada.pulso != null ? ' · ${entrada.pulso} bpm' : ''}'
                       : 'Sem valor registrado',
-                  style: const TextStyle(
-                    color: Color(0xFF808080),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
                     fontSize: 12,
                   ),
                 ),
@@ -1229,15 +1230,15 @@ class _HistoricoItemCard extends StatelessWidget {
             children: [
               Text(
                 _formatDate(entrada.dataHora),
-                style: const TextStyle(
-                  color: Color(0xFF9AA0A6),
+                style: TextStyle(
+                  color: adaptive(context, const Color(0xFF9AA0A6), AppDarkColors.textMuted),
                   fontSize: 10,
                 ),
               ),
               Text(
                 _formatTime(entrada.dataHora),
-                style: const TextStyle(
-                  color: Colors.black,
+                style: TextStyle(
+                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1414,7 +1415,7 @@ class _NumericValueCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1434,8 +1435,8 @@ class _NumericValueCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Color(0xFF6F636B),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF6F636B), AppDarkColors.textSecondary),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1443,7 +1444,7 @@ class _NumericValueCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2FBFC),
+                    color: adaptive(context, const Color(0xFFF2FBFC), AppDarkColors.tintedInfo),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: const Color(0xFF2FA3B5),
@@ -1463,16 +1464,16 @@ class _NumericValueCard extends StatelessWidget {
                           validator: validator,
                           maxLines: 1,
                           textAlignVertical: TextAlignVertical.center,
-                          style: const TextStyle(
-                            color: Colors.black,
+                          style: TextStyle(
+                            color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                             fontSize: 30,
                             fontWeight: FontWeight.w700,
                             height: 1.1,
                           ),
                           decoration: InputDecoration(
                             hintText: hintText,
-                            hintStyle: const TextStyle(
-                              color: Color(0xFFBFCBCE),
+                            hintStyle: TextStyle(
+                              color: adaptive(context, const Color(0xFFBFCBCE), AppDarkColors.textMuted),
                               fontSize: 30,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1524,7 +1525,7 @@ class _PickerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: adaptive(context, Colors.white, AppDarkColors.surface),
       borderRadius: BorderRadius.circular(9),
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.16),
@@ -1545,8 +1546,8 @@ class _PickerCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.black,
+                      style: TextStyle(
+                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         height: 1,
@@ -1555,8 +1556,8 @@ class _PickerCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       value,
-                      style: const TextStyle(
-                        color: Color(0xFF8D8D8D),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF8D8D8D), AppDarkColors.textMuted),
                         fontSize: 12,
                         height: 1,
                       ),
@@ -1587,7 +1588,7 @@ class _ObservationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(11, 8, 11, 10),
-      decoration: _cardDecoration(radius: 9),
+      decoration: _cardDecoration(context, radius: 9),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1600,8 +1601,8 @@ class _ObservationCard extends StatelessWidget {
               ),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.black,
+                style: TextStyle(
+                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1615,7 +1616,7 @@ class _ObservationCard extends StatelessWidget {
             maxLines: 4,
             decoration: InputDecoration(
               hintText: hintText,
-              hintStyle: const TextStyle(color: Color(0xFF8D8D8D)),
+              hintStyle: TextStyle(color: adaptive(context, const Color(0xFF8D8D8D), AppDarkColors.textMuted)),
               contentPadding: const EdgeInsets.all(9),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
@@ -1745,20 +1746,20 @@ class _NoIdosoState extends StatelessWidget {
             size: 54,
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Escolha uma ficha',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF073248),
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Selecione um idoso para registrar a oxigenação.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF607178), fontSize: 13),
+            style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
           ),
           const SizedBox(height: 16),
           FilledButton(
@@ -1790,20 +1791,20 @@ class _ErrorState extends StatelessWidget {
           const Icon(Icons.cloud_off_rounded,
               color: Color(0xFF2FA3B5), size: 54),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Não foi possível carregar',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF073248),
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Confira a conexão com a API e tente novamente.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF607178), fontSize: 13),
+            style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
           ),
           const SizedBox(height: 18),
           FilledButton(
@@ -1818,9 +1819,9 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-BoxDecoration _cardDecoration({double radius = 9}) {
+BoxDecoration _cardDecoration(BuildContext context, {double radius = 9}) {
   return BoxDecoration(
-    color: Colors.white,
+    color: adaptive(context, Colors.white, AppDarkColors.surface),
     borderRadius: BorderRadius.circular(radius),
     boxShadow: [
       BoxShadow(

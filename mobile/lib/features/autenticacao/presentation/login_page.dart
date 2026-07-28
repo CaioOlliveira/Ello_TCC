@@ -8,6 +8,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/auth/google_auth_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/app_text_field.dart';
 
@@ -289,79 +290,82 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      // resizeToAvoidBottomInset (default true) already shrinks the body
-      // for the keyboard; adding extra bottom padding on top of that
-      // double-reserves space and pushes content off-screen.
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
-        child: SafeArea(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 260),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child: switch (_view) {
-              AuthView.landing => _LandingView(
-                  key: const ValueKey('landing-view'),
-                  onApplePressed: () => _showPendingProviderMessage('Apple'),
-                  onGooglePressed: _loading ? null : _submitGoogleLogin,
-                  onEmailPressed: () => _goTo(AuthView.login),
-                  onCadastroPressed: () => _goTo(AuthView.cadastro),
-                  errorMessage: _errorMessage,
-                  loading: _loading,
-                ),
-              AuthView.login => _LoginFormView(
-                  key: const ValueKey('login-view'),
-                  formKey: _loginFormKey,
-                  emailController: _emailController,
-                  senhaController: _senhaController,
-                  loading: _loading,
-                  errorMessage: _errorMessage,
-                  onBack: () => _goTo(AuthView.landing),
-                  onSubmit: _submitLogin,
-                ),
-              AuthView.cadastro => _CadastroFormView(
-                  key: const ValueKey('cadastro-view'),
-                  formKey: _cadastroFormKey,
-                  nomeController: _nomeController,
-                  emailController: _emailController,
-                  telefoneController: _telefoneController,
-                  senhaController: _senhaController,
-                  confirmarSenhaController: _confirmarSenhaController,
-                  loading: _loading,
-                  errorMessage: _errorMessage,
-                  aceitouTermos: _aceitouTermos,
-                  onBack: () => _goTo(AuthView.landing),
-                  onSubmit: _submitCadastro,
-                  onAceitouTermosChanged: (value) {
-                    setState(() {
-                      _aceitouTermos = value ?? false;
-                      _errorMessage = null;
-                    });
-                  },
-                  confirmarSenhaValidator: _confirmarSenhaValidator,
-                ),
-              AuthView.cadastroGoogle => _GoogleCadastroView(
-                  key: const ValueKey('google-cadastro-view'),
-                  formKey: _cadastroFormKey,
-                  nomeController: _nomeController,
-                  emailController: _emailController,
-                  telefoneController: _telefoneController,
-                  loading: _loading,
-                  errorMessage: _errorMessage,
-                  aceitouTermos: _aceitouTermos,
-                  fotoUrl: _googleCadastro?.fotoUrl,
-                  onBack: () => _goTo(AuthView.landing),
-                  onSubmit: _submitGoogleCadastro,
-                  onAceitouTermosChanged: (value) {
-                    setState(() {
-                      _aceitouTermos = value ?? false;
-                      _errorMessage = null;
-                    });
-                  },
-                ),
-            },
+    return Theme(
+      data: AppTheme.light,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        // resizeToAvoidBottomInset (default true) already shrinks the body
+        // for the keyboard; adding extra bottom padding on top of that
+        // double-reserves space and pushes content off-screen.
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.dark,
+          child: SafeArea(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: switch (_view) {
+                AuthView.landing => _LandingView(
+                    key: const ValueKey('landing-view'),
+                    onApplePressed: () => _showPendingProviderMessage('Apple'),
+                    onGooglePressed: _loading ? null : _submitGoogleLogin,
+                    onEmailPressed: () => _goTo(AuthView.login),
+                    onCadastroPressed: () => _goTo(AuthView.cadastro),
+                    errorMessage: _errorMessage,
+                    loading: _loading,
+                  ),
+                AuthView.login => _LoginFormView(
+                    key: const ValueKey('login-view'),
+                    formKey: _loginFormKey,
+                    emailController: _emailController,
+                    senhaController: _senhaController,
+                    loading: _loading,
+                    errorMessage: _errorMessage,
+                    onBack: () => _goTo(AuthView.landing),
+                    onSubmit: _submitLogin,
+                  ),
+                AuthView.cadastro => _CadastroFormView(
+                    key: const ValueKey('cadastro-view'),
+                    formKey: _cadastroFormKey,
+                    nomeController: _nomeController,
+                    emailController: _emailController,
+                    telefoneController: _telefoneController,
+                    senhaController: _senhaController,
+                    confirmarSenhaController: _confirmarSenhaController,
+                    loading: _loading,
+                    errorMessage: _errorMessage,
+                    aceitouTermos: _aceitouTermos,
+                    onBack: () => _goTo(AuthView.landing),
+                    onSubmit: _submitCadastro,
+                    onAceitouTermosChanged: (value) {
+                      setState(() {
+                        _aceitouTermos = value ?? false;
+                        _errorMessage = null;
+                      });
+                    },
+                    confirmarSenhaValidator: _confirmarSenhaValidator,
+                  ),
+                AuthView.cadastroGoogle => _GoogleCadastroView(
+                    key: const ValueKey('google-cadastro-view'),
+                    formKey: _cadastroFormKey,
+                    nomeController: _nomeController,
+                    emailController: _emailController,
+                    telefoneController: _telefoneController,
+                    loading: _loading,
+                    errorMessage: _errorMessage,
+                    aceitouTermos: _aceitouTermos,
+                    fotoUrl: _googleCadastro?.fotoUrl,
+                    onBack: () => _goTo(AuthView.landing),
+                    onSubmit: _submitGoogleCadastro,
+                    onAceitouTermosChanged: (value) {
+                      setState(() {
+                        _aceitouTermos = value ?? false;
+                        _errorMessage = null;
+                      });
+                    },
+                  ),
+              },
+            ),
           ),
         ),
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_palette.dart';
+
 /// Floating circular icon button (white background, soft shadow) used for
 /// header actions such as accessing the caregiver's account settings.
 class ActionIconButton extends StatelessWidget {
@@ -19,7 +21,7 @@ class ActionIconButton extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         shape: const CircleBorder(),
         elevation: 3,
         shadowColor: Colors.black.withValues(alpha: 0.18),

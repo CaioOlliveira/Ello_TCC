@@ -165,7 +165,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
   Future<void> _pickFrequency() async {
     final selected = await showModalBottomSheet<int>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -180,15 +180,15 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD0D0D0),
+                    color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Frequencia de manutencao',
                   style: TextStyle(
-                    color: Color(0xFF073248),
+                    color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -253,8 +253,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
         Text(
           widget.initial == null ? 'Novo equipamento' : 'Editar equipamento',
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFF073248),
+          style: TextStyle(
+            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
@@ -305,9 +305,12 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
         ),
         _LabeledField(label: 'Local onde e guardado', controller: _local),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Foto do equipamento (opcional)',
-          style: TextStyle(fontSize: 13, color: Color(0xFF333333)),
+          style: TextStyle(
+            fontSize: 13,
+            color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+          ),
         ),
         const SizedBox(height: 4),
         InkWell(
@@ -317,7 +320,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
             height: 58,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: adaptive(context, Colors.white, AppDarkColors.surface),
               border: Border.all(color: const Color(0xFF38AFC0)),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -332,8 +335,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                 Expanded(
                   child: Text(
                     _urlFoto == null ? 'Anexar imagem' : 'Imagem anexada',
-                    style: const TextStyle(
-                      color: Color(0xFF073248),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -376,8 +379,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                       : manualDisplayName(_manual.text),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF073248),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -414,7 +417,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           child: OutlinedButton(
             onPressed: widget.saving ? null : widget.onCancel,
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF003B4F),
+              foregroundColor: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
               side: const BorderSide(color: Color(0xFF38AFC0)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -455,11 +458,11 @@ class _EquipamentoDetails extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
                 'Detalhes do equipamento',
                 style: TextStyle(
-                  color: Color(0xFF073248),
+                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                   height: 1,
@@ -469,9 +472,9 @@ class _EquipamentoDetails extends StatelessWidget {
             PopupMenuButton<String>(
               enabled: !saving,
               padding: EdgeInsets.zero,
-              icon: const Icon(
+              icon: Icon(
                 Icons.more_vert_rounded,
-                color: Color(0xFF073248),
+                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 size: 28,
               ),
               onSelected: (value) {
@@ -565,10 +568,10 @@ class _EquipamentoDetails extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Historico de manutencoes',
           style: TextStyle(
-            color: Color(0xFF073248),
+            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
             fontSize: 18,
             fontWeight: FontWeight.w800,
           ),
@@ -684,11 +687,11 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 2, 0, 0),
       children: [
-        const Text(
+        Text(
           'Registrar manutencao',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Color(0xFF111111),
+            color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
@@ -768,7 +771,7 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
           child: OutlinedButton(
             onPressed: widget.saving ? null : widget.onCancel,
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF003B4F),
+              foregroundColor: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
               side: const BorderSide(color: Color(0xFF38AFC0)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),

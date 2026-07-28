@@ -63,8 +63,8 @@ class _InsumoDetailView extends StatelessWidget {
                         item.nome,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
+                        style: TextStyle(
+                          color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
@@ -88,7 +88,7 @@ class _InsumoDetailView extends StatelessWidget {
                 onPressed: onAtualizar,
                 icon: const Icon(Icons.change_circle_rounded, size: 20),
                 label: const Text('Atualizar estoque'),
-                style: _primaryButtonStyle(),
+                style: _primaryButtonStyle(context),
               ),
             ),
           ),
@@ -128,7 +128,7 @@ class _DetailPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(13, 16, 13, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -173,11 +173,14 @@ class _DetailPanel extends StatelessWidget {
                 : _stockLabel(insumo.alertaMinimoUnidades!),
           ),
           const SizedBox(height: 8),
-          const Align(
+          Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'Observacoes',
-              style: TextStyle(color: Colors.black, fontSize: 12),
+              style: TextStyle(
+                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                fontSize: 12,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -187,7 +190,10 @@ class _DetailPanel extends StatelessWidget {
               insumo.observacoes?.isNotEmpty == true
                   ? insumo.observacoes!
                   : 'Sem observacoes.',
-              style: const TextStyle(color: Colors.black, fontSize: 12),
+              style: TextStyle(
+                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                fontSize: 12,
+              ),
             ),
           ),
         ],

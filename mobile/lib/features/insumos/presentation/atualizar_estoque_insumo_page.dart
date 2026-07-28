@@ -411,7 +411,7 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
             height: 52,
             child: FilledButton.icon(
               onPressed: _saving ? null : _save,
-              style: _primaryButtonStyle(),
+              style: _primaryButtonStyle(context),
               icon: _saving
                   ? const SizedBox(
                       width: 19,

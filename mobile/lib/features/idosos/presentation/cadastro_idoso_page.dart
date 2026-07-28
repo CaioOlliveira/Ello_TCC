@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
 class CadastroIdosoPage extends ConsumerStatefulWidget {
@@ -371,9 +372,9 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBFBFB),
+      backgroundColor: adaptive(context, const Color(0xFFFBFBFB), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Column(
             children: [
@@ -464,9 +465,12 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     final card = Container(
       padding: const EdgeInsets.fromLTRB(12, 18, 12, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: const Color(0xFF8BD2DC), width: 1.2),
+        border: Border.all(
+          color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
+          width: 1.2,
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x22000000),
@@ -494,7 +498,10 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12.5),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+              fontSize: 12.5,
+            ),
           ),
           const SizedBox(height: 12),
           formKey != null ? Form(key: formKey, child: card) : card,
@@ -521,7 +528,9 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                       onPressed: _loading ? null : _handleBack,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF3CB1C3),
-                        side: const BorderSide(color: Color(0xFF8BD2DC)),
+                        side: BorderSide(
+                          color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(17),
                         ),
@@ -609,10 +618,10 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
               ),
             ),
             const SizedBox(width: 16),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Foto do Idoso',
                   style: TextStyle(
                     color: Color(0xFF249CB0),
@@ -620,10 +629,13 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 1),
+                const SizedBox(height: 1),
                 Text(
                   'toque para adicionar',
-                  style: TextStyle(color: Color(0xFF9B9B9B), fontSize: 11),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -785,26 +797,26 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
             child: Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.link_rounded,
                     color: Color(0xFF2BA8BA),
                     size: 22,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Acessos',
                       style: TextStyle(
-                        color: Color(0xFF073248),
+                        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                   Icon(
                     Icons.chevron_right_rounded,
-                    color: Color(0xFF6E7C83),
+                    color: adaptive(context, const Color(0xFF6E7C83), AppDarkColors.textSecondary),
                   ),
                 ],
               ),
@@ -847,10 +859,10 @@ class _MonitoramentosStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'O que voce deseja monitorar',
             style: TextStyle(
-              color: Color(0xFF073248),
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 24,
               fontWeight: FontWeight.w700,
               height: 1.1,
@@ -947,7 +959,9 @@ class _MonitoramentoCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFE0F0F3) : Colors.white,
+            color: selected
+                ? adaptive(context, const Color(0xFFE0F0F3), AppDarkColors.tintedInfo)
+                : adaptive(context, Colors.white, AppDarkColors.surface),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: borderColor, width: 1),
             boxShadow: const [
@@ -971,8 +985,8 @@ class _MonitoramentoCard extends StatelessWidget {
                         option.selectionLabel,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF394B52),
+                        style: TextStyle(
+                          color: adaptive(context, const Color(0xFF394B52), AppDarkColors.textPrimary),
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           height: 1.1,
@@ -1008,7 +1022,9 @@ class _MonitoramentoIcon extends StatelessWidget {
       width: 39,
       height: 39,
       decoration: BoxDecoration(
-        color: selected ? Colors.white : const Color(0xFFE9F5F7),
+        color: selected
+            ? adaptive(context, Colors.white, AppDarkColors.surface)
+            : adaptive(context, const Color(0xFFE9F5F7), AppDarkColors.surfaceAlt),
         borderRadius: BorderRadius.circular(11),
       ),
       child: Icon(
@@ -1101,7 +1117,7 @@ class _CadastroHeader extends StatelessWidget {
                 builder: (context, value, _) => LinearProgressIndicator(
                   minHeight: 8,
                   value: value,
-                  backgroundColor: const Color(0xFFE7EEF0),
+                  backgroundColor: adaptive(context, const Color(0xFFE7EEF0), AppDarkColors.border),
                   valueColor: const AlwaysStoppedAnimation<Color>(
                     Color(0xFF3BA7B8),
                   ),
@@ -1117,8 +1133,8 @@ class _CadastroHeader extends StatelessWidget {
                 Expanded(
                   child: Text(
                     stepTitle,
-                    style: const TextStyle(
-                      color: Color(0xFF17324D),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       height: 1,
@@ -1127,8 +1143,8 @@ class _CadastroHeader extends StatelessWidget {
                 ),
                 Text(
                   '$current/$totalSteps',
-                  style: const TextStyle(
-                    color: Color(0xFF8A8A8A),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
                     fontSize: 12,
                     height: 1,
                   ),
@@ -1153,8 +1169,8 @@ class _FieldLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: 2, bottom: 2),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Colors.black,
+        style: TextStyle(
+          color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
           fontSize: 13,
           fontWeight: FontWeight.w700,
           height: 1,
@@ -1202,10 +1218,10 @@ class _InputBox extends StatelessWidget {
         inputFormatters: inputFormatters,
         minLines: minLines,
         maxLines: maxLines,
-        style: const TextStyle(fontSize: 14, color: Color(0xFF17324D)),
+        style: TextStyle(fontSize: 14, color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: Color(0xFF9D9D9D), fontSize: 14),
+          hintStyle: TextStyle(color: adaptive(context, const Color(0xFF9D9D9D), AppDarkColors.textMuted), fontSize: 14),
           suffixIcon: suffixIcon == null
               ? null
               : Icon(suffixIcon, color: const Color(0xFF2697AA), size: 17),
@@ -1220,15 +1236,15 @@ class _InputBox extends StatelessWidget {
           errorStyle: const TextStyle(fontSize: 9, height: 0.8),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+            borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+            borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: const BorderSide(color: Color(0xFF8BD2DC)),
+            borderSide: BorderSide(color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.borderStrong)),
           ),
         ),
       ),
@@ -1254,22 +1270,22 @@ class _SelectBox extends StatelessWidget {
           color: Color(0xFF2697AA),
           size: 19,
         ),
-        style: const TextStyle(fontSize: 14, color: Color(0xFF17324D)),
+        style: TextStyle(fontSize: 14, color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
         decoration: InputDecoration(
           hintText: 'Selecione',
-          hintStyle: const TextStyle(color: Color(0xFF9D9D9D), fontSize: 14),
+          hintStyle: TextStyle(color: adaptive(context, const Color(0xFF9D9D9D), AppDarkColors.textMuted), fontSize: 14),
           contentPadding: const EdgeInsets.symmetric(horizontal: 10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+            borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+            borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: const BorderSide(color: Color(0xFF8BD2DC)),
+            borderSide: BorderSide(color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.borderStrong)),
           ),
         ),
         items: const [
@@ -1341,11 +1357,13 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
               }
               return null;
             },
-            style: const TextStyle(fontSize: 14, color: Color(0xFF17324D)),
+            style: TextStyle(fontSize: 14, color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
             decoration: InputDecoration(
               hintText: 'Ex: O+',
-              hintStyle:
-                  const TextStyle(color: Color(0xFF9D9D9D), fontSize: 14),
+              hintStyle: TextStyle(
+                color: adaptive(context, const Color(0xFF9D9D9D), AppDarkColors.textMuted),
+                fontSize: 14,
+              ),
               suffixIcon: const Icon(
                 Icons.keyboard_arrow_down_rounded,
                 color: Color(0xFF2697AA),
@@ -1362,15 +1380,15 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
               errorStyle: const TextStyle(fontSize: 9, height: 0.8),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+                borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFFD0D0D0)),
+                borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFF8BD2DC)),
+                borderSide: BorderSide(color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.borderStrong)),
               ),
             ),
           ),
@@ -1417,9 +1435,11 @@ class _ConditionChip extends StatelessWidget {
       height: 35,
       padding: const EdgeInsets.only(left: 10, right: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0F4F6),
+        color: adaptive(context, const Color(0xFFE0F4F6), AppDarkColors.surfaceAlt),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFF9FD9E1)),
+        border: Border.all(
+          color: adaptive(context, const Color(0xFF9FD9E1), AppDarkColors.border),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

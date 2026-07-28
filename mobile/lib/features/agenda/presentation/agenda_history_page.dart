@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 
 enum _AgendaHistoryPeriod { dia, semanal, mes }
 
@@ -85,9 +86,9 @@ class _AgendaHistoryPageState extends ConsumerState<AgendaHistoryPage> {
     final filteredItems = _filteredItems;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -110,11 +111,11 @@ class _AgendaHistoryPageState extends ConsumerState<AgendaHistoryPage> {
                       ),
                     ),
                     const SizedBox(height: 19),
-                    const Text(
+                    Text(
                       'Historico da agenda',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF073248),
+                        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
                         height: 1,
@@ -294,7 +295,7 @@ class _HistoryCard extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 82),
         padding: const EdgeInsets.fromLTRB(16, 10, 14, 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: adaptive(context, Colors.white, AppDarkColors.surface),
           borderRadius: BorderRadius.circular(13),
           boxShadow: const [
             BoxShadow(
@@ -316,10 +317,10 @@ class _HistoryCard extends StatelessWidget {
               child: Icon(item.icon, color: const Color(0xFF007A86), size: 31),
             ),
             const SizedBox(width: 9),
-            const SizedBox(
+            SizedBox(
               height: 58,
               child: VerticalDivider(
-                color: Color(0xFFBFBFBF),
+                color: adaptive(context, const Color(0xFFBFBFBF), AppDarkColors.border),
                 thickness: 1,
                 width: 1,
               ),
@@ -334,8 +335,8 @@ class _HistoryCard extends StatelessWidget {
                     item.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
@@ -345,8 +346,8 @@ class _HistoryCard extends StatelessWidget {
                     item.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF8A8A8A),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
                     ),
@@ -355,10 +356,10 @@ class _HistoryCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 9),
-            const SizedBox(
+            SizedBox(
               height: 58,
               child: VerticalDivider(
-                color: Color(0xFFBFBFBF),
+                color: adaptive(context, const Color(0xFFBFBFBF), AppDarkColors.border),
                 thickness: 1,
                 width: 1,
               ),
@@ -372,8 +373,8 @@ class _HistoryCard extends StatelessWidget {
                 children: [
                   Text(
                     item.dateLabel,
-                    style: const TextStyle(
-                      color: Color(0xFF8A8A8A),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
                       fontSize: 12,
                       height: 1,
                     ),
@@ -381,8 +382,8 @@ class _HistoryCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     item.timeLabel,
-                    style: const TextStyle(
-                      color: Color(0xFF073248),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                       fontSize: 12,
                       height: 1,
                       fontWeight: FontWeight.w800,
@@ -425,7 +426,7 @@ class _HistoryCard extends StatelessWidget {
 void _showHistoryDetails(BuildContext context, _AgendaHistoryItem item) {
   showModalBottomSheet<void>(
     context: context,
-    backgroundColor: Colors.white,
+    backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
     ),
@@ -442,7 +443,7 @@ void _showHistoryDetails(BuildContext context, _AgendaHistoryItem item) {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD0D0D0),
+                    color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -450,8 +451,8 @@ void _showHistoryDetails(BuildContext context, _AgendaHistoryItem item) {
               const SizedBox(height: 16),
               Text(
                 item.title,
-                style: const TextStyle(
-                  color: Color(0xFF073248),
+                style: TextStyle(
+                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                 ),
@@ -459,8 +460,8 @@ void _showHistoryDetails(BuildContext context, _AgendaHistoryItem item) {
               const SizedBox(height: 8),
               Text(
                 item.subtitle,
-                style: const TextStyle(
-                  color: Color(0xFF4F4F4F),
+                style: TextStyle(
+                  color: adaptive(context, const Color(0xFF4F4F4F), AppDarkColors.textSecondary),
                   fontSize: 15,
                 ),
               ),
@@ -530,8 +531,8 @@ class _HistoryMessage extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF073248),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -540,7 +541,10 @@ class _HistoryMessage extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF666666), fontSize: 12),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF666666), AppDarkColors.textSecondary),
+              fontSize: 12,
+            ),
           ),
         ],
       ),

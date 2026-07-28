@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import '../../../core/api/api_client.dart';
@@ -73,7 +74,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC),
+      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: SafeArea(
         bottom: false,
         child: Center(
@@ -116,11 +117,11 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
+                  Text(
                     'Resumo do Dia',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Color(0xFF333333),
+                      color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                     ),
@@ -167,10 +168,10 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Proximo compromisso',
                     style: TextStyle(
-                      color: Color(0xFF333333),
+                      color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -253,13 +254,14 @@ class _Greeting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = idoso?.nome.split(' ').first;
+    final textColor = adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           _greetingText(),
-          style: const TextStyle(
-            color: Color(0xFF333333),
+          style: TextStyle(
+            color: textColor,
             fontSize: 21,
             fontWeight: FontWeight.w800,
             height: 1,
@@ -270,8 +272,8 @@ class _Greeting extends StatelessWidget {
           name == null
               ? 'Selecione uma ficha para comecar'
               : 'cuidando de $name hoje',
-          style: const TextStyle(
-            color: Color(0xFF333333),
+          style: TextStyle(
+            color: textColor,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -407,7 +409,9 @@ class _MedicationAlert extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-      decoration: _dashboardCardDecoration(color: const Color(0xFFFFF1F1)),
+      decoration: _dashboardCardDecoration(
+        color: adaptive(context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
+      ),
       child: Row(
         children: [
           const Icon(Icons.notifications_none_rounded,
@@ -429,8 +433,10 @@ class _MedicationAlert extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      const TextStyle(color: Color(0xFF555555), fontSize: 12),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF555555), AppDarkColors.textSecondary),
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -438,7 +444,7 @@ class _MedicationAlert extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: adaptive(context, Colors.white, AppDarkColors.surfaceAlt),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -476,7 +482,7 @@ class _SummaryCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(8),
         elevation: 3,
         shadowColor: Colors.black.withValues(alpha: 0.20),
@@ -495,8 +501,8 @@ class _SummaryCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     text: TextSpan(
-                      style: const TextStyle(
-                        color: Color(0xFF444444),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF444444), AppDarkColors.textPrimary),
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
@@ -537,7 +543,7 @@ class _NextAppointmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: adaptive(context, Colors.white, AppDarkColors.surface),
       borderRadius: BorderRadius.circular(8),
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.20),
@@ -572,8 +578,8 @@ class _NextAppointmentCard extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF333333),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -583,8 +589,8 @@ class _NextAppointmentCard extends StatelessWidget {
                       details,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF111111),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF111111), AppDarkColors.textSecondary),
                         fontSize: 13,
                         height: 1.15,
                       ),
@@ -607,10 +613,11 @@ class _TipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary);
     return Container(
       padding: const EdgeInsets.fromLTRB(13, 10, 10, 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFCBEFF3),
+        color: adaptive(context, const Color(0xFFCBEFF3), AppDarkColors.tintedInfo),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -630,10 +637,10 @@ class _TipCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Dica do dia',
                   style: TextStyle(
-                    color: Color(0xFF333333),
+                    color: textColor,
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                   ),
@@ -642,8 +649,8 @@ class _TipCard extends StatelessWidget {
                   text,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF333333),
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 12,
                     height: 1.15,
                   ),
@@ -651,7 +658,10 @@ class _TipCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: Color(0xFF073248)),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+          ),
         ],
       ),
     );

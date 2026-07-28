@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
+import '../../../core/theme/theme_mode_controller.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class PerfilPage extends ConsumerWidget {
@@ -22,9 +24,9 @@ class PerfilPage extends ConsumerWidget {
         from == null ? '/perfil/editar' : '/perfil/editar?from=$from';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC),
+      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
@@ -228,7 +230,7 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
     final profileRoute = from == null ? '/perfil' : '/perfil?from=$from';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC),
+      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
@@ -456,22 +458,30 @@ class _MenuCard extends StatelessWidget {
   }
 }
 
-class _PreferenciasCard extends StatelessWidget {
+class _PreferenciasCard extends ConsumerWidget {
   const _PreferenciasCard();
 
   @override
-  Widget build(BuildContext context) {
-    return const _Panel(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+
+    return _Panel(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
-          _SwitchItem(icon: Icons.dark_mode_outlined, label: 'Modo escuro'),
           _SwitchItem(
+            icon: Icons.dark_mode_outlined,
+            label: 'Modo escuro',
+            value: isDark,
+            onChanged: (value) =>
+                ref.read(themeModeProvider.notifier).setDark(value),
+          ),
+          const _SwitchItem(
             icon: Icons.notifications_none_rounded,
             label: 'Receber lembretes',
             value: true,
           ),
-          _SwitchItem(
+          const _SwitchItem(
             icon: Icons.lock_outline_rounded,
             label: 'Senha',
             value: true,
@@ -529,12 +539,14 @@ class _SwitchItem extends StatelessWidget {
     required this.label,
     this.value = false,
     this.showDivider = true,
+    this.onChanged,
   });
 
   final IconData icon;
   final String label;
   final bool value;
   final bool showDivider;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -551,7 +563,7 @@ class _SwitchItem extends StatelessWidget {
                   child: Text(label, style: const TextStyle(fontSize: 15))),
               Switch(
                 value: value,
-                onChanged: (_) {},
+                onChanged: onChanged ?? (_) {},
                 activeThumbColor: const Color(0xFF2CA0B4),
               ),
               const SizedBox(width: 6),
@@ -575,7 +587,9 @@ class _SmallIcon extends StatelessWidget {
       width: 30,
       height: 30,
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFB8E6ED)),
+        border: Border.all(
+          color: adaptive(context, const Color(0xFFB8E6ED), AppDarkColors.border),
+        ),
         borderRadius: BorderRadius.circular(5),
       ),
       child: Icon(icon, color: const Color(0xFF238FA1), size: 20),
@@ -600,7 +614,10 @@ class _InfoLine extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF6B6B6B), fontSize: 13),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF6B6B6B), AppDarkColors.textSecondary),
+              fontSize: 13,
+            ),
           ),
         ),
       ],
@@ -622,8 +639,10 @@ class _Panel extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFB8E6ED)),
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
+        border: Border.all(
+          color: adaptive(context, const Color(0xFFB8E6ED), AppDarkColors.border),
+        ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -653,6 +672,8 @@ class _Input extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final borderColor = adaptive(context, const Color(0xFFB8E6ED), AppDarkColors.border);
+
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
@@ -660,14 +681,14 @@ class _Input extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: Color(0xFFB8E6ED)),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: Color(0xFFB8E6ED)),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(9),
@@ -695,7 +716,7 @@ class _Avatar extends StatelessWidget {
 
     return CircleAvatar(
       radius: radius,
-      backgroundColor: const Color(0xFFC8EAF0),
+      backgroundColor: adaptive(context, const Color(0xFFC8EAF0), AppDarkColors.tintedInfo),
       backgroundImage: bytes != null
           ? MemoryImage(bytes)
           : value != null && value!.startsWith('http')

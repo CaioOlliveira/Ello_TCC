@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -19,9 +20,9 @@ class SelecionarIdosoPage extends ConsumerWidget {
     final idososAsync = ref.watch(idososDoUsuarioProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC),
+      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -33,22 +34,22 @@ class SelecionarIdosoPage extends ConsumerWidget {
                   children: [
                     const _Header(),
                     const SizedBox(height: 5),
-                    const Text(
+                    Text(
                       'Fichas',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.black,
+                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 23,
                         fontWeight: FontWeight.w500,
                         height: 1,
                       ),
                     ),
                     const SizedBox(height: 9),
-                    const Text(
+                    Text(
                       'Selecione a ficha do idoso que deseja\nacompanhar agora',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF4C4C4C),
+                        color: adaptive(context, const Color(0xFF4C4C4C), AppDarkColors.textSecondary),
                         fontSize: 12.5,
                         height: 1.18,
                       ),
@@ -109,9 +110,9 @@ class ConviteIdosoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC),
+      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -178,26 +179,26 @@ class ConviteIdosoPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    const StaggeredEntry(
+                    StaggeredEntry(
                       index: 1,
                       child: Text(
                         'Entrar com convite',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.black,
+                          color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                           fontSize: 23,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const StaggeredEntry(
+                    StaggeredEntry(
                       index: 2,
                       child: Text(
                         'Use o codigo enviado por outro cuidador\npara acessar uma ficha compartilhada',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Color(0xFF4C4C4C),
+                          color: adaptive(context, const Color(0xFF4C4C4C), AppDarkColors.textSecondary),
                           fontSize: 12,
                           height: 1.3,
                         ),
@@ -459,22 +460,22 @@ class _AddFichaCardState extends State<_AddFichaCard> {
                 Container(
                   width: 52,
                   height: 52,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFC8EAF0),
+                  decoration: BoxDecoration(
+                    color: adaptive(context, const Color(0xFFC8EAF0), AppDarkColors.surfaceAlt),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.add_rounded,
-                    color: Color(0xFF17324D),
+                    color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                     size: 34,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Adicionar\nficha',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Color(0xFF17324D),
+                    color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     height: 1.15,
@@ -498,7 +499,7 @@ class _OutlinedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF4FBFC),
+        color: adaptive(context, const Color(0xFFF4FBFC), AppDarkColors.tintedInfo),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: const Color(0xFF37AFC3),
@@ -596,8 +597,10 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFF8BD2DC)),
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
+        border: Border.all(
+          color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
+        ),
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
@@ -610,10 +613,10 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Codigo de convite',
             style: TextStyle(
-              color: Colors.black,
+              color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -634,22 +637,26 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
             ),
             decoration: InputDecoration(
               hintText: 'CODIGO',
-              hintStyle: const TextStyle(
-                color: Color(0xFFBFD9DD),
+              hintStyle: TextStyle(
+                color: adaptive(context, const Color(0xFFBFD9DD), AppDarkColors.textMuted),
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 4,
               ),
               filled: true,
-              fillColor: const Color(0xFFF4FBFC),
+              fillColor: adaptive(context, const Color(0xFFF4FBFC), AppDarkColors.tintedInfo),
               contentPadding: const EdgeInsets.symmetric(vertical: 14),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFD0E7EA)),
+                borderSide: BorderSide(
+                  color: adaptive(context, const Color(0xFFD0E7EA), AppDarkColors.border),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFD0E7EA)),
+                borderSide: BorderSide(
+                  color: adaptive(context, const Color(0xFFD0E7EA), AppDarkColors.border),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -723,10 +730,13 @@ class _ErrorState extends StatelessWidget {
           size: 42,
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Nao foi possivel carregar as fichas.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF4C4C4C), fontSize: 12),
+          style: TextStyle(
+            color: adaptive(context, const Color(0xFF4C4C4C), AppDarkColors.textSecondary),
+            fontSize: 12,
+          ),
         ),
         const SizedBox(height: 12),
         Center(

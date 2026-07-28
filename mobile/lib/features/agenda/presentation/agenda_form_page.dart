@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_palette.dart';
 import 'agenda_models.dart';
 import 'agenda_utils.dart';
 
@@ -139,7 +140,7 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
         widget.initial == null ? 'Novo compromisso' : 'Editar compromisso';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -153,8 +154,8 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                   Center(
                     child: Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.black,
+                      style: TextStyle(
+                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
                       ),
@@ -243,7 +244,7 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                   const _FormLabel('Frequencia'),
                   DropdownButtonFormField<String>(
                     initialValue: _frequencia,
-                    decoration: _fieldDecoration(),
+                    decoration: _fieldDecoration(context),
                     items: const [
                       DropdownMenuItem(
                         value: 'Nao repetir',
@@ -280,19 +281,19 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Lembrete',
                               style: TextStyle(
-                                color: Colors.black,
+                                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            Text(
+                            const Text(
                               'Ativar lembretes',
                               style: TextStyle(fontSize: 12),
                             ),
@@ -309,8 +310,10 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                   const _FormLabel('Antecedencia do lembrete'),
                   DropdownButtonFormField<int>(
                     initialValue: _antecedenciaMinutos,
-                    decoration:
-                        _fieldDecoration(suffixIcon: Icons.access_time_rounded),
+                    decoration: _fieldDecoration(
+                      context,
+                      suffixIcon: Icons.access_time_rounded,
+                    ),
                     items: const [
                       DropdownMenuItem(value: 5, child: Text('5 min antes')),
                       DropdownMenuItem(value: 10, child: Text('10 min antes')),
@@ -332,7 +335,7 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                   const _FormLabel('Status'),
                   DropdownButtonFormField<String>(
                     initialValue: _status,
-                    decoration: _fieldDecoration(),
+                    decoration: _fieldDecoration(context),
                     items: const [
                       DropdownMenuItem(
                           value: 'agendado', child: Text('Agendado')),
@@ -485,7 +488,7 @@ class _AgendaTextField extends StatelessWidget {
       onTap: onTap,
       minLines: minLines,
       maxLines: maxLines,
-      decoration: _fieldDecoration(suffixIcon: suffixIcon),
+      decoration: _fieldDecoration(context, suffixIcon: suffixIcon),
     );
   }
 }
@@ -499,8 +502,8 @@ class _FormLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
-        color: Colors.black,
+      style: TextStyle(
+        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
         fontSize: 12,
         fontWeight: FontWeight.w600,
       ),
@@ -508,11 +511,11 @@ class _FormLabel extends StatelessWidget {
   }
 }
 
-InputDecoration _fieldDecoration({IconData? suffixIcon}) {
+InputDecoration _fieldDecoration(BuildContext context, {IconData? suffixIcon}) {
   return InputDecoration(
     isDense: true,
     filled: true,
-    fillColor: Colors.white,
+    fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
     contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
     suffixIcon: suffixIcon == null
         ? null

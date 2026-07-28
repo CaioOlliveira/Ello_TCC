@@ -9,6 +9,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 
 class CorgiaPage extends ConsumerStatefulWidget {
   const CorgiaPage({super.key});
@@ -257,7 +258,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
 
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -398,7 +399,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -430,9 +431,9 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
     final itemCount = _messages.length + reportExtra + (showBusy ? 1 : 0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -592,16 +593,23 @@ class _ChatHeader extends StatelessWidget {
     return Container(
       height: 58,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE5EAEC))),
+      decoration: BoxDecoration(
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
+        border: Border(
+          bottom: BorderSide(
+            color: adaptive(context, const Color(0xFFE5EAEC), AppDarkColors.border),
+          ),
+        ),
       ),
       child: Row(
         children: [
           IconButton(
             tooltip: 'Historico',
             onPressed: loading ? null : onHistory,
-            icon: const Icon(Icons.history_rounded, color: Color(0xFF003B4F)),
+            icon: Icon(
+              Icons.history_rounded,
+              color: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
+            ),
           ),
           Expanded(
             child: Text(
@@ -609,8 +617,8 @@ class _ChatHeader extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF003B4F),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -619,8 +627,10 @@ class _ChatHeader extends StatelessWidget {
           IconButton(
             tooltip: 'Novo chat',
             onPressed: loading ? null : onNewChat,
-            icon:
-                const Icon(Icons.add_comment_rounded, color: Color(0xFF003B4F)),
+            icon: Icon(
+              Icons.add_comment_rounded,
+              color: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
+            ),
           ),
         ],
       ),
@@ -657,7 +667,7 @@ class _HistorySheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(top: 10, bottom: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFD0D8DC),
+                color: adaptive(context, const Color(0xFFD0D8DC), AppDarkColors.border),
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -665,11 +675,11 @@ class _HistorySheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Chats',
                       style: TextStyle(
-                        color: Color(0xFF003B4F),
+                        color: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
@@ -695,11 +705,11 @@ class _HistorySheet extends StatelessWidget {
                       ),
                     )
                   : conversations.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
                             'Nenhum chat salvo ainda.',
                             style: TextStyle(
-                              color: Color(0xFF6F8288),
+                              color: adaptive(context, const Color(0xFF6F8288), AppDarkColors.textSecondary),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -712,8 +722,8 @@ class _HistorySheet extends StatelessWidget {
                                 padding: const EdgeInsets.fromLTRB(8, 14, 8, 6),
                                 child: Text(
                                   entry.key,
-                                  style: const TextStyle(
-                                    color: Color(0xFF6F8288),
+                                  style: TextStyle(
+                                    color: adaptive(context, const Color(0xFF6F8288), AppDarkColors.textSecondary),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -752,7 +762,7 @@ class _HistoryTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       selected: selected,
-      selectedTileColor: const Color(0xFFE4F3F5),
+      selectedTileColor: adaptive(context, const Color(0xFFE4F3F5), AppDarkColors.surfaceAlt),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       leading: const Icon(Icons.chat_bubble_outline, color: Color(0xFF087F8C)),
       title: Text(
@@ -763,7 +773,7 @@ class _HistoryTile extends StatelessWidget {
       ),
       subtitle: Text(
         _formatTime(conversa.atualizadoEm),
-        style: const TextStyle(color: Color(0xFF6F8288)),
+        style: TextStyle(color: adaptive(context, const Color(0xFF6F8288), AppDarkColors.textMuted)),
       ),
     );
   }
@@ -796,13 +806,13 @@ class _InitialAnalysisPrompt extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD9E0E3),
+                    color: adaptive(context, const Color(0xFFD9E0E3), AppDarkColors.surface),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Text(
                     'Ola, cuidador! Analisei os dados de $name nos ultimos dias e preparei o relatorio de saude geral. Quer dar uma olhada?',
-                    style: const TextStyle(
-                      color: Color(0xFF101820),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF101820), AppDarkColors.textPrimary),
                       fontSize: 14,
                       height: 1.3,
                       fontWeight: FontWeight.w500,
@@ -832,7 +842,7 @@ class _InitialReportCard extends StatelessWidget {
         margin: const EdgeInsets.only(top: 6),
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: adaptive(context, Colors.white, AppDarkColors.surface),
           border: Border.all(color: const Color(0xFF33A7BA)),
           borderRadius: BorderRadius.circular(18),
         ),
@@ -841,12 +851,12 @@ class _InitialReportCard extends StatelessWidget {
             for (var index = 0; index < report.secoes.length; index++) ...[
               _ReportSection(section: report.secoes[index]),
               if (index < report.secoes.length - 1)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Divider(
                     height: 1,
                     thickness: 1,
-                    color: Color(0xFF79C6D2),
+                    color: adaptive(context, const Color(0xFF79C6D2), AppDarkColors.border),
                   ),
                 ),
             ],
@@ -879,8 +889,8 @@ class _ReportSection extends StatelessWidget {
         Expanded(
           child: RichText(
             text: TextSpan(
-              style: const TextStyle(
-                color: Color(0xFF101820),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF101820), AppDarkColors.textPrimary),
                 fontSize: 12.4,
                 height: 1.24,
                 fontWeight: FontWeight.w500,
@@ -965,9 +975,11 @@ class _MessageBubble extends StatelessWidget {
     final color = message.fromUser
         ? const Color(0xFF3A7287)
         : message.isError
-            ? const Color(0xFFFFE5E2)
-            : const Color(0xFFD9E0E3);
-    final textColor = message.fromUser ? Colors.white : const Color(0xFF101820);
+            ? adaptive(context, const Color(0xFFFFE5E2), AppDarkColors.tintedWarn)
+            : adaptive(context, const Color(0xFFD9E0E3), AppDarkColors.surface);
+    final textColor = message.fromUser
+        ? Colors.white
+        : adaptive(context, const Color(0xFF101820), AppDarkColors.textPrimary);
 
     final imageBytes = _decodeDataUrl(message.imageDataUrl);
     final bubble = Container(
@@ -1057,9 +1069,9 @@ class _PendingImagePreview extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF9BD3DC)),
+        border: Border.all(color: adaptive(context, const Color(0xFF9BD3DC), AppDarkColors.border)),
       ),
       child: Row(
         children: [
@@ -1073,11 +1085,11 @@ class _PendingImagePreview extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
               'Imagem anexada para analise',
               style: TextStyle(
-                color: Color(0xFF003B4F),
+                color: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1085,7 +1097,10 @@ class _PendingImagePreview extends StatelessWidget {
           IconButton(
             tooltip: 'Remover imagem',
             onPressed: onRemove,
-            icon: const Icon(Icons.close_rounded, color: Color(0xFF003B4F)),
+            icon: Icon(
+              Icons.close_rounded,
+              color: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
+            ),
           ),
         ],
       ),
@@ -1125,7 +1140,7 @@ class _TypingBubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             decoration: BoxDecoration(
-              color: const Color(0xFFD9E0E3),
+              color: adaptive(context, const Color(0xFFD9E0E3), AppDarkColors.surface),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const _TypingDots(),
@@ -1221,7 +1236,7 @@ class _QuestionInput extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 42),
       padding: const EdgeInsets.only(left: 18),
       decoration: BoxDecoration(
-        color: const Color(0xFFD9D9D9),
+        color: adaptive(context, const Color(0xFFD9D9D9), AppDarkColors.surfaceAlt),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
@@ -1233,7 +1248,7 @@ class _QuestionInput extends StatelessWidget {
               hasImage
                   ? Icons.image_rounded
                   : Icons.add_photo_alternate_rounded,
-              color: const Color(0xFF111111),
+              color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
               size: 21,
             ),
           ),
@@ -1248,8 +1263,8 @@ class _QuestionInput extends StatelessWidget {
                 border: InputBorder.none,
                 isDense: true,
               ),
-              style: const TextStyle(
-                color: Color(0xFF111111),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
@@ -1260,8 +1275,9 @@ class _QuestionInput extends StatelessWidget {
             onPressed: loading ? null : onMic,
             icon: Icon(
               listening ? Icons.mic_rounded : Icons.mic_none_rounded,
-              color:
-                  listening ? const Color(0xFF087F8C) : const Color(0xFF111111),
+              color: listening
+                  ? const Color(0xFF087F8C)
+                  : adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
               size: 21,
             ),
           ),
@@ -1270,7 +1286,7 @@ class _QuestionInput extends StatelessWidget {
             onPressed: loading ? null : onSubmitted,
             icon: Icon(
               loading ? Icons.hourglass_top_rounded : Icons.send_rounded,
-              color: const Color(0xFF111111),
+              color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
               size: 21,
             ),
           ),
