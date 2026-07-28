@@ -49,11 +49,13 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
   Future<void> _loadConversations() async {
     final usuario = ref.read(authSessionProvider);
     if (usuario == null || usuario.id.isEmpty) return;
+    final idosoId = ref.read(selectedIdosoProvider)?.id;
 
     setState(() => _loadingHistory = true);
     try {
       final conversas = await ref.read(apiClientProvider).listarConversasIa(
             usuarioId: usuario.id,
+            idosoId: idosoId,
           );
       if (!mounted) return;
       setState(() => _conversations = conversas);
@@ -117,6 +119,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       final mensagens = await ref.read(apiClientProvider).listarMensagensIa(
             conversaId: conversa.id,
             usuarioId: usuario.id,
+            idosoId: ref.read(selectedIdosoProvider)?.id,
           );
       if (!mounted) return;
       setState(() {
@@ -419,6 +422,19 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<IdosoResumo?>(selectedIdosoProvider, (previous, next) {
+      if (previous?.id == next?.id) return;
+      setState(() {
+        _messages.clear();
+        _conversations = const [];
+        _activeConversation = null;
+        _initialReport = null;
+        _initialReportIndex = null;
+        _pendingImage = null;
+      });
+      _loadConversations();
+    });
+
     final title = _activeConversation?.titulo ?? 'CoraIA';
     final idoso = ref.watch(selectedIdosoProvider);
     final showInitialPrompt = _shouldShowInitialPrompt;

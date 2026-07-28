@@ -57,7 +57,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Nao foi possivel carregar as refeicoes.');
+      setState(() => _error = 'Não foi possível carregar as refeições.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -70,9 +70,6 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
             usuarioId: ref.read(authSessionProvider)?.id,
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Refeicao concluida.')),
-      );
       _load();
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -197,9 +194,9 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Adicionar refeicao?'),
+        title: const Text('Adicionar refeição?'),
         content: Text(
-          'A ultima refeicao foi cadastrada ha $label. Deseja adicionar outra mesmo assim?',
+          'A última refeição foi cadastrada há $label. Deseja adicionar outra mesmo assim?',
         ),
         actions: [
           TextButton(
@@ -373,7 +370,7 @@ class _AlimentacaoListView extends StatelessWidget {
                 else if (todayMeals.isEmpty)
                   const Padding(
                     padding: EdgeInsets.only(top: 35),
-                    child: Center(child: Text('Nenhuma refeicao cadastrada.')),
+                    child: Center(child: Text('Nenhuma refeição cadastrada.')),
                   )
                 else
                   for (final refeicao in todayMeals)
@@ -397,7 +394,7 @@ class _AlimentacaoListView extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_rounded, size: 27),
-                  label: const Text('Adicionar Refeicao'),
+                  label: const Text('Adicionar refeição'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF1897AA),
                     side:
@@ -430,7 +427,7 @@ class _AlimentacaoListView extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  child: const Text('Ver Historico'),
+                  child: const Text('Ver histórico'),
                 ),
               ),
             ],
@@ -865,6 +862,17 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
     });
   }
 
+  void _editFood(AlimentoConsumido alimento) {
+    setState(() {
+      _alimentos.remove(alimento);
+      _alimentoController.text = alimento.nome;
+      _pesoController.text = alimento.pesoGramas == null
+          ? ''
+          : _formatNumber(alimento.pesoGramas!);
+      _error = null;
+    });
+  }
+
   DateTime? _scheduledDateTime() {
     final date = _parseDate(_dataController.text);
     final time = _parseTime(_horaController.text);
@@ -911,7 +919,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
     FocusScope.of(context).unfocus();
     final scheduled = _scheduledDateTime();
     if (scheduled == null) {
-      setState(() => _error = 'Informe data e hora validas.');
+      setState(() => _error = 'Informe data e hora válidas.');
       return;
     }
     final now = DateTime.now();
@@ -924,7 +932,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
     );
     if (scheduled.isBefore(currentMinute)) {
       setState(
-          () => _error = 'A data e hora nao podem ser anteriores a agora.');
+          () => _error = 'A data e hora não podem ser anteriores a agora.');
       return;
     }
     if (_alimentos.isEmpty) {
@@ -962,22 +970,13 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
         await api.atualizarRefeicao(id: widget.initial!.id, data: data);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.initial == null
-                ? 'Refeicao salva com sucesso.'
-                : 'Refeicao atualizada com sucesso.',
-          ),
-        ),
-      );
       widget.onSaved();
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Nao foi possivel salvar a refeicao.');
+      setState(() => _error = 'Não foi possível salvar a refeição.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -1006,10 +1005,10 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
             ),
             items: const [
               DropdownMenuItem(
-                  value: 'Cafe da manha', child: Text('Cafe da manha')),
-              DropdownMenuItem(value: 'Almoco', child: Text('Almoco')),
+                  value: 'Cafe da manha', child: Text('Café da manhã')),
+              DropdownMenuItem(value: 'Almoco', child: Text('Almoço')),
               DropdownMenuItem(
-                  value: 'Cafe da tarde', child: Text('Cafe da tarde')),
+                  value: 'Cafe da tarde', child: Text('Café da tarde')),
               DropdownMenuItem(value: 'Janta', child: Text('Janta')),
             ],
             onChanged: (value) => setState(() => _tipo = value ?? _tipo),
@@ -1069,6 +1068,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
           for (final alimento in _alimentos)
             _FoodChip(
               alimento: alimento,
+              onEdit: () => _editFood(alimento),
               onRemove: () => setState(() => _alimentos.remove(alimento)),
             ),
           const SizedBox(height: 16),
@@ -1090,7 +1090,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
             ],
           ),
           const SizedBox(height: 18),
-          const Text('Observacoes',
+          const Text('Observações',
               style: TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
           TextField(
@@ -1158,45 +1158,55 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
 }
 
 class _FoodChip extends StatelessWidget {
-  const _FoodChip({required this.alimento, required this.onRemove});
+  const _FoodChip({
+    required this.alimento,
+    required this.onEdit,
+    required this.onRemove,
+  });
 
   final AlimentoConsumido alimento;
+  final VoidCallback onEdit;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFEFEF),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              alimento.nome,
-              style: const TextStyle(color: Color(0xFF386073), fontSize: 14),
+    return InkWell(
+      onTap: onEdit,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFEFEF),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.14),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-          ),
-          Text(
-            '${_formatNumber(alimento.calorias ?? 0)}kcal  ${_formatNumber(alimento.pesoGramas ?? 0)}g',
-            style: const TextStyle(color: Color(0xFF386073), fontSize: 12),
-          ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            onPressed: onRemove,
-            icon: const Icon(Icons.cancel, color: Color(0xFF006F80)),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                alimento.nome,
+                style: const TextStyle(color: Color(0xFF386073), fontSize: 14),
+              ),
+            ),
+            Text(
+              '${_formatNumber(alimento.calorias ?? 0)}kcal  ${_formatNumber(alimento.pesoGramas ?? 0)}g',
+              style: const TextStyle(color: Color(0xFF386073), fontSize: 12),
+            ),
+            IconButton(
+              tooltip: 'Remover alimento',
+              visualDensity: VisualDensity.compact,
+              onPressed: onRemove,
+              icon: const Icon(Icons.cancel, color: Color(0xFF006F80)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1215,7 +1225,7 @@ const _acceptanceOptions = [
   _AcceptanceOption('comeu_bem', 'Comeu bem', .75),
   _AcceptanceOption('comeu_metade', 'Comeu metade', .5),
   _AcceptanceOption('comeu_pouco', 'Comeu pouco', .25),
-  _AcceptanceOption('nao_comeu', 'Nao comeu', null),
+  _AcceptanceOption('nao_comeu', 'Não comeu', null),
 ];
 
 class _AcceptanceButton extends StatelessWidget {
@@ -1484,7 +1494,7 @@ String _acceptanceLabel(String value) {
     'comeu_bem' => 'Comeu bem',
     'comeu_metade' => 'Comeu metade',
     'comeu_pouco' => 'Comeu pouco',
-    'nao_comeu' => 'Nao comeu',
+    'nao_comeu' => 'Não comeu',
     _ => value,
   };
 }

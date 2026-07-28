@@ -60,9 +60,6 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
         monitoramentos: selectedIds,
       );
       ref.invalidate(idososDoUsuarioProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Monitoramentos atualizados.')),
-      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,7 +69,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Não foi possível atualizar os monitoramentos.'),
+          content: Text('Nao foi possivel atualizar os monitoramentos.'),
         ),
       );
     } finally {
@@ -122,7 +119,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                         height: 1,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 18),
                     Expanded(
                       child: idoso == null
                           ? const _MessageState(
@@ -142,7 +139,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
-                      height: 38,
+                      height: 48,
                       child: OutlinedButton.icon(
                         onPressed: _saving ? null : _abrirSeletor,
                         icon: _saving
@@ -154,7 +151,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                                   color: Color(0xFF1696AA),
                                 ),
                               )
-                            : const Icon(Icons.add_rounded, size: 23),
+                            : const Icon(Icons.add_rounded, size: 27),
                         label: const Text('Adicionar registro'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF073248),
@@ -166,8 +163,8 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                             borderRadius: BorderRadius.circular(13),
                           ),
                           textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -200,8 +197,8 @@ class _MonitoramentoGrid extends StatelessWidget {
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            mainAxisExtent: 88,
+            crossAxisSpacing: 12,
+            mainAxisExtent: 104,
           ),
           itemBuilder: (context, index) {
             final option = options[index];
@@ -273,12 +270,12 @@ class _MonitoramentoTileContent extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 10, 6, 10),
+          padding: const EdgeInsets.fromLTRB(10, 12, 6, 12),
           child: Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 48,
+                height: 48,
                 decoration: const BoxDecoration(
                   color: Color(0xFFCFEFF4),
                   shape: BoxShape.circle,
@@ -286,10 +283,10 @@ class _MonitoramentoTileContent extends StatelessWidget {
                 child: Icon(
                   option.icon,
                   color: const Color(0xFF2BA8BA),
-                  size: 27,
+                  size: 30,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -301,21 +298,21 @@ class _MonitoramentoTileContent extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.black,
-                        fontSize: 14.5,
+                        fontSize: 15.5,
                         fontWeight: FontWeight.w800,
-                        height: 1,
+                        height: 1.05,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Text(
                       option.subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Color(0xFF8C8C8C),
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w500,
-                        height: 1.1,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.18,
                       ),
                     ),
                   ],
@@ -324,7 +321,7 @@ class _MonitoramentoTileContent extends StatelessWidget {
               const Icon(
                 Icons.chevron_right_rounded,
                 color: Color(0xFF8C8C8C),
-                size: 24,
+                size: 23,
               ),
             ],
           ),
@@ -351,15 +348,15 @@ class _MessageState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: const Color(0xFF1696AA), size: 48),
-          const SizedBox(height: 10),
+          Icon(icon, color: const Color(0xFF1696AA), size: 62),
+          const SizedBox(height: 14),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Color(0xFF073248),
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 5),
@@ -368,8 +365,8 @@ class _MessageState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Color(0xFF737373),
-              fontSize: 12.5,
-              height: 1.2,
+              fontSize: 15,
+              height: 1.3,
             ),
           ),
         ],
@@ -442,7 +439,7 @@ class _MonitoramentoPickerState extends State<_MonitoramentoPicker> {
                         'O que deseja monitorar',
                         style: TextStyle(
                           color: Color(0xFF073248),
-                          fontSize: 20,
+                          fontSize: 23,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -460,9 +457,9 @@ class _MonitoramentoPickerState extends State<_MonitoramentoPicker> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      mainAxisSpacing: 11,
+                      mainAxisSpacing: 13,
                       crossAxisSpacing: 12,
-                      mainAxisExtent: 76,
+                      mainAxisExtent: 88,
                     ),
                     itemBuilder: (context, index) {
                       final option = monitoramentoOptions[index];
@@ -532,7 +529,7 @@ class _PickerOptionTile extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          padding: const EdgeInsets.fromLTRB(9, 10, 8, 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
@@ -545,8 +542,8 @@ class _PickerOptionTile extends StatelessWidget {
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                width: 34,
-                height: 34,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: selected ? Colors.white : const Color(0xFFE9F5F7),
                   borderRadius: BorderRadius.circular(10),
@@ -554,7 +551,7 @@ class _PickerOptionTile extends StatelessWidget {
                 child: Icon(
                   option.icon,
                   color: const Color(0xFF2BA8BA),
-                  size: 22,
+                  size: 25,
                 ),
               ),
               const SizedBox(width: 8),
@@ -565,9 +562,9 @@ class _PickerOptionTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF394B52),
-                    fontSize: 12.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    height: 1.05,
+                    height: 1.12,
                   ),
                 ),
               ),
@@ -578,7 +575,7 @@ class _PickerOptionTile extends StatelessWidget {
                 child: const Icon(
                   Icons.check_circle_rounded,
                   color: Color(0xFF38AFC0),
-                  size: 20,
+                  size: 21,
                 ),
               ),
             ],

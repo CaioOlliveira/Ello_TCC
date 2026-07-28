@@ -53,7 +53,13 @@ class PerfilPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const StaggeredEntry(index: 2, child: _MenuCard()),
+                StaggeredEntry(
+                  index: 2,
+                  child: _MenuCard(
+                    usuario: usuario,
+                    onEditPersonalInfo: () => context.go(editRoute),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Preferências',
@@ -216,7 +222,7 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
       setState(() => _erro = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _erro = 'Nao foi possivel atualizar o perfil.');
+      setState(() => _erro = 'Não foi possível atualizar o perfil.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -311,7 +317,7 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('Salvar alterações'),
+                        : const Text('Salvar alteracoes'),
                   ),
                 ),
               ],
@@ -397,14 +403,14 @@ class _UsuarioCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 _InfoLine(
                   icon: Icons.mail_outline_rounded,
-                  text: usuario?.email ?? 'email nao informado',
+                  text: usuario?.email ?? 'e-mail não informado',
                 ),
                 const SizedBox(height: 5),
                 _InfoLine(
                   icon: Icons.phone_outlined,
                   text: usuario?.telefone?.isNotEmpty == true
                       ? usuario!.telefone!
-                      : 'telefone nao informado',
+                      : 'telefone não informado',
                 ),
               ],
             ),
@@ -424,12 +430,26 @@ class _UsuarioCard extends StatelessWidget {
 }
 
 class _MenuCard extends StatelessWidget {
-  const _MenuCard();
+  const _MenuCard({
+    required this.usuario,
+    required this.onEditPersonalInfo,
+  });
+
+  final UsuarioSessao? usuario;
+  final VoidCallback onEditPersonalInfo;
 
   @override
   Widget build(BuildContext context) {
     final items = [
-      (Icons.person_outline_rounded, 'Informações pessoais', null),
+      (
+        Icons.person_outline_rounded,
+        'Informacoes pessoais',
+        () => _showPersonalInfoSheet(
+              context,
+              usuario,
+              onEditPersonalInfo,
+            ),
+      ),
       (Icons.shield_outlined, 'Segurança', null),
       (Icons.info_outline_rounded, 'Sobre o app', null),
       (
@@ -450,6 +470,135 @@ class _MenuCard extends StatelessWidget {
               onTap: items[index].$3,
               showDivider: index < items.length - 1,
             ),
+        ],
+      ),
+    );
+  }
+}
+
+void _showPersonalInfoSheet(
+  BuildContext context,
+  UsuarioSessao? usuario,
+  VoidCallback onEdit,
+) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD9E2E5),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Informacoes pessoais',
+                style: TextStyle(
+                  color: Color(0xFF073248),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _PersonalInfoLine(
+                icon: Icons.person_outline_rounded,
+                label: 'Nome',
+                value: _valueOrNotInformed(usuario?.nome),
+              ),
+              _PersonalInfoLine(
+                icon: Icons.mail_outline_rounded,
+                label: 'E-mail',
+                value: _valueOrNotInformed(usuario?.email),
+              ),
+              _PersonalInfoLine(
+                icon: Icons.phone_outlined,
+                label: 'Telefone',
+                value: _valueOrNotInformed(usuario?.telefone),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 46,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    onEdit();
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 19),
+                  label: const Text('Editar informacoes'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0E6F7E),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _PersonalInfoLine extends StatelessWidget {
+  const _PersonalInfoLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF238FA1), size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7F86),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Color(0xFF17324D),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -717,8 +866,12 @@ class _Avatar extends StatelessWidget {
 }
 
 String? _obrigatorio(String? value) {
-  if (value == null || value.trim().isEmpty) return 'Campo obrigatorio.';
+  if (value == null || value.trim().isEmpty) return 'Campo obrigatório.';
   return null;
+}
+
+String _valueOrNotInformed(String? value) {
+  return value == null || value.trim().isEmpty ? 'não informado' : value.trim();
 }
 
 Uint8List? _dataImageBytes(String? value) {

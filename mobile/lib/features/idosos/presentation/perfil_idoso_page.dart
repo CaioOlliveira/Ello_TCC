@@ -52,15 +52,13 @@ class PerfilIdosoPage extends ConsumerWidget {
                       ActionIconButton(
                         tooltip: 'Compartilhar ficha',
                         icon: Icons.ios_share_rounded,
-                        onTap: () =>
-                            _showCompartilharSheet(context, idoso.id),
+                        onTap: () => _showCompartilharSheet(context, idoso.id),
                       ),
                       const SizedBox(width: 10),
                       ActionIconButton(
                         tooltip: 'Perfil do cuidador',
                         icon: Icons.person_rounded,
-                        onTap: () =>
-                            context.go('/perfil?from=idoso-perfil'),
+                        onTap: () => context.go('/perfil?from=idoso-perfil'),
                       ),
                     ],
                   ),
@@ -73,7 +71,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                     index: 2,
                     child: _InfoCard(
                       icon: Icons.water_drop_rounded,
-                      title: 'Tipo Sanguineo',
+                      title: 'Tipo sanguíneo',
                       value: idoso.tipoSanguineo!,
                     ),
                   ),
@@ -82,7 +80,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                     index: 3,
                     child: _InfoCard(
                       icon: Icons.monitor_heart_rounded,
-                      title: 'Doencas',
+                      title: 'Doenças',
                       value: idoso.condicoes.join(' e '),
                     ),
                   ),
@@ -92,12 +90,11 @@ class PerfilIdosoPage extends ConsumerWidget {
                     index: 4,
                     child: _InfoCard(
                       icon: Icons.phone_rounded,
-                      title: 'Contato de Emergencia',
+                      title: 'Contato de emergência',
                       value: [
                         if (idoso.contatoEmergenciaNome?.isNotEmpty == true)
                           '${idoso.contatoEmergenciaNome}${idoso.contatoEmergenciaParentesco?.isNotEmpty == true ? ' (${idoso.contatoEmergenciaParentesco})' : ''}',
-                        if (idoso.contatoEmergenciaTelefone?.isNotEmpty ==
-                            true)
+                        if (idoso.contatoEmergenciaTelefone?.isNotEmpty == true)
                           _formatPhone(idoso.contatoEmergenciaTelefone!),
                       ].join('\n'),
                     ),
@@ -177,7 +174,7 @@ class _CompartilharFichaSheetState
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _erro = 'Nao foi possivel gerar o codigo. Tente novamente.';
+        _erro = 'Não foi possível gerar o código. Tente novamente.';
         _loading = false;
       });
     }
@@ -189,7 +186,7 @@ class _CompartilharFichaSheetState
     await Clipboard.setData(ClipboardData(text: codigo));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Codigo copiado.')),
+      const SnackBar(content: Text('Código copiado.')),
     );
   }
 
@@ -250,10 +247,11 @@ class _CompartilharFichaSheetState
             ),
             const SizedBox(height: 8),
             const Text(
-              'Peca para a outra pessoa abrir o Ello, tocar em\n'
-              '"Entrar com convite" e colar o codigo abaixo.',
+              'Peça para a outra pessoa abrir o Ello, tocar em\n'
+              '"Entrar com convite" e colar o código abaixo.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
+              style: TextStyle(
+                  color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
             ),
             const SizedBox(height: 22),
             AnimatedSwitcher(
@@ -298,7 +296,8 @@ class _CompartilharFichaSheetState
                               borderRadius: BorderRadius.circular(14),
                               child: Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 18),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7F4F6),
                                   borderRadius: BorderRadius.circular(14),
@@ -325,7 +324,7 @@ class _CompartilharFichaSheetState
                               child: FilledButton.icon(
                                 onPressed: _copiarCodigo,
                                 icon: const Icon(Icons.copy_rounded, size: 19),
-                                label: const Text('Copiar codigo'),
+                                label: const Text('Copiar código'),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: const Color(0xFF0E6F7E),
                                   foregroundColor: Colors.white,
@@ -341,7 +340,7 @@ class _CompartilharFichaSheetState
                             ),
                             const SizedBox(height: 10),
                             const Text(
-                              'Valido por 7 dias e para um unico uso.',
+                              'Válido por 7 dias e para um único uso.',
                               style: TextStyle(
                                 color: Color(0xFF9B9B9B),
                                 fontSize: 11,

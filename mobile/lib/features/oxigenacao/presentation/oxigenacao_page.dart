@@ -169,9 +169,6 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
       setState(() => _mode = _OxigenacaoMode.resumo);
       _reloadResumo(idoso.id);
       _reloadHistorico(idoso.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Oxigenação registrada.')),
-      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -180,7 +177,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível registrar oxigenação.')),
+        const SnackBar(content: Text('Nao foi possivel registrar oxigenação.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -409,7 +406,7 @@ class _ResumoOxigenacaoView extends StatelessWidget {
                         child: _NavRow(
                           icon: Icons.history_rounded,
                           iconColor: const Color(0xFF25A1B2),
-                          title: 'Ver histórico de oxigenação',
+                          title: 'Ver historico de oxigenação',
                           onTap: onViewHistorico,
                         ),
                       ),
@@ -595,7 +592,7 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               const Text(
-                'Faça a primeira medição',
+                'Faça a primeira medicao',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Color(0xFF073248),
@@ -605,7 +602,7 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Ainda não há registros de oxigenação para $idosoNome. Comece registrando a medição atual.',
+                'Ainda não ha registros de oxigenação para $idosoNome. Comece registrando a medicao atual.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Color(0xFF607178),
@@ -654,7 +651,7 @@ class _AnimatedOxigenacaoValue extends StatelessWidget {
             children: [
               TextSpan(
                   text: text, style: const TextStyle(fontSize: 39, height: 1)),
-              const TextSpan(text: '%SpO₂', style: TextStyle(fontSize: 25)),
+              const TextSpan(text: '%SpOâ‚‚', style: TextStyle(fontSize: 25)),
             ],
           ),
         );
@@ -1020,7 +1017,7 @@ class _AnalysisCard extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'A análise detalhada por IA ainda está em treinamento.',
+                'A analise detalhada por IA ainda está em treinamento.',
               ),
             ),
           );
@@ -1048,7 +1045,7 @@ class _AnalysisCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Análise da oxigenação',
+                      'Analise da oxigenação',
                       style: TextStyle(
                         color: Color(0xFF2F4853),
                         fontSize: 14,
@@ -1104,7 +1101,7 @@ class _HistoricoOxigenacaoView extends StatelessWidget {
         children: [
           _OxigenacaoHeader(
             onBack: onBack,
-            title: 'Histórico da oxigenação',
+            title: 'Historico da oxigenação',
             showWordmark: true,
           ),
           const SizedBox(height: 12),
@@ -1157,7 +1154,7 @@ class _HistoricoVazio extends StatelessWidget {
             ),
             SizedBox(height: 6),
             Text(
-              'Altere o período ou registre uma nova medição.',
+              'Altere o período ou registre uma nova medicao.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Color(0xFF607178), fontSize: 13),
             ),
@@ -1213,7 +1210,7 @@ class _HistoricoItemCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   entrada.saturacao != null
-                      ? '${entrada.saturacao}% SpO₂${entrada.pulso != null ? ' · ${entrada.pulso} bpm' : ''}'
+                      ? '${entrada.saturacao}% SpOâ‚‚${entrada.pulso != null ? ' · ${entrada.pulso} bpm' : ''}'
                       : 'Sem valor registrado',
                   style: const TextStyle(
                     color: Color(0xFF808080),
@@ -1357,7 +1354,7 @@ class _SaturacaoInput extends StatelessWidget {
       inputFormatters: const [],
       digitsOnly: true,
       hintText: '000',
-      suffixText: 'SpO₂',
+      suffixText: 'SpOâ‚‚',
       validator: _validateSaturacao,
     );
   }
@@ -1791,7 +1788,7 @@ class _ErrorState extends StatelessWidget {
               color: Color(0xFF2FA3B5), size: 54),
           const SizedBox(height: 10),
           const Text(
-            'Não foi possível carregar',
+            'Nao foi possivel carregar',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF073248),
@@ -1801,7 +1798,7 @@ class _ErrorState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Confira a conexão com a API e tente novamente.',
+            'Confira a conexao com a API e tente novamente.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF607178), fontSize: 13),
           ),

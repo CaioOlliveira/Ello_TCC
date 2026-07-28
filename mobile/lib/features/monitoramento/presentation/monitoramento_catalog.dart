@@ -42,7 +42,7 @@ const monitoramentoOptions = [
     title: 'Humor',
     selectionLabel: 'Humor',
     subtitle: 'Emoções e observações',
-    icon: Icons.mood_rounded,
+    icon: Icons.self_improvement_rounded,
     route: '/humor',
   ),
   MonitoramentoOption(

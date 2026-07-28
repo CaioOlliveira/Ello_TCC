@@ -205,9 +205,6 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Insumo atualizado com sucesso.')),
-      );
       widget.onSaved(updated);
     } on ApiException catch (error) {
       if (!mounted) return;

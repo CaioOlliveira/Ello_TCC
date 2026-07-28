@@ -207,9 +207,6 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
       setState(() => _mode = _GlicemiaMode.resumo);
       _reloadResumo(idoso.id);
       _reloadHistorico(idoso.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Glicemia registrada.')),
-      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -252,9 +249,6 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
       _observacoesInsulinaController.clear();
       setState(() => _mode = _GlicemiaMode.resumo);
       _reloadResumo(idoso.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Uso de insulina registrado.')),
-      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -565,7 +559,7 @@ class _ResumoGlicemiaView extends StatelessWidget {
                         child: _NavRow(
                           icon: Icons.history_rounded,
                           iconColor: const Color(0xFF25A1B2),
-                          title: 'Ver histórico de glicemia',
+                          title: 'Ver historico de glicemia',
                           onTap: onViewHistorico,
                         ),
                       ),
@@ -1258,68 +1252,52 @@ class _AnalysisCard extends StatelessWidget {
     return Material(
       color: const Color(0xFFC9E7ED),
       borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'A análise detalhada por IA ainda está em treinamento.',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: const BoxDecoration(
+                color: Color(0xFF25A1B2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.water_drop_outlined,
+                color: Colors.white,
+                size: 32,
               ),
             ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 9, 11, 9),
-          child: Row(
-            children: [
-              Container(
-                width: 53,
-                height: 53,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF25A1B2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.water_drop_outlined,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Análise de glicemia',
-                      style: TextStyle(
-                        color: Color(0xFF2F4853),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Analise de glicemia',
+                    style: TextStyle(
+                      color: Color(0xFF2F4853),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      resumo.analise.texto,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF2F4853),
-                        fontSize: 10,
-                        height: 1.08,
-                      ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    resumo.analise.texto,
+                    maxLines: 8,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF2F4853),
+                      fontSize: 13,
+                      height: 1.25,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFF073248),
-                size: 30,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1366,7 +1344,7 @@ class _InsulinaResumoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${insulina.tipoInsulina} • ${_formatDose(insulina.doseUnidades)} un • ${_formatTime(insulina.aplicadoEm)}',
+                  '${insulina.tipoInsulina} â€¢ ${_formatDose(insulina.doseUnidades)} un â€¢ ${_formatTime(insulina.aplicadoEm)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1629,8 +1607,8 @@ class _RegistrarGlicemiaView extends StatelessWidget {
               value: contexto,
               options: const [
                 'Jejum',
-                'Antes da refeição',
-                'Após refeição',
+                'Antes da refeicao',
+                'Após refeicao',
                 'Ao deitar',
                 'Sintomas',
                 'Outro',
@@ -2379,7 +2357,7 @@ class _ErrorState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Confira a conexão com a API e tente novamente.',
+            'Confira a conexao com a API e tente novamente.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF607178), fontSize: 13),
           ),

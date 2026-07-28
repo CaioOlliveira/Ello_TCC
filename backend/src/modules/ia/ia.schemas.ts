@@ -40,6 +40,7 @@ export const criarConversaIaSchema = z.object({
 
 export const listarMensagensIaSchema = z.object({
   usuarioId: z.string().uuid("Usuario invalido."),
+  idosoId: z.string().uuid("Idoso invalido.").optional(),
 });
 
 export const relatorioInicialIaSchema = z.object({
@@ -50,4 +51,5 @@ export const relatorioInicialIaSchema = z.object({
 export type PerguntarIaInput = z.infer<typeof perguntarIaSchema>;
 export type ListarConversasIaInput = z.infer<typeof listarConversasIaSchema>;
 export type CriarConversaIaInput = z.infer<typeof criarConversaIaSchema>;
+export type ListarMensagensIaInput = z.infer<typeof listarMensagensIaSchema>;
 export type RelatorioInicialIaInput = z.infer<typeof relatorioInicialIaSchema>;

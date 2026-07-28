@@ -107,6 +107,9 @@ end $$;
 create index if not exists idx_conversas_ia_usuario_atualizado
   on public.conversas_ia (usuario_id, atualizado_em desc);
 
+create index if not exists idx_conversas_ia_usuario_idoso_atualizado
+  on public.conversas_ia (usuario_id, idoso_id, atualizado_em desc);
+
 create index if not exists idx_conversas_ia_idoso
   on public.conversas_ia (idoso_id);
 

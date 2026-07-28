@@ -117,9 +117,6 @@ class _HumorPageState extends ConsumerState<HumorPage> {
           );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Humor registrado com sucesso.')),
-      );
       context.go('/monitoramento');
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -127,7 +124,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Nao foi possivel salvar o registro de humor.';
+        _errorMessage = 'Não foi possível salvar o registro de humor.';
       });
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -151,7 +148,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
               return AlertDialog(
                 title: const Text('Humor ja cadastrado'),
                 content: const Text(
-                  'Voce ja cadastrou um humor hoje. Certeza que deseja adicionar outro?',
+                  'Você já cadastrou um humor hoje. Certeza que deseja adicionar outro?',
                 ),
                 actions: [
                   TextButton(
@@ -326,7 +323,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            child: const Text('Ver Historico'),
+                            child: const Text('Ver histórico'),
                           ),
                         ),
                       ),

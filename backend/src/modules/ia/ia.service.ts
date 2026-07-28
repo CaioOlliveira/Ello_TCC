@@ -7,6 +7,7 @@ import { env } from "../../config/env.js";
 import { getPool, isDatabaseEnabled } from "../../database/pool.js";
 import type {
   CriarConversaIaInput,
+  ListarMensagensIaInput,
   ListarConversasIaInput,
   PerguntarIaInput,
   RelatorioInicialIaInput,
@@ -81,9 +82,10 @@ export const iaService = {
     return { dados: result.rows[0] };
   },
 
-  async listarMensagens(conversaId: string, usuarioId: string) {
+  async listarMensagens(conversaId: string, input: ListarMensagensIaInput) {
     await garantirTabelasIa();
-    await buscarConversaDoUsuario(conversaId, usuarioId);
+    const conversa = await buscarConversaDoUsuario(conversaId, input.usuarioId);
+    validarConversaDoIdoso(conversa, input.idosoId);
 
     const result = await getPool().query<MensagemIaRow>(
       `
@@ -118,6 +120,7 @@ export const iaService = {
             titulo: "Novo chat",
           })
         ).dados;
+    validarConversaDoIdoso(conversa, input.idosoId);
 
     const conteudoUsuario = input.anexos?.length
       ? `${input.mensagem || "Analise esta imagem."}\n[imagem anexada]`
@@ -290,6 +293,11 @@ async function garantirTabelasIa() {
   `);
 
   await getPool().query(`
+    create index if not exists idx_conversas_ia_usuario_idoso_atualizado
+    on conversas_ia (usuario_id, idoso_id, atualizado_em desc)
+  `);
+
+  await getPool().query(`
     create index if not exists idx_mensagens_ia_conversa_criado
     on mensagens_ia (conversa_id, criado_em asc)
   `);
@@ -332,6 +340,20 @@ async function buscarConversaDoUsuario(conversaId: string, usuarioId: string) {
   }
 
   return conversa;
+}
+
+function validarConversaDoIdoso(
+  conversa: ConversaIaRow,
+  idosoId?: string | null,
+) {
+  if (!idosoId) return;
+  if (conversa.idoso_id === idosoId) return;
+
+  throw new AppError(
+    "CONVERSA_IA_DE_OUTRA_FICHA",
+    "Este chat pertence a outra ficha.",
+    404,
+  );
 }
 
 async function buscarMensagens(conversaId: string) {

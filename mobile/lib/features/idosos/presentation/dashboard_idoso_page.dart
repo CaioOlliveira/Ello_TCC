@@ -61,7 +61,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel carregar o resumo.')),
+        const SnackBar(content: Text('Não foi possível carregar o resumo.')),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -87,8 +87,8 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                 children: [
                   StaggeredEntry(
                     index: 0,
-                    child:
-                        _DashboardHeader(onProfile: () => context.go('/perfil')),
+                    child: _DashboardHeader(
+                        onProfile: () => context.go('/perfil')),
                   ),
                   const SizedBox(height: 10),
                   StaggeredEntry(
@@ -150,7 +150,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     index: 6,
                     child: _SummaryCard(
                       icon: Icons.restaurant_rounded,
-                      title: 'Ultima refeicao:',
+                      title: 'Última refeição:',
                       value: _resumo.ultimaRefeicaoLabel,
                       valueColor: const Color(0xFF168FA1),
                       onTap: () => context.go('/alimentacao'),
@@ -168,7 +168,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Proximo compromisso',
+                    'Próximo compromisso',
                     style: TextStyle(
                       color: Color(0xFF333333),
                       fontSize: 15,
@@ -418,7 +418,7 @@ class _MedicationAlert extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Proximo medicamento',
+                  'Próximo medicamento',
                   style: TextStyle(
                     color: Color(0xFFE47A00),
                     fontSize: 14,
@@ -663,9 +663,9 @@ class _DashboardResumo {
     this.medicamentosLabel = 'em breve',
     this.proximoMedicamentoLabel = 'Cadastre medicamentos',
     this.proximoMedicamentoHora = '--:--',
-    this.humorLabel = 'Sem registro',
-    this.ultimaRefeicaoLabel = 'Sem registro',
-    this.insulinaLabel = 'Sem registro',
+    this.humorLabel = 'não registrado ainda',
+    this.ultimaRefeicaoLabel = 'não registrado ainda',
+    this.insulinaLabel = 'não registrado ainda',
     this.proximoCompromissoTitulo = 'Nenhum compromisso',
     this.proximoCompromissoDetalhes = 'Agenda livre por enquanto',
     this.dica =
@@ -680,20 +680,23 @@ class _DashboardResumo {
     required String dica,
   }) {
     final nextAppointment = _nextAppointment(compromissos);
-    final latestMeal = _latestMeal(refeicoes);
-    final latestMood = _latestMood(humores);
+    final latestMeal = _latestMealToday(refeicoes);
+    final latestMood = _latestMoodToday(humores);
+    final latestInsulin = glicemia.insulinaRecente;
+    final hasInsulinToday =
+        latestInsulin != null && _isSameLocalDay(latestInsulin.aplicadoEm);
 
     return _DashboardResumo(
       medicamentosLabel: '0 pendentes',
       proximoMedicamentoLabel: 'Nenhum pendente',
       proximoMedicamentoHora: '--:--',
-      humorLabel: latestMood ?? 'Sem registro',
+      humorLabel: latestMood ?? 'não registrado ainda',
       ultimaRefeicaoLabel: latestMeal == null
-          ? 'Sem registro'
+          ? 'não registrado ainda'
           : 'Ha ${_timeAgo(_mealDateTime(latestMeal))}',
-      insulinaLabel: glicemia.insulinaRecente == null
-          ? 'Sem registro'
-          : '${glicemia.insulinaRecente!.tipoInsulina} normal',
+      insulinaLabel: hasInsulinToday
+          ? '${latestInsulin.tipoInsulina} normal'
+          : 'não registrado ainda',
       proximoCompromissoTitulo: nextAppointment?.title ?? 'Nenhum compromisso',
       proximoCompromissoDetalhes:
           nextAppointment?.details ?? 'Agenda livre por enquanto',
@@ -767,17 +770,21 @@ _ParsedAppointment? _appointmentFromJson(Map<String, dynamic> json) {
     dateTime: dateTime,
     local: json['local']?.toString().isNotEmpty == true
         ? json['local'].toString()
-        : 'Local nao informado',
+        : 'Local não informado',
   );
 }
 
-String? _latestMood(List<Map<String, dynamic>> humores) {
+String? _latestMoodToday(List<Map<String, dynamic>> humores) {
   if (humores.isEmpty) return null;
-  final sorted = [...humores]..sort((a, b) {
+  final sorted = humores.where((item) {
+    return _isSameLocalDay(_parseMoodDate(item));
+  }).toList()
+    ..sort((a, b) {
       final aDate = _parseMoodDate(a);
       final bDate = _parseMoodDate(b);
       return bDate.compareTo(aDate);
     });
+  if (sorted.isEmpty) return null;
   final value = sorted.first['humor']?.toString();
   if (value == null || value.isEmpty) return null;
   return value[0].toUpperCase() + value.substring(1).toLowerCase();
@@ -791,14 +798,27 @@ DateTime _parseMoodDate(Map<String, dynamic> item) {
       DateTime.fromMillisecondsSinceEpoch(0);
 }
 
-RefeicaoResumo? _latestMeal(List<RefeicaoResumo> refeicoes) {
+RefeicaoResumo? _latestMealToday(List<RefeicaoResumo> refeicoes) {
   if (refeicoes.isEmpty) return null;
-  final sorted = [...refeicoes]..sort((a, b) {
+  final sorted = refeicoes.where((item) {
+    final dateTime = _mealDateTime(item);
+    return dateTime != null && _isSameLocalDay(dateTime);
+  }).toList()
+    ..sort((a, b) {
       final aDate = _mealDateTime(a) ?? DateTime.fromMillisecondsSinceEpoch(0);
       final bDate = _mealDateTime(b) ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bDate.compareTo(aDate);
     });
+  if (sorted.isEmpty) return null;
   return sorted.first;
+}
+
+bool _isSameLocalDay(DateTime date, [DateTime? reference]) {
+  final localDate = date.toLocal();
+  final localReference = (reference ?? DateTime.now()).toLocal();
+  return localDate.year == localReference.year &&
+      localDate.month == localReference.month &&
+      localDate.day == localReference.day;
 }
 
 DateTime? _mealDateTime(RefeicaoResumo refeicao) {

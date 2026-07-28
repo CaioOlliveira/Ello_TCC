@@ -96,9 +96,6 @@ class _PermissoesDetalhadasPageState
         _sujo = false;
         _salvando = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permissões atualizadas.')),
-      );
       if (context.canPop()) {
         context.pop();
       }
@@ -255,7 +252,7 @@ class _PermissoesDetalhadasPageState
                         Expanded(
                           child: Text(
                             'Como familiar, esta pessoa pode visualizar e '
-                            'editar todas as informações da ficha.',
+                            'editar todas as informacoes da ficha.',
                             style: TextStyle(
                               color: Color(0xFF0D6E80),
                               fontSize: 12.5,
