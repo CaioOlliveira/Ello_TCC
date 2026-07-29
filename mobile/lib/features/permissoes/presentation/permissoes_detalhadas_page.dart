@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
@@ -140,9 +141,9 @@ class _PermissoesDetalhadasPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC),
+      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -163,11 +164,11 @@ class _PermissoesDetalhadasPageState
                             size: 32,
                           ),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Permissões detalhadas',
                             style: TextStyle(
-                              color: Colors.black,
+                              color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                             ),
@@ -210,7 +211,7 @@ class _PermissoesDetalhadasPageState
               Text(
                 _erro ?? 'Nao foi possivel carregar.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF4C4C4C), fontSize: 12),
+                style: TextStyle(color: adaptive(context, const Color(0xFF4C4C4C), AppDarkColors.textSecondary), fontSize: 12),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
@@ -239,7 +240,7 @@ class _PermissoesDetalhadasPageState
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE7F4F6),
+                      color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Row(
@@ -291,10 +292,10 @@ class _PermissoesDetalhadasPageState
         if (!ehFamiliar)
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFCFCFC),
+            decoration: BoxDecoration(
+              color: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
               border: Border(
-                top: BorderSide(color: Color(0xFFE4EFF1)),
+                top: BorderSide(color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border)),
               ),
             ),
             child: SizedBox(
@@ -304,8 +305,8 @@ class _PermissoesDetalhadasPageState
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF0E6F7E),
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFFCFE1E4),
-                  disabledForegroundColor: Colors.white,
+                  disabledBackgroundColor: adaptive(context, const Color(0xFFCFE1E4), AppDarkColors.borderStrong),
+                  disabledForegroundColor: adaptive(context, Colors.white, AppDarkColors.textMuted),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
@@ -345,9 +346,9 @@ class _MembroCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE4EFF1)),
+        border: Border.all(color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -360,7 +361,7 @@ class _MembroCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: const Color(0xFFD1F2F6),
+            backgroundColor: adaptive(context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
             backgroundImage: bytes != null ? MemoryImage(bytes) : null,
             child: bytes == null
                 ? const Icon(
@@ -379,8 +380,8 @@ class _MembroCard extends StatelessWidget {
                   membro.nome,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF17324D),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
@@ -394,7 +395,7 @@ class _MembroCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE7F4F6),
+                        color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -413,8 +414,8 @@ class _MembroCard extends StatelessWidget {
                           membro.relacao!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF8A8A8A),
+                          style: TextStyle(
+                            color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
                             fontSize: 12,
                           ),
                         ),
@@ -426,16 +427,16 @@ class _MembroCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.phone_outlined,
                         size: 14,
-                        color: Color(0xFF9B9B9B),
+                        color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
                       ),
                       const SizedBox(width: 5),
                       Text(
                         membro.telefone!,
-                        style: const TextStyle(
-                          color: Color(0xFF5E6B73),
+                        style: TextStyle(
+                          color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
                           fontSize: 12,
                         ),
                       ),
@@ -476,7 +477,7 @@ class _PermissaoSecao extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF8BD2DC)),
         boxShadow: [
@@ -496,8 +497,8 @@ class _PermissaoSecao extends StatelessWidget {
               const SizedBox(width: 9),
               Text(
                 titulo,
-                style: const TextStyle(
-                  color: Color(0xFF073248),
+                style: TextStyle(
+                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
@@ -561,12 +562,14 @@ class _ModuloCheckbox extends StatelessWidget {
               height: 24,
               margin: const EdgeInsets.only(top: 1),
               decoration: BoxDecoration(
-                color: selecionado ? const Color(0xFF2BA8BA) : Colors.white,
+                color: selecionado
+                    ? const Color(0xFF2BA8BA)
+                    : adaptive(context, Colors.white, AppDarkColors.surface),
                 borderRadius: BorderRadius.circular(7),
                 border: Border.all(
                   color: selecionado
                       ? const Color(0xFF2BA8BA)
-                      : const Color(0xFFC7D8DA),
+                      : adaptive(context, const Color(0xFFC7D8DA), AppDarkColors.border),
                   width: 1.6,
                 ),
               ),
@@ -582,8 +585,8 @@ class _ModuloCheckbox extends StatelessWidget {
             Expanded(
               child: Text(
                 modulo.titulo,
-                style: const TextStyle(
-                  color: Color(0xFF17324D),
+                style: TextStyle(
+                  color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   height: 1.25,

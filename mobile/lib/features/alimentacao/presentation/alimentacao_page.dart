@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 
 enum _AlimentacaoView { lista, form }
 
@@ -155,8 +156,8 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
           children: [
             Text(
               refeicao.tipoRefeicao,
-              style: const TextStyle(
-                color: Color(0xFF073248),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
               ),
@@ -218,7 +219,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -320,15 +321,15 @@ class _AlimentacaoListView extends StatelessWidget {
                 icon: const Icon(Icons.chevron_left_rounded, size: 30),
                 label: const Text('Voltar'),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF073248),
+                  foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 ),
               ),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Alimentacao',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Color(0xFF073248),
+                    color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                     fontSize: 29,
                     fontWeight: FontWeight.w800,
                   ),
@@ -351,10 +352,10 @@ class _AlimentacaoListView extends StatelessWidget {
                   onAddWater: onAddWater,
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Refeicoes do dia',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                   ),
@@ -416,7 +417,7 @@ class _AlimentacaoListView extends StatelessWidget {
                 child: OutlinedButton(
                   onPressed: onHistory,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF073248),
+                    foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                     side:
                         const BorderSide(color: Color(0xFF1897AA), width: 1.3),
                     shape: RoundedRectangleBorder(
@@ -474,22 +475,22 @@ class _WaterCardState extends State<_WaterCard> {
     if (peso == null || peso <= 0) {
       return Container(
         padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
-        decoration: _softCardDecoration(),
+        decoration: _softCardDecoration(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Peso do idoso',
               style: TextStyle(
-                color: Color(0xFF073248),
+                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Informe o peso para calcular a meta diaria de agua.',
-              style: TextStyle(color: Color(0xFF6E7C83), fontSize: 12),
+              style: TextStyle(color: adaptive(context, const Color(0xFF6E7C83), AppDarkColors.textSecondary), fontSize: 12),
             ),
             const SizedBox(height: 10),
             Row(
@@ -503,7 +504,7 @@ class _WaterCardState extends State<_WaterCard> {
                       hintText: 'Ex: 67',
                       suffixText: 'kg',
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(9),
                         borderSide: const BorderSide(color: Color(0xFF2BA8BA)),
@@ -543,14 +544,14 @@ class _WaterCardState extends State<_WaterCard> {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-      decoration: _softCardDecoration(),
+      decoration: _softCardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Agua consumida',
             style: TextStyle(
-              color: Color(0xFF073248),
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontWeight: FontWeight.w800,
               fontSize: 13,
             ),
@@ -570,8 +571,8 @@ class _WaterCardState extends State<_WaterCard> {
                   children: [
                     Text(
                       '${todayTotal.toInt()}ml / ${target.toInt()}ml',
-                      style: const TextStyle(
-                        color: Color(0xFF073248),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                       ),
@@ -586,7 +587,7 @@ class _WaterCardState extends State<_WaterCard> {
                         child: LinearProgressIndicator(
                           minHeight: 10,
                           value: value,
-                          backgroundColor: const Color(0xFFE0E0E0),
+                          backgroundColor: adaptive(context, const Color(0xFFE0E0E0), AppDarkColors.surfaceAlt),
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             Color(0xFF003B4F),
                           ),
@@ -601,10 +602,10 @@ class _WaterCardState extends State<_WaterCard> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Adicionar agua',
-                  style: TextStyle(color: Color(0xFF777777), fontSize: 11),
+                  style: TextStyle(color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary), fontSize: 11),
                 ),
               ),
               SizedBox(
@@ -634,11 +635,11 @@ class _WaterCardState extends State<_WaterCard> {
                 ),
             ],
           ),
-          const Align(
+          Align(
             alignment: Alignment.centerRight,
             child: Text(
               'Copo: 200ml',
-              style: TextStyle(color: Color(0xFF777777), fontSize: 10),
+              style: TextStyle(color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary), fontSize: 10),
             ),
           ),
         ],
@@ -700,7 +701,9 @@ class _MealCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
-        color: filled ? const Color(0xFFD5EEF3) : Colors.white,
+        color: filled
+            ? adaptive(context, const Color(0xFFD5EEF3), AppDarkColors.tintedInfo)
+            : adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
@@ -726,18 +729,18 @@ class _MealCard extends StatelessWidget {
                         refeicao.tipoRefeicao,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
+                        style: TextStyle(
+                          color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
                     if (!refeicao.concluida)
-                      const Text(
+                      Text(
                         'Pendente',
                         style: TextStyle(
-                          color: Color(0xFF073248),
+                          color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -746,15 +749,13 @@ class _MealCard extends StatelessWidget {
                 ),
                 Text(
                   refeicao.horaConsumo ?? '--:--',
-                  style:
-                      const TextStyle(color: Color(0xFF777777), fontSize: 11),
+                  style: TextStyle(color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary), fontSize: 11),
                 ),
                 Text(
                   refeicao.alimentos.map((item) => item.nome).join(', '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      const TextStyle(color: Color(0xFF777777), fontSize: 11),
+                  style: TextStyle(color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary), fontSize: 11),
                 ),
                 const SizedBox(height: 5),
                 Row(
@@ -793,7 +794,7 @@ class _TinyButton extends StatelessWidget {
           onPressed: onTap,
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF8BCDD8),
-            foregroundColor: const Color(0xFF073248),
+            foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
             padding: EdgeInsets.zero,
             textStyle:
                 const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
@@ -1029,8 +1030,8 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
           DropdownButtonFormField<String>(
             initialValue: _tipo,
             decoration: const InputDecoration(border: InputBorder.none),
-            style: const TextStyle(
-              color: Color(0xFF073248),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 21,
               fontWeight: FontWeight.w500,
             ),
@@ -1128,7 +1129,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
             controller: _observacoesController,
             minLines: 4,
             maxLines: 5,
-            decoration: _inputDecoration(),
+            decoration: _inputDecoration(context),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -1173,7 +1174,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
             child: OutlinedButton(
               onPressed: _saving ? null : widget.onCancel,
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF073248),
+                foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 side: const BorderSide(color: Color(0xFF1897AA)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -1208,7 +1209,7 @@ class _FoodChip extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFEFEFEF),
+          color: adaptive(context, const Color(0xFFEFEFEF), AppDarkColors.surfaceAlt),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -1223,12 +1224,12 @@ class _FoodChip extends StatelessWidget {
             Expanded(
               child: Text(
                 alimento.nome,
-                style: const TextStyle(color: Color(0xFF386073), fontSize: 14),
+                style: TextStyle(color: adaptive(context, const Color(0xFF386073), AppDarkColors.textPrimary), fontSize: 14),
               ),
             ),
             Text(
               '${_formatNumber(alimento.calorias ?? 0)}kcal  ${_formatNumber(alimento.pesoGramas ?? 0)}g',
-              style: const TextStyle(color: Color(0xFF386073), fontSize: 12),
+              style: TextStyle(color: adaptive(context, const Color(0xFF386073), AppDarkColors.textPrimary), fontSize: 12),
             ),
             IconButton(
               tooltip: 'Remover alimento',
@@ -1279,7 +1280,9 @@ class _AcceptanceButton extends StatelessWidget {
         height: 70,
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE3F5F8) : Colors.white,
+          color: selected
+              ? adaptive(context, const Color(0xFFE3F5F8), AppDarkColors.tintedInfo)
+              : adaptive(context, Colors.white, AppDarkColors.surface),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFF2BA8BA)),
         ),
@@ -1391,7 +1394,7 @@ class _LabeledField extends StatelessWidget {
           controller: controller,
           readOnly: readOnly,
           onTap: onTap,
-          decoration: _inputDecoration(suffixIcon: suffixIcon),
+          decoration: _inputDecoration(context, suffixIcon: suffixIcon),
         ),
       ],
     );
@@ -1420,7 +1423,7 @@ class _PlainInput extends StatelessWidget {
         hintText: hintText,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
         filled: true,
-        fillColor: const Color(0xFFE9E9E9),
+        fillColor: adaptive(context, const Color(0xFFE9E9E9), AppDarkColors.surfaceAlt),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(999),
           borderSide: BorderSide.none,
@@ -1432,10 +1435,10 @@ class _PlainInput extends StatelessWidget {
   }
 }
 
-InputDecoration _inputDecoration({IconData? suffixIcon}) {
+InputDecoration _inputDecoration(BuildContext context, {IconData? suffixIcon}) {
   return InputDecoration(
     filled: true,
-    fillColor: Colors.white,
+    fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
     suffixIcon: suffixIcon == null
         ? null
         : Icon(suffixIcon, color: const Color(0xFF2BA8BA)),
@@ -1483,9 +1486,9 @@ bool _isToday(DateTime date) {
       date.day == now.day;
 }
 
-BoxDecoration _softCardDecoration() {
+BoxDecoration _softCardDecoration(BuildContext context) {
   return BoxDecoration(
-    color: Colors.white,
+    color: adaptive(context, Colors.white, AppDarkColors.surface),
     borderRadius: BorderRadius.circular(8),
     boxShadow: [
       BoxShadow(

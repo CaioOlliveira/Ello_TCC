@@ -38,6 +38,9 @@ class ApiEndpoints {
   static const oxigenacao = '/oxigenacao';
   static const oxigenacaoResumo = '/oxigenacao/resumo';
   static const oxigenacaoHistorico = '/oxigenacao/historico';
+  static const temperatura = '/temperatura';
+  static const temperaturaResumo = '/temperatura/resumo';
+  static const temperaturaHistorico = '/temperatura/historico';
   static String dicaDashboard(String idosoId) =>
       '/dashboard/idosos/$idosoId/dica';
   static String compromisso(String id) => '/agenda/$id';

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_palette.dart';
+
 class CoraIAPage extends StatelessWidget {
   const CoraIAPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -19,8 +21,8 @@ class CoraIAPage extends StatelessWidget {
                   Container(
                     width: 82,
                     height: 82,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD1F2F6),
+                    decoration: BoxDecoration(
+                      color: adaptive(context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -30,21 +32,21 @@ class CoraIAPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'CoraIA',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Color(0xFF073248),
+                      color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'Essa funcionalidade vai chegar em breve.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Color(0xFF5E6B73),
+                      color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
                       fontSize: 16,
                       height: 1.35,
                     ),

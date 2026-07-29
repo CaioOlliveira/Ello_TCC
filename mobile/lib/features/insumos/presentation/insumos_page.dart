@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 part 'cadastro_insumo_page.dart';
@@ -178,9 +179,9 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -287,11 +288,11 @@ class _InsumosListView extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 2),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Insumos',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     height: 1,
@@ -300,11 +301,14 @@ class _InsumosListView extends StatelessWidget {
               ),
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.only(left: 50),
+          Padding(
+            padding: const EdgeInsets.only(left: 50),
             child: Text(
               'Controle de estoque dos produtos usados no cuidado',
-              style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 11.5),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+                fontSize: 11.5,
+              ),
             ),
           ),
           const SizedBox(height: 7),
@@ -369,7 +373,7 @@ class _InsumosListView extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onHistory,
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF073248),
+                foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 side: const BorderSide(color: Color(0xFF2CA0B4), width: 1.4),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -409,8 +413,8 @@ class _StatusFilters extends StatelessWidget {
           Expanded(
             child: Material(
               color: selected == filter.$1
-                  ? const Color(0xFFDDF2F5)
-                  : Colors.white,
+                  ? adaptive(context, const Color(0xFFDDF2F5), AppDarkColors.tintedInfo)
+                  : adaptive(context, Colors.white, AppDarkColors.surface),
               borderRadius: BorderRadius.circular(999),
               child: InkWell(
                 onTap: () => onChanged(filter.$1),
@@ -439,7 +443,7 @@ class _StatusFilters extends StatelessWidget {
                           style: TextStyle(
                             color: selected == filter.$1
                                 ? const Color(0xFF006B7E)
-                                : const Color(0xFF6A6A6A),
+                                : adaptive(context, const Color(0xFF6A6A6A), AppDarkColors.textSecondary),
                             fontSize: 11.2,
                             fontWeight: selected == filter.$1
                                 ? FontWeight.w800
@@ -471,7 +475,7 @@ class _InsumoCard extends StatelessWidget {
     final status = _statusFor(insumo);
 
     return Material(
-      color: Colors.white,
+      color: adaptive(context, Colors.white, AppDarkColors.surface),
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.18),
       borderRadius: BorderRadius.circular(8),
@@ -490,8 +494,8 @@ class _InsumoCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.black,
+                style: TextStyle(
+                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                 ),
@@ -501,7 +505,10 @@ class _InsumoCard extends StatelessWidget {
                 _stockLabel(insumo.quantidadeUnidades),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.black, fontSize: 9.5),
+                style: TextStyle(
+                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                  fontSize: 9.5,
+                ),
               ),
               const SizedBox(height: 5),
               _StatusBadge(status: status, compact: true),
@@ -549,8 +556,12 @@ class _LabeledField extends StatelessWidget {
           onTap: onTap,
           minLines: minLines,
           maxLines: maxLines,
-          style: const TextStyle(color: Color(0xFF17324D), fontSize: 14),
+          style: TextStyle(
+            color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+            fontSize: 14,
+          ),
           decoration: _inputDecoration(
+            context,
             '',
             suffixIcon: suffixIcon,
             suffixText: suffixText,
@@ -572,8 +583,8 @@ class _FormLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: 1, bottom: 3),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Colors.black,
+        style: TextStyle(
+          color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -597,14 +608,17 @@ class _DetailRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: Colors.black, fontSize: 12),
+              style: TextStyle(
+                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                fontSize: 12,
+              ),
             ),
           ),
           Text(
             value,
             textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: Color(0xFF003B4F),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -665,7 +679,7 @@ class _ProductImage extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFFE9F5F7),
+        color: adaptive(context, const Color(0xFFE9F5F7), AppDarkColors.tintedInfo),
         borderRadius: BorderRadius.circular(6),
         image: provider == null
             ? null
@@ -705,7 +719,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF555555)),
+              style: TextStyle(color: adaptive(context, const Color(0xFF555555), AppDarkColors.textSecondary)),
             ),
             const SizedBox(height: 12),
             OutlinedButton(onPressed: onRetry, child: const Text('Voltar')),
@@ -730,7 +744,7 @@ class _EmptyState extends StatelessWidget {
     return Center(
       child: Text(
         message,
-        style: const TextStyle(color: Color(0xFF777777), fontSize: 13),
+        style: TextStyle(color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary), fontSize: 13),
       ),
     );
   }
@@ -751,19 +765,23 @@ class _InsumoStatus {
 }
 
 InputDecoration _inputDecoration(
+  BuildContext context,
   String hint, {
   IconData? suffixIcon,
   String? suffixText,
 }) {
   return InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(color: Color(0xFF9A9A9A), fontSize: 11),
+    hintStyle: TextStyle(
+      color: adaptive(context, const Color(0xFF9A9A9A), AppDarkColors.textMuted),
+      fontSize: 11,
+    ),
     filled: true,
-    fillColor: Colors.white,
+    fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
     isDense: true,
     contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 13),
     suffixText: suffixText,
-    suffixStyle: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
+    suffixStyle: TextStyle(color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary), fontSize: 12),
     suffixIcon: suffixIcon == null
         ? null
         : Icon(suffixIcon, color: const Color(0xFF2CA0B4), size: 17),
@@ -783,11 +801,12 @@ InputDecoration _inputDecoration(
   );
 }
 
-ButtonStyle _primaryButtonStyle() {
+ButtonStyle _primaryButtonStyle(BuildContext context) {
   return FilledButton.styleFrom(
     backgroundColor: const Color(0xFF3BA7B8),
     foregroundColor: Colors.white,
-    disabledBackgroundColor: const Color(0xFF8ABEC7),
+    disabledBackgroundColor: adaptive(context, const Color(0xFF8ABEC7), AppDarkColors.borderStrong),
+    disabledForegroundColor: adaptive(context, Colors.white, AppDarkColors.textMuted),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     minimumSize: const Size.fromHeight(52),
     textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),

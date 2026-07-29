@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/app_palette.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -43,7 +44,7 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: adaptive(context, AppColors.background, AppDarkColors.bg),
       body: Center(
         child: FadeTransition(
           opacity: _fade,

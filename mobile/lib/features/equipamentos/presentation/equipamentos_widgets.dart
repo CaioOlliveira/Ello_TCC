@@ -68,8 +68,8 @@ class _LegendItem extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFF4D4D4D),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF4D4D4D), AppDarkColors.textSecondary),
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
             ),
@@ -90,7 +90,7 @@ class _DetailsHeader extends StatelessWidget {
     final status = equipamento.statusInfo;
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Row(
         children: [
           _EquipmentPicture(equipamento: equipamento, size: 96),
@@ -103,21 +103,21 @@ class _DetailsHeader extends StatelessWidget {
                   equipamento.nome,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF222222),
+                    color: adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
                   ),
                 ),
                 Text('Marca: ${emptyDash(equipamento.marca)}',
-                    style: _detailStyle()),
+                    style: _detailStyle(context)),
                 Text('Modelo: ${emptyDash(equipamento.modelo)}',
-                    style: _detailStyle()),
+                    style: _detailStyle(context)),
                 Text(
                   'Local onde e guardado: ${emptyDash(equipamento.localGuardado)}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: _detailStyle(),
+                  style: _detailStyle(context),
                 ),
                 const SizedBox(height: 6),
                 Align(
@@ -172,7 +172,7 @@ class _InfoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Row(
         children: [
           Container(
@@ -189,13 +189,13 @@ class _InfoTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: _mutedStyle()),
+                Text(label, style: _mutedStyle(context)),
                 Text(
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF111111),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                   ),
@@ -218,7 +218,7 @@ class _MaintenanceEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 9, 10, 9),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -296,7 +296,10 @@ class _MiniLine extends StatelessWidget {
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF111111), fontSize: 12),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -317,7 +320,7 @@ class _EquipmentPicture extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7F8),
+        color: adaptive(context, const Color(0xFFF4F7F8), AppDarkColors.surfaceAlt),
         borderRadius: BorderRadius.circular(8),
       ),
       child: equipamento.urlFoto.isNotEmpty
@@ -406,7 +409,11 @@ class _EquipmentIcon extends StatelessWidget {
             : normalized.contains('glic')
                 ? Icons.bloodtype_outlined
                 : Icons.medical_services_outlined;
-    return Icon(icon, color: const Color(0xFF073248), size: size * 0.55);
+    return Icon(
+      icon,
+      color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+      size: size * 0.55,
+    );
   }
 }
 
@@ -431,7 +438,10 @@ class _LabeledField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF333333))),
+              style: TextStyle(
+                fontSize: 13,
+                color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+              )),
           SizedBox(
             height: maxLines == 1 ? 40 : null,
             child: TextField(
@@ -439,7 +449,7 @@ class _LabeledField extends StatelessWidget {
               keyboardType: keyboardType,
               maxLines: maxLines,
               style: const TextStyle(fontSize: 15),
-              decoration: _inputDecoration(),
+              decoration: _inputDecoration(context),
             ),
           ),
         ],
@@ -467,7 +477,10 @@ class _DateField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF333333))),
+              style: TextStyle(
+                fontSize: 13,
+                color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+              )),
           SizedBox(
             height: 40,
             child: TextField(
@@ -476,6 +489,7 @@ class _DateField extends StatelessWidget {
               onTap: onTap,
               style: const TextStyle(fontSize: 15),
               decoration: _inputDecoration(
+                context,
                 suffix: const Icon(Icons.calendar_month_rounded, size: 20),
               ),
             ),
@@ -505,7 +519,10 @@ class _OptionField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF333333))),
+              style: TextStyle(
+                fontSize: 13,
+                color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+              )),
           SizedBox(
             height: 40,
             child: TextField(
@@ -514,6 +531,7 @@ class _OptionField extends StatelessWidget {
               onTap: onTap,
               style: const TextStyle(fontSize: 15),
               decoration: _inputDecoration(
+                context,
                 suffix: const Icon(Icons.keyboard_arrow_down_rounded),
               ),
             ),
@@ -544,7 +562,9 @@ class _TypeChip extends StatelessWidget {
         height: 42,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFE1F3F6) : Colors.white,
+          color: selected
+              ? adaptive(context, const Color(0xFFE1F3F6), AppDarkColors.tintedInfo)
+              : adaptive(context, Colors.white, AppDarkColors.surface),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFF38AFC0)),
         ),
@@ -561,8 +581,8 @@ class _TypeChip extends StatelessWidget {
             const SizedBox(width: 5),
             Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF073248),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -596,8 +616,8 @@ class _MessageState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF073248),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -606,7 +626,10 @@ class _MessageState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF777777), fontSize: 14),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary),
+              fontSize: 14,
+            ),
           ),
         ],
       ),
@@ -614,14 +637,14 @@ class _MessageState extends StatelessWidget {
   }
 }
 
-InputDecoration _inputDecoration({Widget? suffix}) {
+InputDecoration _inputDecoration(BuildContext context, {Widget? suffix}) {
   return InputDecoration(
     isDense: true,
     contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
     suffixIcon: suffix,
     suffixIconColor: const Color(0xFF1696AA),
     filled: true,
-    fillColor: Colors.white,
+    fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
       borderSide: const BorderSide(color: Color(0xFF38AFC0)),
@@ -643,9 +666,9 @@ ButtonStyle _primaryButtonStyle() {
   );
 }
 
-BoxDecoration _cardDecoration() {
+BoxDecoration _cardDecoration(BuildContext context) {
   return BoxDecoration(
-    color: Colors.white,
+    color: adaptive(context, Colors.white, AppDarkColors.surface),
     borderRadius: BorderRadius.circular(8),
     boxShadow: [
       BoxShadow(
@@ -657,13 +680,20 @@ BoxDecoration _cardDecoration() {
   );
 }
 
-TextStyle _mutedStyle() {
-  return const TextStyle(
-      color: Color(0xFF767676), fontSize: 12.5, height: 1.25);
+TextStyle _mutedStyle(BuildContext context) {
+  return TextStyle(
+    color: adaptive(context, const Color(0xFF767676), AppDarkColors.textMuted),
+    fontSize: 12.5,
+    height: 1.25,
+  );
 }
 
-TextStyle _detailStyle() {
-  return const TextStyle(color: Color(0xFF222222), fontSize: 12.5, height: 1.2);
+TextStyle _detailStyle(BuildContext context) {
+  return TextStyle(
+    color: adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
+    fontSize: 12.5,
+    height: 1.2,
+  );
 }
 
 DateTime? parseDate(dynamic value) {

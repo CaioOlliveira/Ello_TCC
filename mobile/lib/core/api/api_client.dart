@@ -960,6 +960,204 @@ class OxigenacaoResumo {
   final List<OxigenacaoSeriePonto> serie;
 }
 
+class TemperaturaRegistro {
+  const TemperaturaRegistro({
+    required this.id,
+    required this.idosoId,
+    required this.temperatura,
+    required this.medidoEm,
+    this.observacoes,
+  });
+
+  factory TemperaturaRegistro.fromJson(Map<String, dynamic> json) {
+    final temperatura = json['temperatura'];
+
+    return TemperaturaRegistro(
+      id: json['id']?.toString() ?? '',
+      idosoId: json['idosoId']?.toString() ?? '',
+      temperatura:
+          temperatura is num ? temperatura.toDouble() : 0,
+      medidoEm: (DateTime.tryParse(json['medidoEm']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
+      observacoes: json['observacoes']?.toString(),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final double temperatura;
+  final DateTime medidoEm;
+  final String? observacoes;
+}
+
+class TemperaturaHistoricoEntrada {
+  const TemperaturaHistoricoEntrada({
+    required this.id,
+    required this.usuarioNome,
+    required this.acao,
+    required this.descricao,
+    required this.dataHora,
+    required this.badge,
+    this.temperatura,
+  });
+
+  factory TemperaturaHistoricoEntrada.fromJson(Map<String, dynamic> json) {
+    final temperatura = json['temperatura'];
+
+    return TemperaturaHistoricoEntrada(
+      id: json['id']?.toString() ?? '',
+      usuarioNome: json['usuarioNome']?.toString() ?? 'Cuidador',
+      acao: json['acao']?.toString() ?? 'criar',
+      descricao: json['descricao']?.toString() ?? '',
+      temperatura: temperatura is num ? temperatura.toDouble() : null,
+      dataHora: (DateTime.tryParse(json['dataHora']?.toString() ?? '') ??
+              DateTime.now())
+          .toLocal(),
+      badge: GlicemiaHistoricoBadge.fromJson(
+        json['badge'] is Map<String, dynamic> ? json['badge'] : null,
+      ),
+    );
+  }
+
+  final String id;
+  final String usuarioNome;
+  final String acao;
+  final String descricao;
+  final double? temperatura;
+  final DateTime dataHora;
+  final GlicemiaHistoricoBadge badge;
+}
+
+class TemperaturaSeriePonto {
+  const TemperaturaSeriePonto({
+    required this.data,
+    required this.rotulo,
+    this.valor,
+  });
+
+  factory TemperaturaSeriePonto.fromJson(Map<String, dynamic> json) {
+    final valor = json['valor'];
+
+    return TemperaturaSeriePonto(
+      data: json['data']?.toString() ?? '',
+      rotulo: json['rotulo']?.toString() ?? '',
+      valor: valor is num ? valor.toDouble() : null,
+    );
+  }
+
+  final String data;
+  final String rotulo;
+  final double? valor;
+}
+
+class TemperaturaAlerta {
+  const TemperaturaAlerta({
+    required this.status,
+    required this.titulo,
+    required this.mensagem,
+    required this.cor,
+  });
+
+  factory TemperaturaAlerta.fromJson(Map<String, dynamic>? json) {
+    return TemperaturaAlerta(
+      status: json?['status']?.toString() ?? 'sem_registro',
+      titulo: json?['titulo']?.toString() ?? 'Sem medicao registrada',
+      mensagem: json?['mensagem']?.toString() ??
+          'Registre a primeira temperatura para gerar alertas.',
+      cor: json?['cor']?.toString() ?? 'neutro',
+    );
+  }
+
+  final String status;
+  final String titulo;
+  final String mensagem;
+  final String cor;
+}
+
+class TemperaturaAnalise {
+  const TemperaturaAnalise({
+    required this.totalMedicoes,
+    required this.totalForaDaFaixa,
+    required this.texto,
+    this.mediaUltimos7Dias,
+  });
+
+  factory TemperaturaAnalise.fromJson(Map<String, dynamic>? json) {
+    final media = json?['mediaUltimos7Dias'];
+
+    return TemperaturaAnalise(
+      mediaUltimos7Dias: media is num ? media.toDouble() : null,
+      totalMedicoes: json?['totalMedicoes'] is num
+          ? (json?['totalMedicoes'] as num).toInt()
+          : 0,
+      totalForaDaFaixa: json?['totalForaDaFaixa'] is num
+          ? (json?['totalForaDaFaixa'] as num).toInt()
+          : 0,
+      texto: json?['texto']?.toString() ??
+          'Ainda nao ha medicoes suficientes para gerar uma analise.',
+    );
+  }
+
+  final double? mediaUltimos7Dias;
+  final int totalMedicoes;
+  final int totalForaDaFaixa;
+  final String texto;
+}
+
+class TemperaturaResumo {
+  const TemperaturaResumo({
+    required this.totalRegistros,
+    required this.alerta,
+    required this.analise,
+    required this.serie,
+    this.ultima,
+    this.mediaTemperaturaDia,
+    this.proximaMedicao,
+  });
+
+  factory TemperaturaResumo.fromJson(Map<String, dynamic> json) {
+    final ultima = json['ultima'];
+    final serie = json['serie'];
+    final proximaMedicao = json['proximaMedicao']?.toString();
+    final mediaTemperaturaDia = json['mediaTemperaturaDia'];
+
+    return TemperaturaResumo(
+      ultima: ultima is Map<String, dynamic>
+          ? TemperaturaRegistro.fromJson(ultima)
+          : null,
+      totalRegistros: json['totalRegistros'] is num
+          ? (json['totalRegistros'] as num).toInt()
+          : 0,
+      mediaTemperaturaDia:
+          mediaTemperaturaDia is num ? mediaTemperaturaDia.toDouble() : null,
+      proximaMedicao: proximaMedicao == null
+          ? null
+          : DateTime.tryParse(proximaMedicao)?.toLocal(),
+      alerta: TemperaturaAlerta.fromJson(
+        json['alerta'] is Map<String, dynamic> ? json['alerta'] : null,
+      ),
+      analise: TemperaturaAnalise.fromJson(
+        json['analise'] is Map<String, dynamic> ? json['analise'] : null,
+      ),
+      serie: serie is List
+          ? serie
+              .whereType<Map<String, dynamic>>()
+              .map(TemperaturaSeriePonto.fromJson)
+              .toList()
+          : const [],
+    );
+  }
+
+  final TemperaturaRegistro? ultima;
+  final int totalRegistros;
+  final double? mediaTemperaturaDia;
+  final DateTime? proximaMedicao;
+  final TemperaturaAlerta alerta;
+  final TemperaturaAnalise analise;
+  final List<TemperaturaSeriePonto> serie;
+}
+
 class MedicamentoHorario {
   const MedicamentoHorario({
     required this.id,
@@ -3139,6 +3337,104 @@ class ApiClient {
       throw _toApiException(
         error,
         fallback: 'Erro ao registrar oxigenação.',
+      );
+    }
+  }
+
+  Future<TemperaturaResumo> getResumoTemperatura({
+    required String idosoId,
+    DateTime? dataReferencia,
+    String periodo = 'dia',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.temperaturaResumo,
+        queryParameters: {
+          'idosoId': idosoId,
+          'periodo': periodo,
+          if (dataReferencia != null)
+            'dataReferencia': _toIsoDateOnly(dataReferencia),
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return TemperaturaResumo.fromJson(dados);
+      }
+
+      return TemperaturaResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar temperatura.',
+      );
+    }
+  }
+
+  Future<List<TemperaturaHistoricoEntrada>> getHistoricoTemperatura({
+    required String idosoId,
+    DateTime? dataReferencia,
+    String periodo = 'dia',
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.temperaturaHistorico,
+        queryParameters: {
+          'idosoId': idosoId,
+          'periodo': periodo,
+          if (dataReferencia != null)
+            'dataReferencia': _toIsoDateOnly(dataReferencia),
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is List) {
+        return dados
+            .whereType<Map<String, dynamic>>()
+            .map(TemperaturaHistoricoEntrada.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar histórico de temperatura.',
+      );
+    }
+  }
+
+  Future<TemperaturaRegistro> criarTemperatura({
+    required String idosoId,
+    required double temperatura,
+    required DateTime medidoEm,
+    String? observacoes,
+    String? registradoPorId,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.temperatura,
+        data: {
+          'idosoId': idosoId,
+          'temperatura': temperatura,
+          'medidoEm': medidoEm.toUtc().toIso8601String(),
+          if (observacoes != null && observacoes.isNotEmpty)
+            'observacoes': observacoes,
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
+        },
+      );
+      final dados = response.data?['dados'];
+
+      if (dados is Map<String, dynamic>) {
+        return TemperaturaRegistro.fromJson(dados);
+      }
+
+      return TemperaturaRegistro.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao registrar temperatura.',
       );
     }
   }

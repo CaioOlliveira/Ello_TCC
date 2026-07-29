@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import 'monitoramento_catalog.dart';
 
@@ -30,7 +31,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
     final selectedIds = await showModalBottomSheet<List<String>>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -85,9 +86,9 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
         : monitoramentoOptionsByIds(idoso.monitoramentos);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.dark,
+        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -109,11 +110,11 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                       ),
                     ),
                     const SizedBox(height: 22),
-                    const Text(
+                    Text(
                       'Monitoramento',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF073248),
+                        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         height: 1,
@@ -154,7 +155,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                             : const Icon(Icons.add_rounded, size: 27),
                         label: const Text('Adicionar registro'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF073248),
+                          foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                           side: const BorderSide(
                             color: Color(0xFF1696AA),
                             width: 1.4,
@@ -262,7 +263,7 @@ class _MonitoramentoTileContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: adaptive(context, Colors.white, AppDarkColors.surface),
       borderRadius: BorderRadius.circular(12),
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.22),
@@ -276,8 +277,8 @@ class _MonitoramentoTileContent extends StatelessWidget {
               Container(
                 width: 48,
                 height: 48,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFCFEFF4),
+                decoration: BoxDecoration(
+                  color: adaptive(context, const Color(0xFFCFEFF4), AppDarkColors.surfaceAlt),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -296,8 +297,8 @@ class _MonitoramentoTileContent extends StatelessWidget {
                       option.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black,
+                      style: TextStyle(
+                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 15.5,
                         fontWeight: FontWeight.w800,
                         height: 1.05,
@@ -308,8 +309,8 @@ class _MonitoramentoTileContent extends StatelessWidget {
                       option.subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF8C8C8C),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF8C8C8C), AppDarkColors.textSecondary),
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         height: 1.18,
@@ -318,9 +319,9 @@ class _MonitoramentoTileContent extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFF8C8C8C),
+                color: adaptive(context, const Color(0xFF8C8C8C), AppDarkColors.textSecondary),
                 size: 23,
               ),
             ],
@@ -353,8 +354,8 @@ class _MessageState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF073248),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
@@ -363,8 +364,8 @@ class _MessageState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF737373),
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF737373), AppDarkColors.textSecondary),
               fontSize: 15,
               height: 1.3,
             ),
@@ -434,11 +435,11 @@ class _MonitoramentoPickerState extends State<_MonitoramentoPicker> {
               children: [
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'O que deseja monitorar',
                         style: TextStyle(
-                          color: Color(0xFF073248),
+                          color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                           fontSize: 23,
                           fontWeight: FontWeight.w800,
                         ),
@@ -521,7 +522,9 @@ class _PickerOptionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const Color(0xFFE0F0F3) : Colors.white,
+      color: selected
+          ? adaptive(context, const Color(0xFFE0F0F3), AppDarkColors.tintedInfo)
+          : adaptive(context, Colors.white, AppDarkColors.surface),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -533,8 +536,9 @@ class _PickerOptionTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color:
-                  selected ? const Color(0xFF38AFC0) : const Color(0xFFE3ECEE),
+              color: selected
+                  ? const Color(0xFF38AFC0)
+                  : adaptive(context, const Color(0xFFE3ECEE), AppDarkColors.border),
               width: selected ? 1.6 : 1,
             ),
           ),
@@ -545,7 +549,9 @@ class _PickerOptionTile extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: selected ? Colors.white : const Color(0xFFE9F5F7),
+                  color: selected
+                      ? adaptive(context, Colors.white, AppDarkColors.surface)
+                      : adaptive(context, const Color(0xFFE9F5F7), AppDarkColors.surfaceAlt),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -560,8 +566,8 @@ class _PickerOptionTile extends StatelessWidget {
                   option.selectionLabel,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF394B52),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF394B52), AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     height: 1.12,

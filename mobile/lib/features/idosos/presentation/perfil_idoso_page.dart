@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -29,7 +30,7 @@ class PerfilIdosoPage extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -197,7 +198,7 @@ class _CompartilharFichaSheetState
         margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
         padding: const EdgeInsets.fromLTRB(22, 14, 22, 24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
@@ -214,7 +215,7 @@ class _CompartilharFichaSheetState
               width: 42,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
+                color: adaptive(context, const Color(0xFFE0E0E0), AppDarkColors.border),
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -237,21 +238,24 @@ class _CompartilharFichaSheetState
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Compartilhar ficha',
               style: TextStyle(
-                color: Color(0xFF073248),
+                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Peça para a outra pessoa abrir o Ello, tocar em\n'
               '"Entrar com convite" e colar o código abaixo.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
+                color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
+                fontSize: 12.5,
+                height: 1.35,
+              ),
             ),
             const SizedBox(height: 22),
             AnimatedSwitcher(
@@ -299,10 +303,10 @@ class _CompartilharFichaSheetState
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 18),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE7F4F6),
+                                  color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: const Color(0xFF8BD2DC),
+                                    color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
                                   ),
                                 ),
                                 child: Text(
@@ -339,10 +343,10 @@ class _CompartilharFichaSheetState
                               ),
                             ),
                             const SizedBox(height: 10),
-                            const Text(
+                            Text(
                               'Válido por 7 dias e para um único uso.',
                               style: TextStyle(
-                                color: Color(0xFF9B9B9B),
+                                color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
                                 fontSize: 11,
                               ),
                             ),
@@ -474,9 +478,11 @@ class _InfoCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE4EFF1)),
+        border: Border.all(
+          color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -516,8 +522,8 @@ class _InfoCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Color(0xFF17324D),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     height: 1.3,

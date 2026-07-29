@@ -11,34 +11,32 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
-enum _PressaoMode { resumo, registrar, historico }
+enum _TemperaturaMode { resumo, registrar, historico }
 
 enum _ChartPeriod { dia, semanal, mes }
 
-class PressaoPage extends ConsumerStatefulWidget {
-  const PressaoPage({super.key});
+class TemperaturaPage extends ConsumerStatefulWidget {
+  const TemperaturaPage({super.key});
 
   @override
-  ConsumerState<PressaoPage> createState() => _PressaoPageState();
+  ConsumerState<TemperaturaPage> createState() => _TemperaturaPageState();
 }
 
-class _PressaoPageState extends ConsumerState<PressaoPage> {
+class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
   final _formKey = GlobalKey<FormState>();
-  final _sistolicaController = TextEditingController();
-  final _diastolicaController = TextEditingController();
-  final _batimentosController = TextEditingController();
+  final _temperaturaController = TextEditingController();
   final _observacoesController = TextEditingController();
 
-  Future<PressaoResumo>? _resumoFuture;
+  Future<TemperaturaResumo>? _resumoFuture;
   String? _loadedIdosoId;
   _ChartPeriod? _loadedPeriod;
 
-  Future<List<PressaoHistoricoEntrada>>? _historicoFuture;
+  Future<List<TemperaturaHistoricoEntrada>>? _historicoFuture;
   String? _historicoLoadedIdosoId;
   _ChartPeriod? _historicoLoadedPeriod;
   _ChartPeriod _historicoPeriod = _ChartPeriod.dia;
 
-  _PressaoMode _mode = _PressaoMode.resumo;
+  _TemperaturaMode _mode = _TemperaturaMode.resumo;
   _ChartPeriod _period = _ChartPeriod.dia;
   DateTime _referenceDate = DateTime.now();
   DateTime _medicaoDate = DateTime.now();
@@ -47,9 +45,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
 
   @override
   void dispose() {
-    _sistolicaController.dispose();
-    _diastolicaController.dispose();
-    _batimentosController.dispose();
+    _temperaturaController.dispose();
     _observacoesController.dispose();
     super.dispose();
   }
@@ -62,7 +58,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     }
     _loadedIdosoId = idosoId;
     _loadedPeriod = _period;
-    _resumoFuture = ref.read(apiClientProvider).getResumoPressao(
+    _resumoFuture = ref.read(apiClientProvider).getResumoTemperatura(
           idosoId: idosoId,
           dataReferencia: _referenceDate,
           periodo: _period.apiValue,
@@ -73,7 +69,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     setState(() {
       _loadedIdosoId = idosoId;
       _loadedPeriod = _period;
-      _resumoFuture = ref.read(apiClientProvider).getResumoPressao(
+      _resumoFuture = ref.read(apiClientProvider).getResumoTemperatura(
             idosoId: idosoId,
             dataReferencia: _referenceDate,
             periodo: _period.apiValue,
@@ -89,7 +85,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     }
     _historicoLoadedIdosoId = idosoId;
     _historicoLoadedPeriod = _historicoPeriod;
-    _historicoFuture = ref.read(apiClientProvider).getHistoricoPressao(
+    _historicoFuture = ref.read(apiClientProvider).getHistoricoTemperatura(
           idosoId: idosoId,
           dataReferencia: _referenceDate,
           periodo: _historicoPeriod.apiValue,
@@ -100,7 +96,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     setState(() {
       _historicoLoadedIdosoId = idosoId;
       _historicoLoadedPeriod = _historicoPeriod;
-      _historicoFuture = ref.read(apiClientProvider).getHistoricoPressao(
+      _historicoFuture = ref.read(apiClientProvider).getHistoricoTemperatura(
             idosoId: idosoId,
             dataReferencia: _referenceDate,
             periodo: _historicoPeriod.apiValue,
@@ -153,29 +149,27 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     setState(() => _saving = true);
 
     try {
-      final sistolica = int.parse(_sistolicaController.text.trim());
-      final diastolica = int.parse(_diastolicaController.text.trim());
-      final batimentosTexto = _batimentosController.text.trim();
+      final temperatura = double.parse(
+        _temperaturaController.text.trim().replaceAll(',', '.'),
+      );
       final medidoEm = _combine(_medicaoDate, _medicaoTime);
-      await ref.read(apiClientProvider).criarPressao(
+      await ref.read(apiClientProvider).criarTemperatura(
             idosoId: idoso.id,
-            sistolica: sistolica,
-            diastolica: diastolica,
+            temperatura: temperatura,
             medidoEm: medidoEm,
-            batimentos:
-                batimentosTexto.isEmpty ? null : int.parse(batimentosTexto),
             observacoes: _observacoesController.text.trim(),
             registradoPorId: ref.read(authSessionProvider)?.id,
           );
 
       if (!mounted) return;
-      _sistolicaController.clear();
-      _diastolicaController.clear();
-      _batimentosController.clear();
+      _temperaturaController.clear();
       _observacoesController.clear();
-      setState(() => _mode = _PressaoMode.resumo);
+      setState(() => _mode = _TemperaturaMode.resumo);
       _reloadResumo(idoso.id);
       _reloadHistorico(idoso.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Temperatura registrada.')),
+      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,7 +178,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel registrar pressão.')),
+        const SnackBar(content: Text('Não foi possível registrar a temperatura.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -234,11 +228,9 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
       child: KeyedSubtree(
         key: ValueKey(_mode),
         child: switch (_mode) {
-          _PressaoMode.registrar => _RegistrarPressaoView(
+          _TemperaturaMode.registrar => _RegistrarTemperaturaView(
               formKey: _formKey,
-              sistolicaController: _sistolicaController,
-              diastolicaController: _diastolicaController,
-              batimentosController: _batimentosController,
+              temperaturaController: _temperaturaController,
               observacoesController: _observacoesController,
               selectedDate: _medicaoDate,
               selectedTime: _medicaoTime,
@@ -246,10 +238,10 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
               onSelectDate: _selectDate,
               onSelectTime: _selectTime,
               onSave: () => _salvar(idoso),
-              onCancel: () => setState(() => _mode = _PressaoMode.resumo),
+              onCancel: () => setState(() => _mode = _TemperaturaMode.resumo),
             ),
-          _PressaoMode.historico =>
-            FutureBuilder<List<PressaoHistoricoEntrada>>(
+          _TemperaturaMode.historico =>
+            FutureBuilder<List<TemperaturaHistoricoEntrada>>(
               future: _historicoFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -260,15 +252,16 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
 
                 if (snapshot.hasError) {
                   return _ErrorState(
-                    onBack: () => setState(() => _mode = _PressaoMode.resumo),
+                    onBack: () =>
+                        setState(() => _mode = _TemperaturaMode.resumo),
                     onRetry: () => _reloadHistorico(idoso.id),
                   );
                 }
 
-                return _HistoricoPressaoView(
+                return _HistoricoTemperaturaView(
                   entradas: snapshot.data ?? const [],
                   period: _historicoPeriod,
-                  onBack: () => setState(() => _mode = _PressaoMode.resumo),
+                  onBack: () => setState(() => _mode = _TemperaturaMode.resumo),
                   onPeriodChanged: (period) {
                     setState(() => _historicoPeriod = period);
                     _reloadHistorico(idoso.id);
@@ -276,7 +269,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
                 );
               },
             ),
-          _PressaoMode.resumo => FutureBuilder<PressaoResumo>(
+          _TemperaturaMode.resumo => FutureBuilder<TemperaturaResumo>(
               future: _resumoFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -293,18 +286,18 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
                 }
 
                 final resumo =
-                    snapshot.data ?? PressaoResumo.fromJson(const {});
+                    snapshot.data ?? TemperaturaResumo.fromJson(const {});
 
-                return _ResumoPressaoView(
+                return _ResumoTemperaturaView(
                   idoso: idoso,
                   resumo: resumo,
                   period: _period,
                   onBack: () => context.go('/monitoramento'),
                   onRegistrar: () {
-                    setState(() => _mode = _PressaoMode.registrar);
+                    setState(() => _mode = _TemperaturaMode.registrar);
                   },
                   onViewHistorico: () {
-                    setState(() => _mode = _PressaoMode.historico);
+                    setState(() => _mode = _TemperaturaMode.historico);
                   },
                   onCalendar: () => _openCalendar(idoso.id),
                   onPeriodChanged: (period) {
@@ -330,8 +323,8 @@ extension _ChartPeriodApi on _ChartPeriod {
   }
 }
 
-class _ResumoPressaoView extends StatelessWidget {
-  const _ResumoPressaoView({
+class _ResumoTemperaturaView extends StatelessWidget {
+  const _ResumoTemperaturaView({
     required this.idoso,
     required this.resumo,
     required this.period,
@@ -343,7 +336,7 @@ class _ResumoPressaoView extends StatelessWidget {
   });
 
   final IdosoResumo idoso;
-  final PressaoResumo resumo;
+  final TemperaturaResumo resumo;
   final _ChartPeriod period;
   final VoidCallback onBack;
   final VoidCallback onRegistrar;
@@ -358,7 +351,7 @@ class _ResumoPressaoView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PressaoHeader(
+          _TemperaturaHeader(
             onBack: onBack,
             trailing: IconButton(
               onPressed: onCalendar,
@@ -381,7 +374,7 @@ class _ResumoPressaoView extends StatelessWidget {
                     children: [
                       StaggeredEntry(
                         index: 0,
-                        child: _MediaPressaoCard(resumo: resumo),
+                        child: _MediaTemperaturaCard(resumo: resumo),
                       ),
                       const SizedBox(height: 14),
                       StaggeredEntry(
@@ -401,9 +394,9 @@ class _ResumoPressaoView extends StatelessWidget {
                       StaggeredEntry(
                         index: 3,
                         child: _NavRow(
-                          icon: Icons.favorite_rounded,
-                          iconColor: const Color(0xFFFF4657),
-                          title: 'Registrar pressão',
+                          icon: Icons.thermostat_rounded,
+                          iconColor: const Color(0xFF148A9C),
+                          title: 'Registrar temperatura',
                           onTap: onRegistrar,
                         ),
                       ),
@@ -413,7 +406,7 @@ class _ResumoPressaoView extends StatelessWidget {
                         child: _NavRow(
                           icon: Icons.history_rounded,
                           iconColor: const Color(0xFF25A1B2),
-                          title: 'Ver historico de pressão',
+                          title: 'Ver histórico de temperatura',
                           onTap: onViewHistorico,
                         ),
                       ),
@@ -426,10 +419,10 @@ class _ResumoPressaoView extends StatelessWidget {
   }
 }
 
-class _PressaoHeader extends StatelessWidget {
-  const _PressaoHeader({
+class _TemperaturaHeader extends StatelessWidget {
+  const _TemperaturaHeader({
     required this.onBack,
-    this.title = 'Resumo da pressão',
+    this.title = 'Resumo da temperatura',
     this.showWordmark = false,
     this.trailing,
   });
@@ -592,8 +585,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.favorite_rounded,
-                  color: Color(0xFFFF4657),
+                  Icons.thermostat_rounded,
+                  color: Color(0xFF148A9C),
                   size: 58,
                 ),
               ),
@@ -609,7 +602,7 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Ainda não ha registros de pressão para $idosoNome. Comece registrando a medicao atual.',
+                'Ainda não há registros de temperatura para $idosoNome. Comece registrando a medição atual.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
@@ -624,7 +617,7 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: onRegistrar,
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('Registrar primeira pressão'),
+                  label: const Text('Registrar primeira temperatura'),
                   style: _primaryButtonStyle(),
                 ),
               ),
@@ -636,60 +629,46 @@ class _PrimeiraMedicaoState extends StatelessWidget {
   }
 }
 
-class _AnimatedPressaoValue extends StatelessWidget {
-  const _AnimatedPressaoValue(
-      {required this.sistolica, required this.diastolica});
+class _AnimatedTemperaturaValue extends StatelessWidget {
+  const _AnimatedTemperaturaValue({required this.value});
 
-  final double? sistolica;
-  final double? diastolica;
+  final double? value;
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: sistolica ?? 0),
+      tween: Tween(begin: 0, end: value ?? 0),
       duration: const Duration(milliseconds: 700),
       curve: Curves.easeOutCubic,
-      builder: (context, animatedSistolica, child) {
-        return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: diastolica ?? 0),
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.easeOutCubic,
-          builder: (context, animatedDiastolica, child) {
-            final text = sistolica == null || diastolica == null
-                ? '--/--'
-                : '${animatedSistolica.round()}/${animatedDiastolica.round()}';
-            return RichText(
-              text: TextSpan(
-                style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-                  fontWeight: FontWeight.w400,
-                ),
-                children: [
-                  TextSpan(
-                      text: text,
-                      style: const TextStyle(fontSize: 39, height: 1)),
-                  const TextSpan(text: 'mmHg', style: TextStyle(fontSize: 25)),
-                ],
-              ),
-            );
-          },
+      builder: (context, animatedValue, child) {
+        final text = value == null ? '--' : _formatTemperatura(animatedValue);
+        return RichText(
+          text: TextSpan(
+            style: TextStyle(
+              color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+              fontWeight: FontWeight.w400,
+            ),
+            children: [
+              TextSpan(
+                  text: text, style: const TextStyle(fontSize: 39, height: 1)),
+              const TextSpan(text: '°C', style: TextStyle(fontSize: 25)),
+            ],
+          ),
         );
       },
     );
   }
 }
 
-class _MediaPressaoCard extends StatelessWidget {
-  const _MediaPressaoCard({required this.resumo});
+class _MediaTemperaturaCard extends StatelessWidget {
+  const _MediaTemperaturaCard({required this.resumo});
 
-  final PressaoResumo resumo;
+  final TemperaturaResumo resumo;
 
   @override
   Widget build(BuildContext context) {
-    final mediaSistolica =
-        resumo.mediaSistolicaDia ?? resumo.analise.mediaUltimos7Dias;
-    final mediaDiastolica =
-        resumo.mediaDiastolicaDia ?? resumo.analise.mediaDiastolicaUltimos7Dias;
+    final media =
+        resumo.mediaTemperaturaDia ?? resumo.analise.mediaUltimos7Dias;
     final ultima = resumo.ultima;
     final alertColor = _alertColor(resumo.alerta.cor);
 
@@ -703,7 +682,7 @@ class _MediaPressaoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Média da pressão',
+                  'Média da temperatura',
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
                     fontSize: 13,
@@ -711,21 +690,8 @@ class _MediaPressaoCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                _AnimatedPressaoValue(
-                  sistolica: mediaSistolica,
-                  diastolica: mediaDiastolica,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  ultima == null
-                      ? 'Sem medicao'
-                      : 'Última medição: ${_formatTime(ultima.medidoEm)} · ${ultima.sistolica}/${ultima.diastolica} mmHg',
-                  style: TextStyle(
-                    color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 4),
+                _AnimatedTemperaturaValue(value: media),
+                const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -749,7 +715,7 @@ class _MediaPressaoCard extends StatelessWidget {
                       Flexible(
                         child: Text(
                           resumo.alerta.mensagem,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: alertColor,
@@ -765,10 +731,25 @@ class _MediaPressaoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          const Icon(
-            Icons.favorite_rounded,
-            color: Color(0xFFFF4657),
-            size: 50,
+          Column(
+            children: [
+              const Icon(
+                Icons.thermostat_rounded,
+                color: Color(0xFF148A9C),
+                size: 44,
+              ),
+              if (ultima != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  _formatTime(ultima.medidoEm),
+                  style: const TextStyle(
+                    color: Color(0xFF148A9C),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -784,7 +765,7 @@ class _ChartCard extends StatelessWidget {
   });
 
   final _ChartPeriod period;
-  final List<PressaoSeriePonto> series;
+  final List<TemperaturaSeriePonto> series;
   final ValueChanged<_ChartPeriod> onChanged;
 
   @override
@@ -805,7 +786,7 @@ class _ChartCard extends StatelessWidget {
               return SizedBox(
                 height: 174,
                 child: CustomPaint(
-                  painter: _PressaoChartPainter(series, animatedValue),
+                  painter: _TemperaturaChartPainter(series, animatedValue),
                   child: Align(
                     alignment: Alignment.bottomCenter,
                     child: Row(
@@ -914,10 +895,10 @@ class _PeriodItem extends StatelessWidget {
   }
 }
 
-class _PressaoChartPainter extends CustomPainter {
-  const _PressaoChartPainter(this.series, [this.progress = 1]);
+class _TemperaturaChartPainter extends CustomPainter {
+  const _TemperaturaChartPainter(this.series, [this.progress = 1]);
 
-  final List<PressaoSeriePonto> series;
+  final List<TemperaturaSeriePonto> series;
   final double progress;
 
   @override
@@ -932,11 +913,11 @@ class _PressaoChartPainter extends CustomPainter {
     final bottom = graphHeight;
     final topPadding = 8.0;
     final minValue = values.isEmpty
-        ? 90.0
-        : values.map((entry) => entry.value).reduce(math.min) - 20;
+        ? 35.5
+        : values.map((entry) => entry.value).reduce(math.min) - 1;
     final maxValue = values.isEmpty
-        ? 130.0
-        : values.map((entry) => entry.value).reduce(math.max) + 20;
+        ? 38.5
+        : values.map((entry) => entry.value).reduce(math.max) + 1;
     final range = math.max(1.0, maxValue - minValue);
 
     Offset pointFor(MapEntry<int, double> entry) {
@@ -1004,7 +985,7 @@ class _PressaoChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _PressaoChartPainter oldDelegate) {
+  bool shouldRepaint(covariant _TemperaturaChartPainter oldDelegate) {
     return oldDelegate.series != series || oldDelegate.progress != progress;
   }
 }
@@ -1012,7 +993,7 @@ class _PressaoChartPainter extends CustomPainter {
 class _AnalysisCard extends StatelessWidget {
   const _AnalysisCard({required this.resumo});
 
-  final PressaoResumo resumo;
+  final TemperaturaResumo resumo;
 
   @override
   Widget build(BuildContext context) {
@@ -1025,7 +1006,7 @@ class _AnalysisCard extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'A analise detalhada por IA ainda está em treinamento.',
+                'A análise detalhada por IA ainda está em treinamento.',
               ),
             ),
           );
@@ -1042,7 +1023,7 @@ class _AnalysisCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.monitor_heart_outlined,
+                  Icons.thermostat_rounded,
                   color: Colors.white,
                   size: 32,
                 ),
@@ -1053,7 +1034,7 @@ class _AnalysisCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Análise da pressão',
+                      'Análise de temperatura',
                       style: TextStyle(
                         color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
                         fontSize: 14,
@@ -1087,15 +1068,15 @@ class _AnalysisCard extends StatelessWidget {
   }
 }
 
-class _HistoricoPressaoView extends StatelessWidget {
-  const _HistoricoPressaoView({
+class _HistoricoTemperaturaView extends StatelessWidget {
+  const _HistoricoTemperaturaView({
     required this.entradas,
     required this.period,
     required this.onBack,
     required this.onPeriodChanged,
   });
 
-  final List<PressaoHistoricoEntrada> entradas;
+  final List<TemperaturaHistoricoEntrada> entradas;
   final _ChartPeriod period;
   final VoidCallback onBack;
   final ValueChanged<_ChartPeriod> onPeriodChanged;
@@ -1107,9 +1088,9 @@ class _HistoricoPressaoView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PressaoHeader(
+          _TemperaturaHeader(
             onBack: onBack,
-            title: 'Historico da pressão',
+            title: 'Histórico da temperatura',
             showWordmark: true,
           ),
           const SizedBox(height: 12),
@@ -1162,7 +1143,7 @@ class _HistoricoVazio extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Altere o período ou registre uma nova medicao.',
+              'Altere o período ou registre uma nova medição.',
               textAlign: TextAlign.center,
               style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
             ),
@@ -1176,15 +1157,15 @@ class _HistoricoVazio extends StatelessWidget {
 class _HistoricoItemCard extends StatelessWidget {
   const _HistoricoItemCard({required this.entrada});
 
-  final PressaoHistoricoEntrada entrada;
+  final TemperaturaHistoricoEntrada entrada;
 
   @override
   Widget build(BuildContext context) {
     final badgeColor = _badgeColor(entrada.badge.cor);
     final isEdicao = entrada.descricao == 'editou observação';
-    final icon = isEdicao ? Icons.edit_rounded : Icons.favorite_rounded;
+    final icon = isEdicao ? Icons.edit_rounded : Icons.thermostat_rounded;
     final iconColor =
-        isEdicao ? const Color(0xFF2FA3B5) : const Color(0xFFFF4657);
+        isEdicao ? const Color(0xFF2FA3B5) : const Color(0xFF148A9C);
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1217,8 +1198,8 @@ class _HistoricoItemCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  entrada.sistolica != null && entrada.diastolica != null
-                      ? '${entrada.sistolica}/${entrada.diastolica} mmHg'
+                  entrada.temperatura != null
+                      ? '${_formatTemperatura(entrada.temperatura!)}°C'
                       : 'Sem valor registrado',
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
@@ -1274,12 +1255,10 @@ class _HistoricoItemCard extends StatelessWidget {
   }
 }
 
-class _RegistrarPressaoView extends StatelessWidget {
-  const _RegistrarPressaoView({
+class _RegistrarTemperaturaView extends StatelessWidget {
+  const _RegistrarTemperaturaView({
     required this.formKey,
-    required this.sistolicaController,
-    required this.diastolicaController,
-    required this.batimentosController,
+    required this.temperaturaController,
     required this.observacoesController,
     required this.selectedDate,
     required this.selectedTime,
@@ -1291,9 +1270,7 @@ class _RegistrarPressaoView extends StatelessWidget {
   });
 
   final GlobalKey<FormState> formKey;
-  final TextEditingController sistolicaController;
-  final TextEditingController diastolicaController;
-  final TextEditingController batimentosController;
+  final TextEditingController temperaturaController;
   final TextEditingController observacoesController;
   final DateTime selectedDate;
   final TimeOfDay selectedTime;
@@ -1306,16 +1283,13 @@ class _RegistrarPressaoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _FormScaffold(
-      title: 'Registrar pressão',
+      title: 'Registrar temperatura',
       child: Form(
         key: formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _PressaoValueInput(
-              sistolicaController: sistolicaController,
-              diastolicaController: diastolicaController,
-            ),
+            _TemperaturaInput(controller: temperaturaController),
             const SizedBox(height: 12),
             _PickerCard(
               icon: Icons.calendar_month_rounded,
@@ -1330,8 +1304,6 @@ class _RegistrarPressaoView extends StatelessWidget {
               value: selectedTime.format(context),
               onTap: saving ? null : onSelectTime,
             ),
-            const SizedBox(height: 12),
-            _BatimentosInput(controller: batimentosController),
             const SizedBox(height: 12),
             _ObservationCard(
               controller: observacoesController,
@@ -1351,151 +1323,49 @@ class _RegistrarPressaoView extends StatelessWidget {
   }
 }
 
-class _PressaoValueInput extends StatelessWidget {
-  const _PressaoValueInput({
-    required this.sistolicaController,
-    required this.diastolicaController,
-  });
+class _TemperaturaInput extends StatelessWidget {
+  const _TemperaturaInput({required this.controller});
 
-  final TextEditingController sistolicaController;
-  final TextEditingController diastolicaController;
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      decoration: _cardDecoration(context),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF4657).withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.favorite_rounded,
-              color: Color(0xFFFF4657),
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _PressaoValueField(
-                    label: 'Sistólica',
-                    controller: sistolicaController,
-                    validator: _validateSistolica,
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 52,
-                  margin: const EdgeInsets.symmetric(horizontal: 10),
-                  color: adaptive(context, const Color(0xFFE1E6E8), AppDarkColors.border),
-                ),
-                Expanded(
-                  child: _PressaoValueField(
-                    label: 'Diastólica',
-                    controller: diastolicaController,
-                    validator: _validateDiastolica,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return _NumericValueCard(
+      icon: Icons.thermostat_rounded,
+      iconColor: const Color(0xFF148A9C),
+      label: 'Temperatura',
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      hintText: '36,0',
+      suffixText: '°C',
+      validator: _validateTemperatura,
     );
   }
 }
 
-class _PressaoValueField extends StatelessWidget {
-  const _PressaoValueField({
+class _NumericValueCard extends StatelessWidget {
+  const _NumericValueCard({
+    required this.icon,
+    required this.iconColor,
     required this.label,
     required this.controller,
+    required this.keyboardType,
+    required this.hintText,
+    required this.suffixText,
     required this.validator,
   });
 
+  final IconData icon;
+  final Color iconColor;
   final String label;
   final TextEditingController controller;
+  final TextInputType keyboardType;
+  final String hintText;
+  final String suffixText;
   final FormFieldValidator<String> validator;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: adaptive(context, const Color(0xFF6F636B), AppDarkColors.textSecondary),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            SizedBox(
-              width: 46,
-              child: TextFormField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: validator,
-                maxLines: 1,
-                textAlignVertical: TextAlignVertical.center,
-                style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  height: 1.1,
-                ),
-                decoration: InputDecoration(
-                  hintText: '000',
-                  hintStyle: TextStyle(
-                    color: adaptive(context, const Color(0xFFBFCBCE), AppDarkColors.textMuted),
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  errorStyle: const TextStyle(fontSize: 10, height: 0.7),
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Text(
-                'mmHg',
-                style: TextStyle(
-                  color: Color(0xFF087B8D),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _BatimentosInput extends StatelessWidget {
-  const _BatimentosInput({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: _cardDecoration(context),
@@ -1506,14 +1376,10 @@ class _BatimentosInput extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: const Color(0xFF2FA3B5).withValues(alpha: 0.12),
+              color: iconColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.monitor_heart_rounded,
-              color: Color(0xFF2FA3B5),
-              size: 26,
-            ),
+            child: Icon(icon, color: iconColor, size: 26),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1521,7 +1387,7 @@ class _BatimentosInput extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Batimentos (opcional)',
+                  label,
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF6F636B), AppDarkColors.textSecondary),
                     fontSize: 14,
@@ -1544,11 +1410,13 @@ class _BatimentosInput extends StatelessWidget {
                       Expanded(
                         child: TextFormField(
                           controller: controller,
-                          keyboardType: TextInputType.number,
+                          keyboardType: keyboardType,
                           inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9,.]'),
+                            ),
                           ],
-                          validator: _validateBatimentos,
+                          validator: validator,
                           maxLines: 1,
                           textAlignVertical: TextAlignVertical.center,
                           style: TextStyle(
@@ -1558,7 +1426,7 @@ class _BatimentosInput extends StatelessWidget {
                             height: 1.1,
                           ),
                           decoration: InputDecoration(
-                            hintText: '00',
+                            hintText: hintText,
                             hintStyle: TextStyle(
                               color: adaptive(context, const Color(0xFFBFCBCE), AppDarkColors.textMuted),
                               fontSize: 30,
@@ -1566,14 +1434,19 @@ class _BatimentosInput extends StatelessWidget {
                             ),
                             border: InputBorder.none,
                             isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                            errorStyle: const TextStyle(fontSize: 11, height: 0.9),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
+                            errorStyle: const TextStyle(
+                              fontSize: 11,
+                              height: 0.9,
+                            ),
                           ),
                         ),
                       ),
-                      const Text(
-                        'bpm',
-                        style: TextStyle(
+                      Text(
+                        suffixText,
+                        style: const TextStyle(
                           color: Color(0xFF087B8D),
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -1839,7 +1712,7 @@ class _NoIdosoState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Selecione um idoso para registrar a pressão arterial.',
+            'Selecione um idoso para registrar a temperatura.',
             textAlign: TextAlign.center,
             style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
           ),
@@ -1868,7 +1741,7 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PressaoHeader(onBack: onBack),
+          _TemperaturaHeader(onBack: onBack),
           const Spacer(),
           const Icon(Icons.cloud_off_rounded,
               color: Color(0xFF2FA3B5), size: 54),
@@ -1948,26 +1821,10 @@ Color _badgeColor(String cor) {
   };
 }
 
-String? _validateSistolica(String? value) {
-  final parsed = int.tryParse(value?.trim() ?? '');
-  if (parsed == null) return 'Obrigatório';
-  if (parsed < 40 || parsed > 300) return 'Use 40-300';
-  return null;
-}
-
-String? _validateDiastolica(String? value) {
-  final parsed = int.tryParse(value?.trim() ?? '');
-  if (parsed == null) return 'Obrigatório';
-  if (parsed < 20 || parsed > 200) return 'Use 20-200';
-  return null;
-}
-
-String? _validateBatimentos(String? value) {
-  final trimmed = value?.trim() ?? '';
-  if (trimmed.isEmpty) return null;
-  final parsed = int.tryParse(trimmed);
-  if (parsed == null) return 'Valor inválido.';
-  if (parsed < 20 || parsed > 250) return 'Use um valor entre 20 e 250.';
+String? _validateTemperatura(String? value) {
+  final parsed = double.tryParse((value?.trim() ?? '').replaceAll(',', '.'));
+  if (parsed == null) return 'Informe o valor.';
+  if (parsed < 25 || parsed > 45) return 'Use um valor entre 25 e 45°C.';
   return null;
 }
 
@@ -1984,4 +1841,8 @@ String _formatDate(DateTime date) {
 String _formatTime(DateTime date) {
   return '${date.hour.toString().padLeft(2, '0')}:'
       '${date.minute.toString().padLeft(2, '0')}';
+}
+
+String _formatTemperatura(double value) {
+  return value.toStringAsFixed(1).replaceAll('.', ',');
 }

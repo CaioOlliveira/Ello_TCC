@@ -18,6 +18,7 @@ import { oxigenacaoRoutes } from "../modules/oxigenacao/oxigenacao.routes.js";
 import { pressaoRoutes } from "../modules/pressao/pressao.routes.js";
 import { registrosRoutes } from "../modules/registros/registros.routes.js";
 import { relatoriosRoutes } from "../modules/relatorios/relatorios.routes.js";
+import { temperaturaRoutes } from "../modules/temperatura/temperatura.routes.js";
 import { usuariosRoutes } from "../modules/usuarios/usuarios.routes.js";
 
 export const routes = Router();
@@ -49,3 +50,4 @@ routes.use("/oxigenacao", oxigenacaoRoutes);
 routes.use("/pressao", pressaoRoutes);
 routes.use("/registros", registrosRoutes);
 routes.use("/relatorios", relatoriosRoutes);
+routes.use("/temperatura", temperaturaRoutes);

@@ -160,19 +160,19 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'Cadastro de insumos',
             style: TextStyle(
-              color: Colors.black,
+              color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
               height: 1,
             ),
           ),
           const SizedBox(height: 2),
-          const Text(
+          Text(
             'Cadastre itens de uso diario para controlar estoque e validade',
-            style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 9.5),
+            style: TextStyle(color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary), fontSize: 9.5),
           ),
           const SizedBox(height: 14),
           _LabeledField(label: 'Nome do Insumo', controller: _nomeController),
@@ -264,7 +264,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
               height: 52,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: adaptive(context, Colors.white, AppDarkColors.surface),
                 border: Border.all(color: const Color(0xFF3BA7B8)),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -279,8 +279,8 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
                   Expanded(
                     child: Text(
                       _fotoUrl == null ? 'Anexar imagem' : 'Imagem anexada',
-                      style: const TextStyle(
-                        color: Color(0xFF6B6B6B),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF6B6B6B), AppDarkColors.textSecondary),
                         fontSize: 12,
                       ),
                     ),
@@ -315,7 +315,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
             height: 52,
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              style: _primaryButtonStyle(),
+              style: _primaryButtonStyle(context),
               child: _saving
                   ? const SizedBox(
                       width: 18,
@@ -334,7 +334,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
             child: OutlinedButton(
               onPressed: _saving ? null : widget.onCancel,
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF17324D),
+                foregroundColor: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                 side: const BorderSide(color: Color(0xFF3BA7B8)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -378,8 +378,8 @@ class _UnitSelector extends StatelessWidget {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: selected == unit
-                            ? const Color(0xFFD6EEF2)
-                            : Colors.white,
+                            ? adaptive(context, const Color(0xFFD6EEF2), AppDarkColors.tintedInfo)
+                            : adaptive(context, Colors.white, AppDarkColors.surface),
                         border: Border.all(color: const Color(0xFF3BA7B8)),
                       ),
                       child: Text(
@@ -387,7 +387,7 @@ class _UnitSelector extends StatelessWidget {
                         style: TextStyle(
                           color: selected == unit
                               ? const Color(0xFF006B7E)
-                              : const Color(0xFF17324D),
+                              : adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
@@ -420,8 +420,8 @@ class _FrequencySelector extends StatelessWidget {
           child: DropdownButtonFormField<String>(
             initialValue: value,
             onChanged: onChanged,
-            decoration: _inputDecoration('Selecione a frequencia'),
-            style: const TextStyle(color: Color(0xFF17324D), fontSize: 11),
+            decoration: _inputDecoration(context, 'Selecione a frequencia'),
+            style: TextStyle(color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary), fontSize: 11),
             icon: const Icon(
               Icons.keyboard_arrow_down_rounded,
               color: Color(0xFF2CA0B4),

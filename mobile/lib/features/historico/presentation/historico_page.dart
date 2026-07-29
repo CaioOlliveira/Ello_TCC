@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/theme/app_palette.dart';
 
 enum _HistoricoPeriodo { dia, semana, mes }
 
@@ -116,7 +117,7 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
     final config = _HistoricoConfig.fromTipo(widget.tipo);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -156,8 +157,8 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
                   Text(
                     config.title,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF073248),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                     ),
@@ -324,7 +325,7 @@ class _HistoricoCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -339,8 +340,8 @@ class _HistoricoCard extends StatelessWidget {
           Container(
             width: 54,
             height: 54,
-            decoration: const BoxDecoration(
-              color: Color(0xFFD5EEF3),
+            decoration: BoxDecoration(
+              color: adaptive(context, const Color(0xFFD5EEF3), AppDarkColors.tintedInfo),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -350,7 +351,7 @@ class _HistoricoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Container(width: 1, height: 56, color: const Color(0xFFD0D0D0)),
+          Container(width: 1, height: 56, color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.divider)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -360,8 +361,8 @@ class _HistoricoCard extends StatelessWidget {
                   '${_firstName(registro.usuarioNome)} $label',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
@@ -371,8 +372,8 @@ class _HistoricoCard extends StatelessWidget {
                   config.detail(registro),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF868686),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF868686), AppDarkColors.textSecondary),
                     fontSize: 11,
                   ),
                 ),
@@ -380,7 +381,7 @@ class _HistoricoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Container(width: 1, height: 56, color: const Color(0xFFD0D0D0)),
+          Container(width: 1, height: 56, color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.divider)),
           const SizedBox(width: 10),
           SizedBox(
             width: 66,
@@ -389,16 +390,16 @@ class _HistoricoCard extends StatelessWidget {
               children: [
                 Text(
                   _formatDate(registro.criadoEm.toLocal()),
-                  style: const TextStyle(
-                    color: Color(0xFF8A8A8A),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
                   _formatTime(registro.criadoEm.toLocal()),
-                  style: const TextStyle(
-                    color: Color(0xFF073248),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -577,7 +578,7 @@ class _HistoricoEmpty extends StatelessWidget {
       child: Text(
         config.emptyMessage,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Color(0xFF777777), fontSize: 14),
+        style: TextStyle(color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary), fontSize: 14),
       ),
     );
   }

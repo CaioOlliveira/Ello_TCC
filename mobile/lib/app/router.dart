@@ -28,6 +28,7 @@ import '../features/permissoes/presentation/permissoes_fichas_page.dart';
 import '../features/pressao/presentation/pressao_page.dart';
 import '../features/relatorios/presentation/relatorios_page.dart';
 import '../features/splash/presentation/splash_page.dart';
+import '../features/temperatura/presentation/temperatura_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -147,6 +148,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const OxigenacaoPage(),
           ),
           GoRoute(
+            path: '/temperatura',
+            builder: (context, state) => const TemperaturaPage(),
+          ),
+          GoRoute(
             path: '/idoso/perfil',
             builder: (context, state) => const PerfilIdosoPage(),
           ),
@@ -172,7 +177,8 @@ class AppShell extends StatelessWidget {
         location == '/humor' ||
         location.startsWith('/historico/') ||
         location == '/pressao' ||
-        location == '/oxigenacao') {
+        location == '/oxigenacao' ||
+        location == '/temperatura') {
       return 1;
     }
     if (location == '/corgia' || location == '/coraia') return 2;

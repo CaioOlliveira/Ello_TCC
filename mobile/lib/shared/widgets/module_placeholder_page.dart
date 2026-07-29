@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/theme/app_palette.dart';
 import 'app_button.dart';
 import 'staggered_entry.dart';
 
@@ -31,7 +32,7 @@ class ModulePlaceholderPage extends StatelessWidget {
     final canPop = context.canPop();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -52,12 +53,12 @@ class ModulePlaceholderPage extends StatelessWidget {
                         }
                       },
                       borderRadius: BorderRadius.circular(12),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 6),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.chevron_left_rounded,
                               color: Color(0xFF2A9CAE),
                               size: 28,
@@ -65,7 +66,7 @@ class ModulePlaceholderPage extends StatelessWidget {
                             Text(
                               'Voltar',
                               style: TextStyle(
-                                color: Colors.black,
+                                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -91,8 +92,8 @@ class ModulePlaceholderPage extends StatelessWidget {
                               child: Text(
                                 title,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Color(0xFF073248),
+                                style: TextStyle(
+                                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                                   fontSize: 24,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -123,13 +124,13 @@ class ModulePlaceholderPage extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: AppSizes.md),
-                            const StaggeredEntry(
+                            StaggeredEntry(
                               index: 4,
                               child: Text(
                                 'Este modulo sera implementado nas proximas etapas.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: Color(0xFF607178),
+                                  color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
                                   fontSize: 13,
                                   height: 1.3,
                                 ),
