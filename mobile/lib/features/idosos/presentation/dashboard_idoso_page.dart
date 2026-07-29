@@ -19,6 +19,9 @@ class DashboardIdosoPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
+  static const _cacheDuration = Duration(minutes: 2);
+  static final Map<String, _DashboardCacheEntry> _cache = {};
+
   var _loading = false;
   _DashboardResumo _resumo = const _DashboardResumo();
 
@@ -28,11 +31,21 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool force = false}) async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
 
-    setState(() => _loading = true);
+    final cached = _cache[idoso.id];
+    final hasFreshCache = cached != null &&
+        DateTime.now().difference(cached.updatedAt) < _cacheDuration;
+
+    if (cached != null && mounted) {
+      setState(() => _resumo = cached.resumo);
+    }
+
+    if (!force && hasFreshCache) return;
+
+    setState(() => _loading = cached == null);
     try {
       final api = ref.read(apiClientProvider);
       final results = await Future.wait<dynamic>([
@@ -40,19 +53,26 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
         api.listarHumores(idosoId: idoso.id),
         api.listarRefeicoes(idosoId: idoso.id),
         api.getResumoGlicemia(idosoId: idoso.id),
-        api.buscarDicaDashboard(idosoId: idoso.id),
       ]);
 
       if (!mounted) return;
+      final resumo = _DashboardResumo.fromData(
+        compromissos: results[0] as List<Map<String, dynamic>>,
+        humores: results[1] as List<Map<String, dynamic>>,
+        refeicoes: results[2] as List<RefeicaoResumo>,
+        glicemia: results[3] as GlicemiaResumo,
+        dica: cached?.resumo.dica ?? _resumo.dica,
+      );
+
       setState(() {
-        _resumo = _DashboardResumo.fromData(
-          compromissos: results[0] as List<Map<String, dynamic>>,
-          humores: results[1] as List<Map<String, dynamic>>,
-          refeicoes: results[2] as List<RefeicaoResumo>,
-          glicemia: results[3] as GlicemiaResumo,
-          dica: results[4] as String,
-        );
+        _resumo = resumo;
       });
+      _cache[idoso.id] = _DashboardCacheEntry(
+        resumo: resumo,
+        updatedAt: DateTime.now(),
+      );
+
+      _loadTip(api, idoso.id);
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -65,6 +85,22 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
       );
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadTip(ApiClient api, String idosoId) async {
+    try {
+      final dica = await api.buscarDicaDashboard(idosoId: idosoId);
+      if (!mounted || ref.read(selectedIdosoProvider)?.id != idosoId) return;
+
+      final resumo = _resumo.copyWith(dica: dica);
+      setState(() => _resumo = resumo);
+      _cache[idosoId] = _DashboardCacheEntry(
+        resumo: resumo,
+        updatedAt: DateTime.now(),
+      );
+    } catch (_) {
+      // A dica da IA não deve atrasar o carregamento do resumo principal.
     }
   }
 
@@ -81,7 +117,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
             constraints: const BoxConstraints(maxWidth: 430),
             child: RefreshIndicator(
               color: const Color(0xFF38AFC0),
-              onRefresh: _load,
+              onRefresh: () => _load(force: true),
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 88),
                 children: [
@@ -710,6 +746,41 @@ class _DashboardResumo {
   final String proximoCompromissoTitulo;
   final String proximoCompromissoDetalhes;
   final String dica;
+
+  _DashboardResumo copyWith({
+    String? medicamentosLabel,
+    String? proximoMedicamentoLabel,
+    String? proximoMedicamentoHora,
+    String? humorLabel,
+    String? ultimaRefeicaoLabel,
+    String? insulinaLabel,
+    String? proximoCompromissoTitulo,
+    String? proximoCompromissoDetalhes,
+    String? dica,
+  }) {
+    return _DashboardResumo(
+      medicamentosLabel: medicamentosLabel ?? this.medicamentosLabel,
+      proximoMedicamentoLabel:
+          proximoMedicamentoLabel ?? this.proximoMedicamentoLabel,
+      proximoMedicamentoHora:
+          proximoMedicamentoHora ?? this.proximoMedicamentoHora,
+      humorLabel: humorLabel ?? this.humorLabel,
+      ultimaRefeicaoLabel: ultimaRefeicaoLabel ?? this.ultimaRefeicaoLabel,
+      insulinaLabel: insulinaLabel ?? this.insulinaLabel,
+      proximoCompromissoTitulo:
+          proximoCompromissoTitulo ?? this.proximoCompromissoTitulo,
+      proximoCompromissoDetalhes:
+          proximoCompromissoDetalhes ?? this.proximoCompromissoDetalhes,
+      dica: dica ?? this.dica,
+    );
+  }
+}
+
+class _DashboardCacheEntry {
+  const _DashboardCacheEntry({required this.resumo, required this.updatedAt});
+
+  final _DashboardResumo resumo;
+  final DateTime updatedAt;
 }
 
 class _AppointmentSummary {
