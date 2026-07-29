@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+import { isFutureInstant } from "../../common/utils/date-utils.js";
+
+const dataNaoFuturaSchema = z
+  .string()
+  .datetime("Data deve estar em formato ISO.")
+  .refine(
+    (value) => !isFutureInstant(value),
+    "Nao e permitido registrar uma data futura.",
+  );
+
 const valorSistolicaSchema = z
   .number()
   .int("Valor deve ser um numero inteiro.")
@@ -17,7 +27,7 @@ export const criarPressaoSchema = z.object({
   sistolica: valorSistolicaSchema,
   diastolica: valorDiastolicaSchema,
   batimentos: z.number().int().min(20).max(250).optional(),
-  medidoEm: z.string().datetime("Data deve estar em formato ISO."),
+  medidoEm: dataNaoFuturaSchema,
   observacoes: z.string().optional(),
   registradoPorId: z.string().uuid().optional(),
 });
@@ -35,6 +45,4 @@ export const historicoPressaoQuerySchema = resumoPressaoQuerySchema;
 export type CriarPressaoInput = z.infer<typeof criarPressaoSchema>;
 export type AtualizarPressaoInput = z.infer<typeof atualizarPressaoSchema>;
 export type ResumoPressaoQuery = z.infer<typeof resumoPressaoQuerySchema>;
-export type HistoricoPressaoQuery = z.infer<
-  typeof historicoPressaoQuerySchema
->;
+export type HistoricoPressaoQuery = z.infer<typeof historicoPressaoQuerySchema>;

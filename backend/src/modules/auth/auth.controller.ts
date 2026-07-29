@@ -3,6 +3,7 @@ import type { RequestHandler } from "express";
 import { authService } from "./auth.service.js";
 import { asyncHandler } from "../../common/utils/async-handler.js";
 import {
+  alterarSenhaSchema,
   cadastroSchema,
   googleCadastroSchema,
   googleLoginSchema,
@@ -34,3 +35,8 @@ export const cadastrarGoogle: RequestHandler = asyncHandler(
     res.status(201).json({ dados: await authService.cadastrarGoogle(input) });
   },
 );
+
+export const alterarSenha: RequestHandler = asyncHandler(async (req, res) => {
+  const input = alterarSenhaSchema.parse(req.body);
+  res.json({ dados: await authService.alterarSenha(input) });
+});

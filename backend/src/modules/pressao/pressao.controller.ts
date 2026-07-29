@@ -13,19 +13,13 @@ import {
 } from "./pressao.schemas.js";
 import { pressaoService } from "./pressao.service.js";
 
-export const listarPressoes: RequestHandler = asyncHandler(
-  async (req, res) => {
-    const { limite, offset, pagina } = getPagination(req.query);
-    const idosoId =
-      typeof req.query.idosoId === "string" ? req.query.idosoId : undefined;
-    const { dados, total } = await pressaoService.listar(
-      limite,
-      offset,
-      idosoId,
-    );
-    res.json({ dados, meta: { total, pagina, limite } });
-  },
-);
+export const listarPressoes: RequestHandler = asyncHandler(async (req, res) => {
+  const { limite, offset, pagina } = getPagination(req.query);
+  const idosoId =
+    typeof req.query.idosoId === "string" ? req.query.idosoId : undefined;
+  const { dados, total } = await pressaoService.listar(limite, offset, idosoId);
+  res.json({ dados, meta: { total, pagina, limite } });
+});
 
 export const buscarPressao: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = idParamSchema.parse(req.params);
@@ -66,10 +60,8 @@ export const atualizarPressao: RequestHandler = asyncHandler(
   },
 );
 
-export const removerPressao: RequestHandler = asyncHandler(
-  async (req, res) => {
-    const { id } = idParamSchema.parse(req.params);
-    await pressaoService.remover(id);
-    res.status(204).send();
-  },
-);
+export const removerPressao: RequestHandler = asyncHandler(async (req, res) => {
+  const { id } = idParamSchema.parse(req.params);
+  await pressaoService.remover(id);
+  res.status(204).send();
+});

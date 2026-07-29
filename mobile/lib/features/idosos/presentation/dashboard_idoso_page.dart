@@ -20,6 +20,9 @@ class DashboardIdosoPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
+  static const _cacheDuration = Duration(minutes: 2);
+  static final Map<String, _DashboardCacheEntry> _cache = {};
+
   var _loading = false;
   _DashboardResumo _resumo = const _DashboardResumo();
 
@@ -29,11 +32,21 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool force = false}) async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
 
-    setState(() => _loading = true);
+    final cached = _cache[idoso.id];
+    final hasFreshCache = cached != null &&
+        DateTime.now().difference(cached.updatedAt) < _cacheDuration;
+
+    if (cached != null && mounted) {
+      setState(() => _resumo = cached.resumo);
+    }
+
+    if (!force && hasFreshCache) return;
+
+    setState(() => _loading = cached == null);
     try {
       final api = ref.read(apiClientProvider);
       final results = await Future.wait<dynamic>([
@@ -41,19 +54,26 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
         api.listarHumores(idosoId: idoso.id),
         api.listarRefeicoes(idosoId: idoso.id),
         api.getResumoGlicemia(idosoId: idoso.id),
-        api.buscarDicaDashboard(idosoId: idoso.id),
       ]);
 
       if (!mounted) return;
+      final resumo = _DashboardResumo.fromData(
+        compromissos: results[0] as List<Map<String, dynamic>>,
+        humores: results[1] as List<Map<String, dynamic>>,
+        refeicoes: results[2] as List<RefeicaoResumo>,
+        glicemia: results[3] as GlicemiaResumo,
+        dica: cached?.resumo.dica ?? _resumo.dica,
+      );
+
       setState(() {
-        _resumo = _DashboardResumo.fromData(
-          compromissos: results[0] as List<Map<String, dynamic>>,
-          humores: results[1] as List<Map<String, dynamic>>,
-          refeicoes: results[2] as List<RefeicaoResumo>,
-          glicemia: results[3] as GlicemiaResumo,
-          dica: results[4] as String,
-        );
+        _resumo = resumo;
       });
+      _cache[idoso.id] = _DashboardCacheEntry(
+        resumo: resumo,
+        updatedAt: DateTime.now(),
+      );
+
+      _loadTip(api, idoso.id);
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -69,12 +89,29 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
     }
   }
 
+  Future<void> _loadTip(ApiClient api, String idosoId) async {
+    try {
+      final dica = await api.buscarDicaDashboard(idosoId: idosoId);
+      if (!mounted || ref.read(selectedIdosoProvider)?.id != idosoId) return;
+
+      final resumo = _resumo.copyWith(dica: dica);
+      setState(() => _resumo = resumo);
+      _cache[idosoId] = _DashboardCacheEntry(
+        resumo: resumo,
+        updatedAt: DateTime.now(),
+      );
+    } catch (_) {
+      // A dica da IA não deve atrasar o carregamento do resumo principal.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: SafeArea(
         bottom: false,
         child: Center(
@@ -82,7 +119,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
             constraints: const BoxConstraints(maxWidth: 430),
             child: RefreshIndicator(
               color: const Color(0xFF38AFC0),
-              onRefresh: _load,
+              onRefresh: () => _load(force: true),
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 88),
                 children: [
@@ -121,7 +158,8 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     'Resumo do Dia',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+                      color: adaptive(context, const Color(0xFF333333),
+                          AppDarkColors.textPrimary),
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                     ),
@@ -171,7 +209,8 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                   Text(
                     'Próximo compromisso',
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+                      color: adaptive(context, const Color(0xFF333333),
+                          AppDarkColors.textPrimary),
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -254,7 +293,9 @@ class _Greeting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = idoso?.nome.split(' ').first;
-    final textColor = adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary);
+    final textColor =
+        adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary);
+    final personText = idoso?.elderText;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -271,7 +312,7 @@ class _Greeting extends StatelessWidget {
         Text(
           name == null
               ? 'Selecione uma ficha para comecar'
-              : 'cuidando de $name hoje',
+              : 'cuidando ${personText!.of} $name hoje',
           style: TextStyle(
             color: textColor,
             fontSize: 12,
@@ -410,7 +451,8 @@ class _MedicationAlert extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
       decoration: _dashboardCardDecoration(
-        color: adaptive(context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
+        color: adaptive(
+            context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
       ),
       child: Row(
         children: [
@@ -434,7 +476,8 @@ class _MedicationAlert extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF555555), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF555555),
+                        AppDarkColors.textSecondary),
                     fontSize: 12,
                   ),
                 ),
@@ -502,7 +545,8 @@ class _SummaryCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     text: TextSpan(
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF444444), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF444444),
+                            AppDarkColors.textPrimary),
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
@@ -579,7 +623,8 @@ class _NextAppointmentCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF333333),
+                            AppDarkColors.textPrimary),
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -590,7 +635,8 @@ class _NextAppointmentCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF111111), AppDarkColors.textSecondary),
+                        color: adaptive(context, const Color(0xFF111111),
+                            AppDarkColors.textSecondary),
                         fontSize: 13,
                         height: 1.15,
                       ),
@@ -613,11 +659,13 @@ class _TipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary);
+    final textColor =
+        adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary);
     return Container(
       padding: const EdgeInsets.fromLTRB(13, 10, 10, 10),
       decoration: BoxDecoration(
-        color: adaptive(context, const Color(0xFFCBEFF3), AppDarkColors.tintedInfo),
+        color: adaptive(
+            context, const Color(0xFFCBEFF3), AppDarkColors.tintedInfo),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -660,7 +708,8 @@ class _TipCard extends StatelessWidget {
           ),
           Icon(
             Icons.chevron_right_rounded,
-            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+            color: adaptive(
+                context, const Color(0xFF073248), AppDarkColors.textPrimary),
           ),
         ],
       ),
@@ -723,6 +772,41 @@ class _DashboardResumo {
   final String proximoCompromissoTitulo;
   final String proximoCompromissoDetalhes;
   final String dica;
+
+  _DashboardResumo copyWith({
+    String? medicamentosLabel,
+    String? proximoMedicamentoLabel,
+    String? proximoMedicamentoHora,
+    String? humorLabel,
+    String? ultimaRefeicaoLabel,
+    String? insulinaLabel,
+    String? proximoCompromissoTitulo,
+    String? proximoCompromissoDetalhes,
+    String? dica,
+  }) {
+    return _DashboardResumo(
+      medicamentosLabel: medicamentosLabel ?? this.medicamentosLabel,
+      proximoMedicamentoLabel:
+          proximoMedicamentoLabel ?? this.proximoMedicamentoLabel,
+      proximoMedicamentoHora:
+          proximoMedicamentoHora ?? this.proximoMedicamentoHora,
+      humorLabel: humorLabel ?? this.humorLabel,
+      ultimaRefeicaoLabel: ultimaRefeicaoLabel ?? this.ultimaRefeicaoLabel,
+      insulinaLabel: insulinaLabel ?? this.insulinaLabel,
+      proximoCompromissoTitulo:
+          proximoCompromissoTitulo ?? this.proximoCompromissoTitulo,
+      proximoCompromissoDetalhes:
+          proximoCompromissoDetalhes ?? this.proximoCompromissoDetalhes,
+      dica: dica ?? this.dica,
+    );
+  }
+}
+
+class _DashboardCacheEntry {
+  const _DashboardCacheEntry({required this.resumo, required this.updatedAt});
+
+  final _DashboardResumo resumo;
+  final DateTime updatedAt;
 }
 
 class _AppointmentSummary {

@@ -31,6 +31,7 @@ type MensagemIaRow = {
   conversa_id: string;
   remetente: "usuario" | "ia";
   conteudo: string;
+  anexos: Array<{ mimeType: string; base64: string }> | null;
   criado_em: Date | string;
 };
 
@@ -89,7 +90,7 @@ export const iaService = {
 
     const result = await getPool().query<MensagemIaRow>(
       `
-        select id, conversa_id, remetente, conteudo, criado_em
+        select id, conversa_id, remetente, conteudo, anexos, criado_em
         from mensagens_ia
         where conversa_id = $1
         order by criado_em asc
@@ -126,7 +127,7 @@ export const iaService = {
       ? `${input.mensagem || "Analise esta imagem."}\n[imagem anexada]`
       : input.mensagem;
 
-    await salvarMensagem(conversa.id, "usuario", conteudoUsuario);
+    await salvarMensagem(conversa.id, "usuario", conteudoUsuario, input.anexos);
     await atualizarTituloSeNecessario(
       conversa.id,
       conversa.titulo,
@@ -261,6 +262,7 @@ async function garantirTabelasIa() {
       conversa_id uuid not null references conversas_ia(id) on delete cascade,
       remetente text not null check (remetente in ('usuario', 'ia')),
       conteudo text not null,
+      anexos jsonb,
       criado_em timestamptz not null default now()
     )
   `);
@@ -270,6 +272,7 @@ async function garantirTabelasIa() {
       add column if not exists conversa_id uuid,
       add column if not exists remetente text,
       add column if not exists conteudo text,
+      add column if not exists anexos jsonb,
       add column if not exists criado_em timestamptz
   `);
 
@@ -359,7 +362,7 @@ function validarConversaDoIdoso(
 async function buscarMensagens(conversaId: string) {
   const result = await getPool().query<MensagemIaRow>(
     `
-      select id, conversa_id, remetente, conteudo, criado_em
+      select id, conversa_id, remetente, conteudo, anexos, criado_em
       from mensagens_ia
       where conversa_id = $1
       order by criado_em asc
@@ -374,14 +377,21 @@ async function salvarMensagem(
   conversaId: string,
   remetente: "usuario" | "ia",
   conteudo: string,
+  anexos?: Array<{ mimeType: string; base64: string }>,
 ) {
   const result = await getPool().query<MensagemIaRow>(
     `
-      insert into mensagens_ia (id, conversa_id, remetente, conteudo)
-      values ($1, $2, $3, $4)
-      returning id, conversa_id, remetente, conteudo, criado_em
+      insert into mensagens_ia (id, conversa_id, remetente, conteudo, anexos)
+      values ($1, $2, $3, $4, $5)
+      returning id, conversa_id, remetente, conteudo, anexos, criado_em
     `,
-    [randomUUID(), conversaId, remetente, conteudo],
+    [
+      randomUUID(),
+      conversaId,
+      remetente,
+      conteudo,
+      anexos?.length ? JSON.stringify(anexos) : null,
+    ],
   );
 
   await atualizarConversa(conversaId);
@@ -443,6 +453,9 @@ function montarPrompt(
       return `${remetente}: ${mensagem.conteudo}`;
     })
     .join("\n\n");
+  const pessoaRelacionada = idosoNome
+    ? descreverPessoaRelacionada(idosoNome, contextoInterno)
+    : "";
 
   return [
     personalidade,
@@ -451,9 +464,7 @@ function montarPrompt(
     usuarioNome
       ? `Voce esta conversando com o cuidador/familiar chamado ${usuarioNome}. Trate-o pelo primeiro nome quando fizer sentido, nunca por um identificador tecnico ou codigo.`
       : "Nao foi informado o nome do cuidador/familiar; nao invente um nome nem use codigos ou identificadores para se referir a ele.",
-    idosoNome
-      ? `A conversa esta relacionada ao idoso chamado ${idosoNome}.`
-      : "",
+    pessoaRelacionada,
     temImagem
       ? "A mensagem atual tem uma imagem anexada. Analise visualmente apenas o que for visivel, descreva com cautela e nao de diagnostico por imagem. Se houver risco, oriente procurar um profissional."
       : "",
@@ -470,6 +481,22 @@ function montarPrompt(
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+function descreverPessoaRelacionada(
+  idosoNome: string,
+  contextoInterno?: Record<string, unknown> | null,
+) {
+  const idoso = lerObjeto(contextoInterno?.idoso);
+  const sexo = textoOuPadrao(idoso?.sexo, "").toLowerCase();
+
+  if (sexo === "feminino") {
+    return `A conversa esta relacionada a idosa chamada ${idosoNome}.`;
+  }
+  if (sexo === "masculino") {
+    return `A conversa esta relacionada ao idoso chamado ${idosoNome}.`;
+  }
+  return `A conversa esta relacionada a pessoa idosa chamada ${idosoNome}.`;
 }
 
 function montarPartesImagem(
@@ -537,11 +564,16 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
 
 function montarRelatorioInicial(contexto: Record<string, unknown> | null) {
   const idoso = lerObjeto(contexto?.idoso);
-  const nome = textoOuPadrao(idoso?.nome_completo, "idoso selecionado");
+  const nome = textoOuPadrao(
+    idoso?.nome_completo,
+    rotuloPessoaSelecionada(idoso?.sexo),
+  );
   const primeiroNome = nome.split(" ")[0] || nome;
   const glicemia = lerObjeto(contexto?.glicemia);
   const resumoGlicemia = lerObjeto(glicemia?.resumo);
-  const humor = lerArray(contexto?.humor && lerObjeto(contexto.humor)?.registrosRecentes);
+  const humor = lerArray(
+    contexto?.humor && lerObjeto(contexto.humor)?.registrosRecentes,
+  );
   const alimentacao = lerArray(
     contexto?.alimentacao && lerObjeto(contexto.alimentacao)?.registrosRecentes,
   );
@@ -577,6 +609,13 @@ function montarRelatorioInicial(contexto: Record<string, unknown> | null) {
       },
     ],
   };
+}
+
+function rotuloPessoaSelecionada(sexo: unknown) {
+  const normalized = textoOuPadrao(sexo, "").toLowerCase();
+  if (normalized === "feminino") return "idosa selecionada";
+  if (normalized === "masculino") return "idoso selecionado";
+  return "pessoa idosa selecionada";
 }
 
 function montarRespostaFallbackIa(
@@ -701,7 +740,10 @@ function montarTextoGlicemia(resumo: Record<string, unknown> | null) {
   const acima180 = numeroOuZero(resumo?.acima180);
   const abaixo70 = numeroOuZero(resumo?.abaixo70);
   const foraDaFaixa = acima180 + abaixo70;
-  const estabilidade = Math.max(0, Math.round(((total - foraDaFaixa) / total) * 100));
+  const estabilidade = Math.max(
+    0,
+    Math.round(((total - foraDaFaixa) / total) * 100),
+  );
 
   if (foraDaFaixa === 0) {
     return `O controle recente parece estavel: foram ${total} medicao(oes), media de ${media} mg/dL e nenhuma fora da faixa padrao registrada.`;
@@ -1075,7 +1117,8 @@ async function montarContextoInternoIdoso(
 
   return sanitizarObjeto({
     geradoEm: now.toISOString(),
-    janelaPrincipal: "ultimos 30 dias; alimentacao, hidratacao e historico em janelas menores quando indicado",
+    janelaPrincipal:
+      "ultimos 30 dias; alimentacao, hidratacao e historico em janelas menores quando indicado",
     idoso: sanitizarLinhas(idoso)[0] ?? null,
     glicemia: {
       resumo: resumirGlicemia(valoresGlicemia),
@@ -1152,7 +1195,9 @@ function sanitizarObjeto(value: unknown): unknown {
 
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)
-      .filter(([key]) => !/url_foto|url_manual|foto_url|manual|base64/i.test(key))
+      .filter(
+        ([key]) => !/url_foto|url_manual|foto_url|manual|base64/i.test(key),
+      )
       .map(([key, item]) => [key, sanitizarObjeto(item)]),
   );
 }

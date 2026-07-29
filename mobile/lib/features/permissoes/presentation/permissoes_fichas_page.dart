@@ -18,9 +18,12 @@ class PermissoesFichasPage extends ConsumerWidget {
     final fichasAsync = ref.watch(fichasAdministradasProvider);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -65,7 +68,8 @@ class PermissoesFichasPage extends ConsumerWidget {
                       child: Text(
                         'Permissões',
                         style: TextStyle(
-                          color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                          color: adaptive(
+                              context, Colors.black, AppDarkColors.textPrimary),
                           fontSize: 23,
                           fontWeight: FontWeight.w600,
                         ),
@@ -78,7 +82,8 @@ class PermissoesFichasPage extends ConsumerWidget {
                         'Fichas em que voce é administrador. Toque em uma '
                         'para gerenciar acessos e permissões.',
                         style: TextStyle(
-                          color: adaptive(context, const Color(0xFF4C4C4C), AppDarkColors.textSecondary),
+                          color: adaptive(context, const Color(0xFF4C4C4C),
+                              AppDarkColors.textSecondary),
                           fontSize: 12.5,
                           height: 1.35,
                         ),
@@ -108,7 +113,10 @@ class PermissoesFichasPage extends ConsumerWidget {
                               Text(
                                 'Nao foi possivel carregar as fichas.',
                                 style: TextStyle(
-                                  color: adaptive(context, const Color(0xFF4C4C4C), AppDarkColors.textSecondary),
+                                  color: adaptive(
+                                      context,
+                                      const Color(0xFF4C4C4C),
+                                      AppDarkColors.textSecondary),
                                   fontSize: 12,
                                 ),
                               ),
@@ -176,7 +184,9 @@ class _FichaAdminCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border)),
+            border: Border.all(
+                color: adaptive(
+                    context, const Color(0xFFE4EFF1), AppDarkColors.border)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.06),
@@ -189,7 +199,8 @@ class _FichaAdminCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 26,
-                backgroundColor: adaptive(context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
+                backgroundColor: adaptive(
+                    context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
                 backgroundImage: bytes != null
                     ? MemoryImage(bytes)
                     : idoso.urlFoto != null && idoso.urlFoto!.startsWith('http')
@@ -215,7 +226,8 @@ class _FichaAdminCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF17324D),
+                            AppDarkColors.textPrimary),
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -225,7 +237,8 @@ class _FichaAdminCard extends StatelessWidget {
                       Text(
                         '${idoso.idade} anos',
                         style: TextStyle(
-                          color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+                          color: adaptive(context, const Color(0xFF8A8A8A),
+                              AppDarkColors.textSecondary),
                           fontSize: 12.5,
                         ),
                       ),
@@ -235,7 +248,8 @@ class _FichaAdminCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: adaptive(context, const Color(0xFF9CB2B8), AppDarkColors.textMuted),
+                color: adaptive(
+                    context, const Color(0xFF9CB2B8), AppDarkColors.textMuted),
               ),
             ],
           ),
@@ -260,7 +274,8 @@ class _EmptyAdminState extends StatelessWidget {
               width: 74,
               height: 74,
               decoration: BoxDecoration(
-                color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
+                color: adaptive(
+                    context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -273,7 +288,8 @@ class _EmptyAdminState extends StatelessWidget {
             Text(
               'Nenhuma ficha administrada',
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
@@ -283,7 +299,11 @@ class _EmptyAdminState extends StatelessWidget {
               'Você ainda não é administrador de nenhuma ficha. '
               'Fichas que você criar aparecerão aqui.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary), fontSize: 12.5, height: 1.35),
+              style: TextStyle(
+                  color: adaptive(context, const Color(0xFF5E6B73),
+                      AppDarkColors.textSecondary),
+                  fontSize: 12.5,
+                  height: 1.35),
             ),
           ],
         ),

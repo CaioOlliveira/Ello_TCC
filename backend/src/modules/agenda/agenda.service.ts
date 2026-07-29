@@ -3,11 +3,7 @@ import { registrarHistorico } from "../../database/audit.js";
 import { getPool } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
 import { notificacoesService } from "../notificacoes/notificacoes.service.js";
-import {
-  deleteRow,
-  insertRow,
-  updateRow,
-} from "../../database/simple-crud.js";
+import { deleteRow, insertRow, updateRow } from "../../database/simple-crud.js";
 import type {
   AtualizarEventoInput,
   AtualizarOcorrenciaEventoInput,
@@ -230,10 +226,7 @@ export const agendaService = {
     return this.buscarPorId(String(atualizado.id));
   },
 
-  async atualizarOcorrencia(
-    id: string,
-    input: AtualizarOcorrenciaEventoInput,
-  ) {
+  async atualizarOcorrencia(id: string, input: AtualizarOcorrenciaEventoInput) {
     const anterior = await this.buscarPorId(id);
     await this.garantirTabelaOcorrencias();
 

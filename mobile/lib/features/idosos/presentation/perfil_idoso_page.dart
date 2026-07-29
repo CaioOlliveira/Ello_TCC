@@ -23,14 +23,17 @@ class PerfilIdosoPage extends ConsumerWidget {
         body: Center(
           child: FilledButton(
             onPressed: () => context.go('/idosos'),
-            child: const Text('Selecionar idoso'),
+            child: const Text('Selecionar pessoa idosa'),
           ),
         ),
       );
     }
 
+    final personText = idoso.elderText;
+
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -76,19 +79,28 @@ class PerfilIdosoPage extends ConsumerWidget {
                       value: idoso.tipoSanguineo!,
                     ),
                   ),
-                if (idoso.condicoes.isNotEmpty)
+                if (idoso.sexo?.isNotEmpty == true)
                   StaggeredEntry(
                     index: 3,
                     child: _InfoCard(
+                      icon: Icons.badge_rounded,
+                      title: 'Sexo',
+                      value: idoso.sexo!,
+                    ),
+                  ),
+                if (idoso.condicoes.isNotEmpty)
+                  StaggeredEntry(
+                    index: 4,
+                    child: _InfoCard(
                       icon: Icons.monitor_heart_rounded,
-                      title: 'Doenças',
+                      title: 'Condições de saúde',
                       value: idoso.condicoes.join(' e '),
                     ),
                   ),
                 if (idoso.contatoEmergenciaNome?.isNotEmpty == true ||
                     idoso.contatoEmergenciaTelefone?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 4,
+                    index: 5,
                     child: _InfoCard(
                       icon: Icons.phone_rounded,
                       title: 'Contato de emergência',
@@ -102,10 +114,10 @@ class PerfilIdosoPage extends ConsumerWidget {
                   ),
                 if (idoso.alergiasRestricoes?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 5,
+                    index: 6,
                     child: _InfoCard(
                       icon: Icons.warning_amber_rounded,
-                      title: 'Alergias',
+                      title: 'Alergias ${personText.of}',
                       value:
                           _joinWithAnd(_splitList(idoso.alergiasRestricoes!)),
                     ),
@@ -215,7 +227,8 @@ class _CompartilharFichaSheetState
               width: 42,
               height: 4,
               decoration: BoxDecoration(
-                color: adaptive(context, const Color(0xFFE0E0E0), AppDarkColors.border),
+                color: adaptive(
+                    context, const Color(0xFFE0E0E0), AppDarkColors.border),
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -241,7 +254,8 @@ class _CompartilharFichaSheetState
             Text(
               'Compartilhar ficha',
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
               ),
@@ -252,7 +266,8 @@ class _CompartilharFichaSheetState
               '"Entrar com convite" e colar o código abaixo.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
+                color: adaptive(context, const Color(0xFF5E6B73),
+                    AppDarkColors.textSecondary),
                 fontSize: 12.5,
                 height: 1.35,
               ),
@@ -303,10 +318,16 @@ class _CompartilharFichaSheetState
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 18),
                                 decoration: BoxDecoration(
-                                  color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
+                                  color: adaptive(
+                                      context,
+                                      const Color(0xFFE7F4F6),
+                                      AppDarkColors.tintedInfo),
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
+                                    color: adaptive(
+                                        context,
+                                        const Color(0xFF8BD2DC),
+                                        AppDarkColors.border),
                                   ),
                                 ),
                                 child: Text(
@@ -346,7 +367,10 @@ class _CompartilharFichaSheetState
                             Text(
                               'Válido por 7 dias e para um único uso.',
                               style: TextStyle(
-                                color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
+                                color: adaptive(
+                                    context,
+                                    const Color(0xFF9B9B9B),
+                                    AppDarkColors.textMuted),
                                 fontSize: 11,
                               ),
                             ),
@@ -481,7 +505,8 @@ class _InfoCard extends StatelessWidget {
         color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
+          color:
+              adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
         ),
         boxShadow: [
           BoxShadow(
@@ -523,7 +548,8 @@ class _InfoCard extends StatelessWidget {
                 Text(
                   value,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF17324D),
+                        AppDarkColors.textPrimary),
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     height: 1.3,

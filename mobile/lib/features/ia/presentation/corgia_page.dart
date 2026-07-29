@@ -131,6 +131,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
               (mensagem) => _ChatMessage(
                 text: _cleanAiText(mensagem.conteudo),
                 fromUser: mensagem.fromUser,
+                imageDataUrl: mensagem.imageDataUrl,
               ),
             ),
           );
@@ -341,7 +342,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       return;
     }
     if (idoso == null || idoso.id.isEmpty) {
-      _addErrorMessage('Selecione um idoso para gerar o relatorio.');
+      _addErrorMessage('Selecione uma pessoa idosa para gerar o relatorio.');
       return;
     }
 
@@ -466,6 +467,9 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
                     child: showInitialPrompt
                         ? _InitialAnalysisPrompt(
                             idosoName: idoso?.nome,
+                            idosoLabel:
+                                idoso?.elderText.selectedWithArticle ??
+                                    'a pessoa idosa selecionada',
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -546,7 +550,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
   String _initialPromptText() {
     final idoso = ref.read(selectedIdosoProvider);
     final name = idoso == null || idoso.nome.trim().isEmpty
-        ? 'o idoso selecionado'
+        ? idoso?.elderText.selectedWithArticle ?? 'a pessoa idosa selecionada'
         : idoso.nome.trim();
     return 'Ola, cuidador! Analisei os dados de $name nos ultimos dias e preparei o relatorio de saude geral. Quer dar uma olhada?';
   }
@@ -798,14 +802,16 @@ class _HistoryTile extends StatelessWidget {
 class _InitialAnalysisPrompt extends StatelessWidget {
   const _InitialAnalysisPrompt({
     required this.idosoName,
+    required this.idosoLabel,
   });
 
   final String? idosoName;
+  final String idosoLabel;
 
   @override
   Widget build(BuildContext context) {
     final name = idosoName == null || idosoName!.trim().isEmpty
-        ? 'o idoso selecionado'
+        ? idosoLabel
         : idosoName!.trim();
 
     return ListView(

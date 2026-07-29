@@ -133,7 +133,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
       context: _pickerContext,
       locale: const Locale('pt', 'BR'),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       initialDate: _referenceDate,
     );
 
@@ -168,7 +168,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
       context: _pickerContext,
       locale: const Locale('pt', 'BR'),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       initialDate: initialDate,
     );
   }
@@ -270,9 +270,12 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFF7F7F7), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFF7F7F7), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -290,6 +293,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
   Widget _buildContent(IdosoResumo idoso) {
     _ensureResumo(idoso.id);
     _ensureHistorico(idoso.id);
+    final feelingHint = idoso.elderText.howFeeling();
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 260),
@@ -315,6 +319,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
               selectedDate: _glicemiaDate,
               selectedTime: _glicemiaTime,
               contexto: _contexto,
+              observationHint: feelingHint,
               saving: _saving,
               onContextoChanged: (value) {
                 if (value != null) setState(() => _contexto = value);
@@ -333,6 +338,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
               nomeInsulina: _nomeInsulina,
               tipoInsulina: _tipoInsulina,
               localAplicacao: _localAplicacao,
+              observationHint: feelingHint,
               saving: _saving,
               onNomeChanged: (value) {
                 if (value != null) setState(() => _nomeInsulina = value);
@@ -618,7 +624,8 @@ class _GlicemiaHeader extends StatelessWidget {
                     Text(
                       'Voltar',
                       style: TextStyle(
-                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                        color: adaptive(
+                            context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -703,7 +710,8 @@ class _NavRow extends StatelessWidget {
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -711,7 +719,8 @@ class _NavRow extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: adaptive(context, const Color(0xFF9AA0A6), AppDarkColors.textMuted),
+                color: adaptive(
+                    context, const Color(0xFF9AA0A6), AppDarkColors.textMuted),
                 size: 24,
               ),
             ],
@@ -746,7 +755,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 width: 92,
                 height: 92,
                 decoration: BoxDecoration(
-                  color: adaptive(context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
+                  color: adaptive(context, const Color(0xFFD8F1F4),
+                      AppDarkColors.tintedInfo),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -760,7 +770,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 'Faça a primeira medição',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                  color: adaptive(context, const Color(0xFF073248),
+                      AppDarkColors.textPrimary),
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
@@ -770,7 +781,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 'Ainda não há registros de glicemia para $idosoNome. Comece registrando a medição atual e, se houver orientação médica, o uso de insulina.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
+                  color: adaptive(context, const Color(0xFF607178),
+                      AppDarkColors.textSecondary),
                   fontSize: 13,
                   height: 1.25,
                 ),
@@ -865,7 +877,8 @@ class _MediaGlicemiaCard extends StatelessWidget {
                 Text(
                   'Média da glicemia',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF727272),
+                        AppDarkColors.textSecondary),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -878,7 +891,8 @@ class _MediaGlicemiaCard extends StatelessWidget {
                       ? 'Sem medição'
                       : 'Última medição: ${_formatTime(ultima.medidoEm)} · ${ultima.valor} mg/dL',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
+                    color: adaptive(context, const Color(0xFF808080),
+                        AppDarkColors.textMuted),
                     fontSize: 11,
                   ),
                 ),
@@ -961,7 +975,8 @@ class _MetricCard extends StatelessWidget {
                 width: 21,
                 height: 21,
                 decoration: BoxDecoration(
-                  color: adaptive(context, const Color(0xFFBFE7EC), AppDarkColors.surfaceAlt),
+                  color: adaptive(context, const Color(0xFFBFE7EC),
+                      AppDarkColors.surfaceAlt),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: const Color(0xFF148A9C), size: 14),
@@ -973,7 +988,8 @@ class _MetricCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1054,8 +1070,10 @@ class _ChartCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: point.valor == null
-                                    ? adaptive(context, const Color(0xFFADB3BB), AppDarkColors.textMuted)
-                                    : adaptive(context, const Color(0xFF8E95A1), AppDarkColors.textSecondary),
+                                    ? adaptive(context, const Color(0xFFADB3BB),
+                                        AppDarkColors.textMuted)
+                                    : adaptive(context, const Color(0xFF8E95A1),
+                                        AppDarkColors.textSecondary),
                                 fontSize: 10,
                               ),
                             ),
@@ -1251,7 +1269,8 @@ class _AnalysisCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: adaptive(context, const Color(0xFFC9E7ED), AppDarkColors.tintedInfo),
+      color:
+          adaptive(context, const Color(0xFFC9E7ED), AppDarkColors.tintedInfo),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -1289,7 +1308,8 @@ class _AnalysisCard extends StatelessWidget {
                     Text(
                       'Análise de glicemia',
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF2F4853),
+                            AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -1300,7 +1320,8 @@ class _AnalysisCard extends StatelessWidget {
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF2F4853),
+                            AppDarkColors.textPrimary),
                         fontSize: 10,
                         height: 1.08,
                       ),
@@ -1310,7 +1331,8 @@ class _AnalysisCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 size: 30,
               ),
             ],
@@ -1337,7 +1359,8 @@ class _InsulinaResumoCard extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: adaptive(context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
+              color: adaptive(
+                  context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -1354,7 +1377,8 @@ class _InsulinaResumoCard extends StatelessWidget {
                 Text(
                   'Última insulina registrada',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF2F4853),
+                        AppDarkColors.textPrimary),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1365,7 +1389,8 @@ class _InsulinaResumoCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF607178),
+                        AppDarkColors.textSecondary),
                     fontSize: 11,
                   ),
                 ),
@@ -1446,7 +1471,8 @@ class _HistoricoVazio extends StatelessWidget {
               'Nenhum registro neste período',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
@@ -1455,7 +1481,10 @@ class _HistoricoVazio extends StatelessWidget {
             Text(
               'Altere o período ou registre uma nova medição.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+              style: TextStyle(
+                  color: adaptive(context, const Color(0xFF607178),
+                      AppDarkColors.textSecondary),
+                  fontSize: 13),
             ),
           ],
         ),
@@ -1501,7 +1530,8 @@ class _HistoricoItemCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1512,7 +1542,8 @@ class _HistoricoItemCard extends StatelessWidget {
                       ? '${entrada.valor} mg/dL'
                       : 'Sem valor registrado',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
+                    color: adaptive(context, const Color(0xFF808080),
+                        AppDarkColors.textMuted),
                     fontSize: 12,
                   ),
                 ),
@@ -1526,14 +1557,16 @@ class _HistoricoItemCard extends StatelessWidget {
               Text(
                 _formatDate(entrada.dataHora),
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF9AA0A6), AppDarkColors.textMuted),
+                  color: adaptive(context, const Color(0xFF9AA0A6),
+                      AppDarkColors.textMuted),
                   fontSize: 10,
                 ),
               ),
               Text(
                 _formatTime(entrada.dataHora),
                 style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                  color: adaptive(
+                      context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1573,6 +1606,7 @@ class _RegistrarGlicemiaView extends StatelessWidget {
     required this.selectedDate,
     required this.selectedTime,
     required this.contexto,
+    required this.observationHint,
     required this.saving,
     required this.onContextoChanged,
     required this.onSelectDate,
@@ -1587,6 +1621,7 @@ class _RegistrarGlicemiaView extends StatelessWidget {
   final DateTime selectedDate;
   final TimeOfDay selectedTime;
   final String contexto;
+  final String observationHint;
   final bool saving;
   final ValueChanged<String?> onContextoChanged;
   final VoidCallback onSelectDate;
@@ -1636,7 +1671,7 @@ class _RegistrarGlicemiaView extends StatelessWidget {
             _ObservationCard(
               controller: observacoesController,
               title: 'Observações',
-              hintText: 'Como o idoso está se sentindo?',
+              hintText: observationHint,
             ),
             const SizedBox(height: 22),
             _SaveCancelButtons(
@@ -1661,6 +1696,7 @@ class _RegistrarInsulinaView extends StatelessWidget {
     required this.nomeInsulina,
     required this.tipoInsulina,
     required this.localAplicacao,
+    required this.observationHint,
     required this.saving,
     required this.onNomeChanged,
     required this.onTipoChanged,
@@ -1679,6 +1715,7 @@ class _RegistrarInsulinaView extends StatelessWidget {
   final String nomeInsulina;
   final String tipoInsulina;
   final String localAplicacao;
+  final String observationHint;
   final bool saving;
   final ValueChanged<String?> onNomeChanged;
   final ValueChanged<String> onTipoChanged;
@@ -1735,7 +1772,7 @@ class _RegistrarInsulinaView extends StatelessWidget {
             _ObservationCard(
               controller: observacoesController,
               title: 'Observações',
-              hintText: 'Como o idoso está se sentindo?',
+              hintText: observationHint,
             ),
             const SizedBox(height: 22),
             _SaveCancelButtons(
@@ -1974,7 +2011,8 @@ class _NumericValueCard extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF6F636B), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF6F636B),
+                        AppDarkColors.textSecondary),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1982,7 +2020,8 @@ class _NumericValueCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: adaptive(context, const Color(0xFFF2FBFC), AppDarkColors.tintedInfo),
+                    color: adaptive(context, const Color(0xFFF2FBFC),
+                        AppDarkColors.tintedInfo),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: const Color(0xFF2FA3B5),
@@ -2003,7 +2042,8 @@ class _NumericValueCard extends StatelessWidget {
                           maxLines: 1,
                           textAlignVertical: TextAlignVertical.center,
                           style: TextStyle(
-                            color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                            color: adaptive(context, Colors.black,
+                                AppDarkColors.textPrimary),
                             fontSize: 30,
                             fontWeight: FontWeight.w700,
                             height: 1.1,
@@ -2011,7 +2051,8 @@ class _NumericValueCard extends StatelessWidget {
                           decoration: InputDecoration(
                             hintText: hintText,
                             hintStyle: TextStyle(
-                              color: adaptive(context, const Color(0xFFBFCBCE), AppDarkColors.textMuted),
+                              color: adaptive(context, const Color(0xFFBFCBCE),
+                                  AppDarkColors.textMuted),
                               fontSize: 30,
                               fontWeight: FontWeight.w700,
                             ),
@@ -2043,7 +2084,8 @@ class _NumericValueCard extends StatelessWidget {
                   Text(
                     captionBelow!,
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF8D8D8D), AppDarkColors.textMuted),
+                      color: adaptive(context, const Color(0xFF8D8D8D),
+                          AppDarkColors.textMuted),
                       fontSize: 12,
                     ),
                   ),
@@ -2095,7 +2137,8 @@ class _PickerCard extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                        color: adaptive(
+                            context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         height: 1,
@@ -2105,7 +2148,8 @@ class _PickerCard extends StatelessWidget {
                     Text(
                       value,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF8D8D8D), AppDarkColors.textMuted),
+                        color: adaptive(context, const Color(0xFF8D8D8D),
+                            AppDarkColors.textMuted),
                         fontSize: 12,
                         height: 1,
                       ),
@@ -2156,7 +2200,8 @@ class _DropdownCard extends StatelessWidget {
             onChanged: onChanged,
             icon: Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
+              color: adaptive(
+                  context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
             ),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -2209,7 +2254,8 @@ class _ObservationCard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                  color: adaptive(
+                      context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
@@ -2223,7 +2269,9 @@ class _ObservationCard extends StatelessWidget {
             maxLines: 4,
             decoration: InputDecoration(
               hintText: hintText,
-              hintStyle: TextStyle(color: adaptive(context, const Color(0xFF8D8D8D), AppDarkColors.textMuted)),
+              hintStyle: TextStyle(
+                  color: adaptive(context, const Color(0xFF8D8D8D),
+                      AppDarkColors.textMuted)),
               contentPadding: const EdgeInsets.all(9),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
@@ -2322,16 +2370,20 @@ class _NoIdosoState extends StatelessWidget {
             'Escolha uma ficha',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Selecione um idoso para registrar glicemia e uso de insulina.',
+            'Selecione uma pessoa idosa para registrar glicemia e uso de insulina.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+            style: TextStyle(
+                color: adaptive(context, const Color(0xFF607178),
+                    AppDarkColors.textSecondary),
+                fontSize: 13),
           ),
           const SizedBox(height: 16),
           FilledButton(
@@ -2367,7 +2419,8 @@ class _ErrorState extends StatelessWidget {
             'Não foi possível carregar',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -2376,7 +2429,10 @@ class _ErrorState extends StatelessWidget {
           Text(
             'Confira a conexão com a API e tente novamente.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+            style: TextStyle(
+                color: adaptive(context, const Color(0xFF607178),
+                    AppDarkColors.textSecondary),
+                fontSize: 13),
           ),
           const SizedBox(height: 18),
           FilledButton(

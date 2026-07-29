@@ -8,9 +8,9 @@ const isDatabaseConnectionError = (
 ): error is { code?: string; message?: string } =>
   Boolean(
     error &&
-      typeof error === "object" &&
-      "code" in error &&
-      typeof (error as { code?: unknown }).code === "string",
+    typeof error === "object" &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string",
   );
 
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {

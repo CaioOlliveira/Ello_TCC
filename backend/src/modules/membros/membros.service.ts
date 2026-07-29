@@ -69,7 +69,11 @@ export const membrosService = {
 
     const membro = result.rows[0];
     if (!membro) {
-      throw new AppError("MEMBRO_NAO_ENCONTRADO", "Membro não encontrado.", 404);
+      throw new AppError(
+        "MEMBRO_NAO_ENCONTRADO",
+        "Membro não encontrado.",
+        404,
+      );
     }
     return membro;
   },
@@ -128,7 +132,10 @@ export const membrosService = {
           and mf.usuario_id != $2
         order by mf.criado_em asc
       `,
-      [idosoId, criador?.criado_por_id ?? "00000000-0000-0000-0000-000000000000"],
+      [
+        idosoId,
+        criador?.criado_por_id ?? "00000000-0000-0000-0000-000000000000",
+      ],
     );
 
     return [

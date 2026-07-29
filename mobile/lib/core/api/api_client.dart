@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../utils/elder_text.dart';
 import 'api_endpoints.dart';
 import 'api_exception.dart';
 
@@ -37,7 +38,7 @@ class IdosoResumo {
           json['tipo_sanguineo']?.toString(),
       dataNascimento: json['dataNascimento']?.toString() ??
           json['data_nascimento']?.toString(),
-      sexo: json['sexo']?.toString(),
+      sexo: normalizeSexo(json['sexo']?.toString()) ?? json['sexo']?.toString(),
       limitacoes: json['limitacoes']?.toString(),
       observacoesGerais: json['observacoesGerais']?.toString() ??
           json['observacoes_saude']?.toString(),
@@ -77,6 +78,8 @@ class IdosoResumo {
   final List<String> condicoes;
   final List<String> monitoramentos;
 
+  ElderText get elderText => ElderText.fromSexo(sexo);
+
   IdosoResumo copyWith({
     String? nome,
     int? idade,
@@ -102,7 +105,7 @@ class IdosoResumo {
       pesoKg: pesoKg ?? this.pesoKg,
       tipoSanguineo: tipoSanguineo ?? this.tipoSanguineo,
       dataNascimento: dataNascimento ?? this.dataNascimento,
-      sexo: sexo ?? this.sexo,
+      sexo: normalizeSexo(sexo) ?? sexo ?? this.sexo,
       limitacoes: limitacoes ?? this.limitacoes,
       observacoesGerais: observacoesGerais ?? this.observacoesGerais,
       alergiasRestricoes: alergiasRestricoes ?? this.alergiasRestricoes,
@@ -163,9 +166,23 @@ class AiMensagem {
     required this.remetente,
     required this.conteudo,
     required this.criadoEm,
+    this.imageDataUrl,
   });
 
   factory AiMensagem.fromJson(Map<String, dynamic> json) {
+    final anexos = json['anexos'];
+    String? imageDataUrl;
+    if (anexos is List && anexos.isNotEmpty) {
+      final first = anexos.first;
+      if (first is Map<String, dynamic>) {
+        final mimeType = first['mimeType']?.toString();
+        final base64 = first['base64']?.toString();
+        if (mimeType != null && base64 != null) {
+          imageDataUrl = 'data:$mimeType;base64,$base64';
+        }
+      }
+    }
+
     return AiMensagem(
       id: json['id']?.toString() ?? '',
       conversaId: json['conversaId']?.toString() ??
@@ -177,6 +194,7 @@ class AiMensagem {
             json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
           ) ??
           DateTime.now(),
+      imageDataUrl: imageDataUrl,
     );
   }
 
@@ -185,6 +203,7 @@ class AiMensagem {
   final String remetente;
   final String conteudo;
   final DateTime criadoEm;
+  final String? imageDataUrl;
 
   bool get fromUser => remetente == 'usuario';
 }
@@ -1643,7 +1662,8 @@ class ConviteFicha {
   const ConviteFicha({required this.codigo, this.expiraEm});
 
   factory ConviteFicha.fromJson(Map<String, dynamic> json) {
-    final expira = json['expira_em']?.toString() ?? json['expiraEm']?.toString();
+    final expira =
+        json['expira_em']?.toString() ?? json['expiraEm']?.toString();
     return ConviteFicha(
       codigo: json['codigo']?.toString() ?? '',
       expiraEm: expira == null ? null : DateTime.tryParse(expira),
@@ -1723,9 +1743,8 @@ class SolicitacaoPendente {
       nome: json['usuario_nome']?.toString() ?? 'Sem nome',
       urlFoto: json['usuario_foto']?.toString(),
       funcao: json['funcao']?.toString(),
-      criadoEm:
-          DateTime.tryParse(json['criado_em']?.toString() ?? '') ??
-              DateTime.now(),
+      criadoEm: DateTime.tryParse(json['criado_em']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 
@@ -1871,6 +1890,28 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> alterarSenha({
+    required String usuarioId,
+    required String senhaAtual,
+    required String novaSenha,
+    required String confirmarNovaSenha,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.alterarSenha,
+        data: {
+          'usuarioId': usuarioId,
+          'senhaAtual': senhaAtual,
+          'novaSenha': novaSenha,
+          'confirmarNovaSenha': confirmarNovaSenha,
+        },
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao alterar senha.');
+    }
+  }
+
   Future<Map<String, dynamic>> atualizarUsuario({
     required String id,
     String? nome,
@@ -1957,7 +1998,7 @@ class ApiClient {
           if (urlFoto != null && urlFoto.isNotEmpty) 'urlFoto': urlFoto,
           if (criadoPorId != null && criadoPorId.isNotEmpty)
             'criadoPorId': criadoPorId,
-          if (sexo != null && sexo.isNotEmpty) 'sexo': sexo,
+          if (normalizeSexo(sexo) != null) 'sexo': normalizeSexo(sexo),
           if (tipoSanguineo != null && tipoSanguineo.isNotEmpty)
             'tipoSanguineo': tipoSanguineo,
           if (condicoesSaude != null && condicoesSaude.isNotEmpty)

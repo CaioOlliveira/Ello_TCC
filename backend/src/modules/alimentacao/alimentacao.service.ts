@@ -28,7 +28,11 @@ type RefeicaoRow = Record<string, unknown> & {
   concluida_em?: string | null;
 };
 
-const toDateTime = (data?: string, hora?: string, fallback?: string): string => {
+const toDateTime = (
+  data?: string,
+  hora?: string,
+  fallback?: string,
+): string => {
   if (data && hora) return `${data}T${hora}:00.000Z`;
   return fallback ?? new Date().toISOString();
 };

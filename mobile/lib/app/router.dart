@@ -76,6 +76,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const EditarPerfilPage(),
       ),
       GoRoute(
+        path: '/perfil/seguranca',
+        builder: (context, state) => const SegurancaPerfilPage(),
+      ),
+      GoRoute(
+        path: '/perfil/sobre',
+        builder: (context, state) => const SobreAppPage(),
+      ),
+      GoRoute(
         path: '/permissoes',
         builder: (context, state) => const PermissoesFichasPage(),
       ),

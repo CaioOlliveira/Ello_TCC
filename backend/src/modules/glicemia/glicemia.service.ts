@@ -6,6 +6,13 @@ import {
   getRowById,
   updateRow,
 } from "../../database/simple-crud.js";
+import {
+  formatLocalDate,
+  parseLocalDate,
+  periodRange,
+  sameLocalDay,
+  startOfLocalDay,
+} from "../../common/utils/date-utils.js";
 import type {
   AtualizarGlicemiaInput,
   CriarGlicemiaInput,
@@ -127,19 +134,8 @@ const mapearInsulina = (row: InsulinaRow): RegistroInsulina => ({
 
 const round = (value: number) => Math.round(value);
 
-const startOfDay = (date: Date) => {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-};
-
-const sameDay = (value: Date, reference: Date) =>
-  value.getFullYear() === reference.getFullYear() &&
-  value.getMonth() === reference.getMonth() &&
-    value.getDate() === reference.getDate();
-
 const startOfWeek = (date: Date) => {
-  const copy = startOfDay(date);
+  const copy = startOfLocalDay(date);
   const day = copy.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   copy.setDate(copy.getDate() + diff);
@@ -203,18 +199,18 @@ const criarSerieDiaria = (
   registros: RegistroGlicemia[],
   dataReferencia: Date,
 ) => {
-  const inicio = startOfDay(dataReferencia);
+  const inicio = startOfLocalDay(dataReferencia);
   inicio.setDate(inicio.getDate() - 6);
 
   return Array.from({ length: 7 }, (_, index) => {
     const dia = new Date(inicio);
     dia.setDate(inicio.getDate() + index);
     const valores = registros
-      .filter((registro) => sameDay(new Date(registro.medidoEm), dia))
+      .filter((registro) => sameLocalDay(new Date(registro.medidoEm), dia))
       .map((registro) => registro.valor);
 
     return {
-      data: dia.toISOString().substring(0, 10),
+      data: formatLocalDate(dia),
       rotulo: dia.toLocaleDateString("pt-BR", {
         day: "2-digit",
         month: "2-digit",
@@ -244,7 +240,7 @@ const criarSerieSemanal = (
       .map((registro) => registro.valor);
 
     return {
-      data: semanaInicio.toISOString().substring(0, 10),
+      data: formatLocalDate(semanaInicio),
       rotulo: semanaInicio.toLocaleDateString("pt-BR", {
         day: "2-digit",
         month: "2-digit",
@@ -283,7 +279,7 @@ const criarSerieMensal = (
       .map((registro) => registro.valor);
 
     return {
-      data: mesInicio.toISOString().substring(0, 10),
+      data: formatLocalDate(mesInicio),
       rotulo: mesInicio.toLocaleDateString("pt-BR", { month: "short" }),
       valor: average(valores),
     };
@@ -295,7 +291,8 @@ const criarSerie = (
   dataReferencia: Date,
   periodo: PeriodoGlicemia,
 ) => {
-  if (periodo === "semanal") return criarSerieSemanal(registros, dataReferencia);
+  if (periodo === "semanal")
+    return criarSerieSemanal(registros, dataReferencia);
   if (periodo === "mes") return criarSerieMensal(registros, dataReferencia);
   return criarSerieDiaria(registros, dataReferencia);
 };
@@ -313,7 +310,8 @@ const montarAnalise = (registros: RegistroGlicemia[]) => {
   );
   const foraDaFaixa = ultimos7Dias.filter(
     (registro) =>
-      registro.valor < faixaPadrao.minimo || registro.valor > faixaPadrao.maximo,
+      registro.valor < faixaPadrao.minimo ||
+      registro.valor > faixaPadrao.maximo,
   ).length;
 
   if (ultimos7Dias.length === 0 || mediaUltimos7Dias == null) {
@@ -347,27 +345,28 @@ const montarResumo = (
   periodo: PeriodoGlicemia = "dia",
 ) => {
   const ordenados = [...registros].sort(
-    (a, b) =>
-      new Date(b.medidoEm).getTime() - new Date(a.medidoEm).getTime(),
+    (a, b) => new Date(b.medidoEm).getTime() - new Date(a.medidoEm).getTime(),
   );
   const insulinasOrdenadas = [...insulinas].sort(
     (a, b) =>
       new Date(b.aplicadoEm).getTime() - new Date(a.aplicadoEm).getTime(),
   );
 
-  const ultima = ordenados[0] ?? null;
-  const valoresDoDia = ordenados
-    .filter((registro) => sameDay(new Date(registro.medidoEm), dataReferencia))
-    .map((registro) => registro.valor);
+  const registrosDoDia = ordenados.filter((registro) =>
+    sameLocalDay(new Date(registro.medidoEm), dataReferencia),
+  );
+  const ultima = registrosDoDia[0] ?? null;
+  const valoresDoDia = registrosDoDia.map((registro) => registro.valor);
   const mediaDia = average(valoresDoDia);
   const proximaMedicao = ultima
-    ? new Date(new Date(ultima.medidoEm).getTime() + 3 * 60 * 60 * 1000)
-        .toISOString()
+    ? new Date(
+        new Date(ultima.medidoEm).getTime() + 3 * 60 * 60 * 1000,
+      ).toISOString()
     : null;
 
   return {
     ultima,
-    totalRegistros: ordenados.length,
+    totalRegistros: registrosDoDia.length,
     mediaDia,
     proximaMedicao,
     faixa: faixaPadrao,
@@ -413,7 +412,9 @@ const ensureInsulinaSchema = async () => {
   insulinaSchemaReady = true;
 };
 
-const buscarGlicemias = async (idosoId: string): Promise<RegistroGlicemia[]> => {
+const buscarGlicemias = async (
+  idosoId: string,
+): Promise<RegistroGlicemia[]> => {
   if (!isDatabaseEnabled) {
     return glicemiasMemoria.filter((registro) => registro.idosoId === idosoId);
   }
@@ -440,7 +441,9 @@ const buscarGlicemias = async (idosoId: string): Promise<RegistroGlicemia[]> => 
   return result.rows.map(mapearGlicemia);
 };
 
-const buscarInsulinas = async (idosoId: string): Promise<RegistroInsulina[]> => {
+const buscarInsulinas = async (
+  idosoId: string,
+): Promise<RegistroInsulina[]> => {
   if (!isDatabaseEnabled) {
     return insulinasMemoria.filter((registro) => registro.idosoId === idosoId);
   }
@@ -568,25 +571,6 @@ const montarEntradaHistorico = (row: {
   };
 };
 
-const inicioDoPeriodoHistorico = (
-  referencia: Date,
-  periodo: PeriodoGlicemia,
-) => {
-  if (periodo === "semanal") {
-    const inicio = startOfDay(referencia);
-    inicio.setDate(inicio.getDate() - 6);
-    return inicio;
-  }
-
-  if (periodo === "mes") {
-    const inicio = startOfDay(referencia);
-    inicio.setDate(inicio.getDate() - 29);
-    return inicio;
-  }
-
-  return startOfDay(referencia);
-};
-
 export const glicemiaService = {
   async listar(limit: number, offset: number, idosoId?: string) {
     if (!isDatabaseEnabled) {
@@ -644,9 +628,7 @@ export const glicemiaService = {
     dataReferencia?: string,
     periodo: PeriodoGlicemia = "dia",
   ) {
-    const referencia = dataReferencia
-      ? new Date(`${dataReferencia}T12:00:00`)
-      : new Date();
+    const referencia = parseLocalDate(dataReferencia);
     const [registros, insulinas] = await Promise.all([
       buscarGlicemias(idosoId),
       buscarInsulinas(idosoId),
@@ -660,17 +642,19 @@ export const glicemiaService = {
     dataReferencia?: string,
     periodo: PeriodoGlicemia = "dia",
   ): Promise<HistoricoGlicemiaEntrada[]> {
-    const referencia = dataReferencia
-      ? new Date(`${dataReferencia}T12:00:00`)
-      : new Date();
-    const inicio = inicioDoPeriodoHistorico(referencia, periodo);
+    const referencia = parseLocalDate(dataReferencia);
+    const { start: inicio, endExclusive: fim } = periodRange(
+      referencia,
+      periodo,
+    );
 
     if (!isDatabaseEnabled) {
       return glicemiasMemoria
         .filter(
           (registro) =>
             registro.idosoId === idosoId &&
-            new Date(registro.medidoEm) >= inicio,
+            new Date(registro.medidoEm) >= inicio &&
+            new Date(registro.medidoEm) < fim,
         )
         .map((registro) =>
           montarEntradaHistorico({
@@ -705,10 +689,11 @@ export const glicemiaService = {
         where h.idoso_id = $1
           and h.tipo_entidade = $2
           and h.criado_em >= $3
+          and h.criado_em < $4
         order by h.criado_em desc
         limit 100
       `,
-      [idosoId, table, inicio.toISOString()],
+      [idosoId, table, inicio.toISOString(), fim.toISOString()],
     );
 
     return result.rows.map((row) =>

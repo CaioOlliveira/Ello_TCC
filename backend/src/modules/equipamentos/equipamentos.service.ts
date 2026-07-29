@@ -72,14 +72,18 @@ export const equipamentosService = {
         select
           h.*,
           u.nome as usuario_nome,
-          e.nome as equipamento_nome
+          coalesce(
+            e.nome,
+            h.dados_novos ->> 'nome',
+            h.dados_anteriores ->> 'nome'
+          ) as equipamento_nome
         from historico_alteracoes h
         left join usuarios u on u.id = h.usuario_id
         left join manutencoes_equipamentos me
           on h.tipo_entidade = 'manutencoes_equipamentos'
          and me.id::text = h.entidade_id::text
         left join equipamentos e
-          on e.id = me.equipamento_id
+          on e.id = coalesce(me.equipamento_id, h.entidade_id::uuid)
         where ${where}
         order by h.criado_em desc
         limit $${params.length + 1} offset $${params.length + 2}

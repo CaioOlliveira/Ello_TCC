@@ -6,9 +6,9 @@ void main() {
   testWidgets('navega da splash para login', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: ElloApp()));
 
-    expect(find.text('Ello'), findsOneWidget);
+    expect(find.text('ello'), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 901));
+    await tester.pump(const Duration(milliseconds: 1101));
     await tester.pumpAndSettle();
 
     expect(

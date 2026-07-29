@@ -185,6 +185,7 @@ async function buscarContextoIdoso(idosoId: string) {
   const result = await getPool().query<{
     nome: string | null;
     idade: number | null;
+    sexo: string | null;
     condicoes: unknown;
     limitacoes: string | null;
   }>(
@@ -195,6 +196,7 @@ async function buscarContextoIdoso(idosoId: string) {
           when data_nascimento is null then null
           else extract(year from age(current_date, data_nascimento))::int
         end as idade,
+        sexo,
         observacoes_saude as condicoes,
         limitacoes
       from fichas_idosos
@@ -210,6 +212,7 @@ async function buscarContextoIdoso(idosoId: string) {
   return [
     `Nome: ${idoso.nome ?? "nao informado"}.`,
     idoso.idade ? `Idade: ${idoso.idade}.` : "",
+    idoso.sexo ? `Sexo: ${idoso.sexo}.` : "",
     idoso.condicoes ? `Condicoes: ${JSON.stringify(idoso.condicoes)}.` : "",
     idoso.limitacoes ? `Limitacoes: ${idoso.limitacoes}.` : "",
   ]

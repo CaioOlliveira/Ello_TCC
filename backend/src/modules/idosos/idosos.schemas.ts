@@ -1,5 +1,40 @@
 import { z } from "zod";
 
+const valoresSexo = ["Feminino", "Masculino", "Outro"] as const;
+
+export const normalizarSexo = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+
+  if (!normalized) return undefined;
+  if (["f", "fem", "feminino", "mulher", "idosa"].includes(normalized)) {
+    return "Feminino";
+  }
+  if (["m", "masc", "masculino", "homem", "idoso"].includes(normalized)) {
+    return "Masculino";
+  }
+  if (
+    ["outro", "outra", "nao binario", "nao_binario", "nonbinary"].includes(
+      normalized,
+    )
+  ) {
+    return "Outro";
+  }
+  return value;
+};
+
+const sexoSchema = z.preprocess(
+  normalizarSexo,
+  z.enum(valoresSexo, {
+    invalid_type_error: "Sexo invalido.",
+    required_error: "Sexo e obrigatorio.",
+  }),
+);
+
 export const idosoParamsSchema = z.object({
   idosoId: z.string().min(1, "Idoso e obrigatorio."),
 });
@@ -20,7 +55,7 @@ export const criarIdosoSchema = z.object({
   dataNascimento: z.string().date("Data de nascimento invalida.").optional(),
   urlFoto: z.string().optional(),
   pesoKg: z.number().positive().optional(),
-  sexo: z.string().optional(),
+  sexo: sexoSchema.optional(),
   tipoSanguineo: z
     .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
     .optional(),

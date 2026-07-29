@@ -175,9 +175,12 @@ class _HumorPageState extends ConsumerState<HumorPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -197,9 +200,10 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                     StaggeredEntry(
                       index: 1,
                       child: Text(
-                        'Como ${_firstName(idoso?.nome ?? 'o idoso')} esta hoje?',
+                        'Como ${_moodTarget(idoso)} esta hoje?',
                         style: TextStyle(
-                          color: adaptive(context, const Color(0xFF242424), AppDarkColors.textPrimary),
+                          color: adaptive(context, const Color(0xFF242424),
+                              AppDarkColors.textPrimary),
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                         ),
@@ -286,8 +290,12 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF003B4F),
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: adaptive(context, const Color(0xFF7BA3AD), AppDarkColors.borderStrong),
-                            disabledForegroundColor: adaptive(context, Colors.white, AppDarkColors.textMuted),
+                            disabledBackgroundColor: adaptive(
+                                context,
+                                const Color(0xFF7BA3AD),
+                                AppDarkColors.borderStrong),
+                            disabledForegroundColor: adaptive(
+                                context, Colors.white, AppDarkColors.textMuted),
                             elevation: 4,
                             shadowColor:
                                 const Color(0xFF003B4F).withValues(alpha: 0.4),
@@ -312,7 +320,10 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                           child: OutlinedButton(
                             onPressed: () => context.push('/historico/humor'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                              foregroundColor: adaptive(
+                                  context,
+                                  const Color(0xFF073248),
+                                  AppDarkColors.textPrimary),
                               side: const BorderSide(
                                 color: Color(0xFF38AFC0),
                                 width: 1.4,
@@ -352,12 +363,20 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(
+        TextButton.icon(
           onPressed: onBack,
           icon: const Icon(
             Icons.chevron_left_rounded,
             color: Color(0xFF238FA1),
-            size: 34,
+            size: 28,
+          ),
+          label: const Text(
+            'Voltar',
+            style: TextStyle(
+              color: Color(0xFF238FA1),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         const Expanded(
@@ -530,7 +549,8 @@ class _MoodButton extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         decoration: BoxDecoration(
           color: selected
-              ? adaptive(context, const Color(0xFFE0F4F1), AppDarkColors.tintedInfo)
+              ? adaptive(
+                  context, const Color(0xFFE0F4F1), AppDarkColors.tintedInfo)
               : adaptive(context, Colors.white, AppDarkColors.surface),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
@@ -561,7 +581,8 @@ class _MoodButton extends StatelessWidget {
               style: TextStyle(
                 color: selected
                     ? const Color(0xFF19796F)
-                    : adaptive(context, const Color(0xFF666666), AppDarkColors.textSecondary),
+                    : adaptive(context, const Color(0xFF666666),
+                        AppDarkColors.textSecondary),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -607,7 +628,8 @@ class _ObservationBox extends StatelessWidget {
               Text(
                 'Observações',
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                  color: adaptive(context, const Color(0xFF17324D),
+                      AppDarkColors.textPrimary),
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
@@ -622,20 +644,26 @@ class _ObservationBox extends StatelessWidget {
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
               filled: true,
-              fillColor: adaptive(context, const Color(0xFFF2FBFC), AppDarkColors.tintedInfo),
+              fillColor: adaptive(
+                  context, const Color(0xFFF2FBFC), AppDarkColors.tintedInfo),
               hintText: 'Conte como foi o dia.',
               hintStyle: TextStyle(
-                color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
+                color: adaptive(
+                    context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
                 fontSize: 14,
               ),
               contentPadding: const EdgeInsets.all(10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(9),
-                borderSide: BorderSide(color: adaptive(context, const Color(0xFFCDE7EA), AppDarkColors.border)),
+                borderSide: BorderSide(
+                    color: adaptive(context, const Color(0xFFCDE7EA),
+                        AppDarkColors.border)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(9),
-                borderSide: BorderSide(color: adaptive(context, const Color(0xFFCDE7EA), AppDarkColors.border)),
+                borderSide: BorderSide(
+                    color: adaptive(context, const Color(0xFFCDE7EA),
+                        AppDarkColors.border)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(9),
@@ -683,7 +711,8 @@ class _SmallField extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: adaptive(context, const Color(0xFFDCF1F4), AppDarkColors.surfaceAlt),
+                  color: adaptive(context, const Color(0xFFDCF1F4),
+                      AppDarkColors.surfaceAlt),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: const Color(0xFF148A9C), size: 17),
@@ -696,7 +725,8 @@ class _SmallField extends StatelessWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF6F636B), AppDarkColors.textSecondary),
+                        color: adaptive(context, const Color(0xFF6F636B),
+                            AppDarkColors.textSecondary),
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -705,7 +735,8 @@ class _SmallField extends StatelessWidget {
                     Text(
                       controller.text,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF17324D),
+                            AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -739,8 +770,15 @@ const _moods = [
 
 String _firstName(String nome) {
   final trimmed = nome.trim();
-  if (trimmed.isEmpty) return 'Idoso';
+  if (trimmed.isEmpty) return 'Pessoa idosa';
   return trimmed.split(RegExp(r'\s+')).first;
+}
+
+String _moodTarget(IdosoResumo? idoso) {
+  if (idoso == null || idoso.nome.trim().isEmpty) {
+    return idoso?.elderText.withArticle ?? 'a pessoa idosa';
+  }
+  return _firstName(idoso.nome);
 }
 
 Uint8List? _dataImageBytes(String? value) {

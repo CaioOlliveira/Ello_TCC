@@ -29,8 +29,7 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
   List<SolicitacaoPendente> _pendentes = const [];
   String? _acaoEmAndamentoId;
 
-  String? get _idosoId =>
-      widget.idosoId ?? ref.read(selectedIdosoProvider)?.id;
+  String? get _idosoId => widget.idosoId ?? ref.read(selectedIdosoProvider)?.id;
 
   @override
   void initState() {
@@ -211,11 +210,17 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
   @override
   Widget build(BuildContext context) {
     final backRoute = widget.idosoId != null ? '/permissoes' : '/idoso/perfil';
+    final title = _idoso == null
+        ? 'Acessos da ficha'
+        : 'Acessos da ficha ${_idoso!.elderText.of}';
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -235,9 +240,10 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
                           ),
                         ),
                         Text(
-                          'Acesso ficha do idoso',
+                          title,
                           style: TextStyle(
-                            color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                            color: adaptive(context, Colors.black,
+                                AppDarkColors.textPrimary),
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                           ),
@@ -279,7 +285,8 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
                 _erro ?? 'Nao foi possivel carregar.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF4C4C4C), AppDarkColors.textSecondary),
+                  color: adaptive(context, const Color(0xFF4C4C4C),
+                      AppDarkColors.textSecondary),
                   fontSize: 12,
                 ),
               ),
@@ -390,7 +397,8 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+        color: adaptive(
+            context, const Color(0xFF073248), AppDarkColors.textPrimary),
         fontSize: 16,
         fontWeight: FontWeight.w800,
       ),
@@ -417,7 +425,8 @@ class _FichaResumoCard extends StatelessWidget {
         color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
+          color:
+              adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
         ),
         boxShadow: [
           BoxShadow(
@@ -431,7 +440,8 @@ class _FichaResumoCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 32,
-            backgroundColor: adaptive(context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
+            backgroundColor: adaptive(
+                context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
             backgroundImage: bytes != null
                 ? MemoryImage(bytes)
                 : idoso.urlFoto != null && idoso.urlFoto!.startsWith('http')
@@ -515,7 +525,8 @@ class _CompartilharCard extends StatelessWidget {
         color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
+          color:
+              adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
         ),
         boxShadow: [
           BoxShadow(
@@ -529,8 +540,9 @@ class _CompartilharCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Qualquer pessoa com este codigo poderá solicitar acesso à ficha.',
-            style: TextStyle(color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
+            'Qualquer pessoa com este código poderá solicitar acesso à ficha.',
+            style: TextStyle(
+                color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
           ),
           const SizedBox(height: 14),
           if (convite == null || convite.codigo.isEmpty)
@@ -638,7 +650,8 @@ class _PendenteCard extends StatelessWidget {
         color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
+          color:
+              adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
         ),
         boxShadow: [
           BoxShadow(
@@ -652,7 +665,8 @@ class _PendenteCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: adaptive(context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
+            backgroundColor: adaptive(
+                context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
             backgroundImage: bytes != null ? MemoryImage(bytes) : null,
             child: bytes == null
                 ? const Icon(
@@ -805,8 +819,9 @@ class _ParticipanteCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-          color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
-        ),
+              color: adaptive(
+                  context, const Color(0xFFE4EFF1), AppDarkColors.border),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.06),
@@ -819,7 +834,8 @@ class _ParticipanteCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: adaptive(context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
+                backgroundColor: adaptive(
+                    context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
                 backgroundImage: bytes != null ? MemoryImage(bytes) : null,
                 child: bytes == null
                     ? const Icon(
@@ -1161,9 +1177,8 @@ class _CargoOption extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: selected
-                  ? const Color(0xFF2BA8BA)
-                  : const Color(0xFFE4EFF1),
+              color:
+                  selected ? const Color(0xFF2BA8BA) : const Color(0xFFE4EFF1),
               width: selected ? 1.4 : 1,
             ),
           ),

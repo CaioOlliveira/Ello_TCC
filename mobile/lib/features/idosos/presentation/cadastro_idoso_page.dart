@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../core/utils/avatar_image.dart';
+import '../../../core/utils/elder_text.dart';
 import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
 class CadastroIdosoPage extends ConsumerStatefulWidget {
@@ -34,8 +35,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   final _contatoNomeController = TextEditingController();
   final _contatoParentescoController = TextEditingController();
   final _observacoesController = TextEditingController();
-  final _picker = ImagePicker();
-
   final List<String> _condicoes = [];
   String? _sexo;
   Uint8List? _fotoBytes;
@@ -54,6 +53,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
 
   bool get _isEditing => widget.edicao;
   int get _totalSteps => _isEditing ? 3 : 4;
+  ElderText get _personText => ElderText.fromSexo(_sexo);
   String get _backRoute =>
       widget.from == 'idoso-perfil' ? '/idoso/perfil' : '/dashboard';
 
@@ -66,14 +66,15 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     if (idoso == null) return;
 
     _nomeController.text = idoso.nome;
-    if (idoso.idade > 0) _idadeController.text = idoso.idade.toString();
     if (idoso.dataNascimento != null && idoso.dataNascimento!.length >= 10) {
       final parsed = DateTime.tryParse(idoso.dataNascimento!.substring(0, 10));
       if (parsed != null) {
         _dataNascimentoController.text = _formatBrazilianDate(parsed);
+        _idadeController.text =
+            _calculateAge(parsed, DateTime.now()).toString();
       }
     }
-    _sexo = idoso.sexo;
+    _sexo = normalizeSexo(idoso.sexo) ?? idoso.sexo;
     _tipoSanguineoController.text = idoso.tipoSanguineo ?? '';
     _limitacoesController.text = idoso.limitacoes ?? '';
     _alergiasController.text = idoso.alergiasRestricoes ?? '';
@@ -128,14 +129,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   }
 
   Future<void> _selecionarFoto() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 900,
-      imageQuality: 85,
-    );
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
+    final bytes = await pickAvatarImage(context);
+    if (bytes == null) return;
     if (!mounted) return;
     setState(() => _fotoBytes = bytes);
   }
@@ -256,7 +251,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       final usuarioId = ref.read(authSessionProvider)?.id;
       final fotoUrl = _fotoBytes == null
           ? _fotoUrl
-          : 'data:image/jpeg;base64,${base64Encode(_fotoBytes!)}';
+          : 'data:image/png;base64,${base64Encode(_fotoBytes!)}';
       final dataNascimento = _toIsoDate(_dataNascimentoController.text.trim());
       final selectedIdoso = ref.read(selectedIdosoProvider);
       final response = _isEditing && selectedIdoso != null
@@ -268,7 +263,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                   'criadoPorId': usuarioId,
                 if (dataNascimento != null) 'dataNascimento': dataNascimento,
                 if (fotoUrl != null && fotoUrl.isNotEmpty) 'urlFoto': fotoUrl,
-                if (_sexo != null && _sexo!.isNotEmpty) 'sexo': _sexo,
+                if (normalizeSexo(_sexo) != null) 'sexo': normalizeSexo(_sexo),
                 if (_tipoSanguineoController.text.trim().isNotEmpty)
                   'tipoSanguineo': _tipoSanguineoController.text.trim(),
                 'condicoesSaude': _condicoes,
@@ -293,7 +288,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
               criadoPorId: usuarioId,
               dataNascimento: dataNascimento,
               urlFoto: fotoUrl,
-              sexo: _sexo,
+              sexo: normalizeSexo(_sexo),
               tipoSanguineo: _tipoSanguineoController.text.trim(),
               condicoesSaude: _condicoes,
               monitoramentos: _monitoramentosSelecionados.toList(),
@@ -318,7 +313,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         idade: int.tryParse(_idadeController.text.trim()) ?? 0,
         urlFoto: fotoUrl,
         dataNascimento: dataNascimento,
-        sexo: _sexo,
+        sexo: normalizeSexo(_sexo),
         tipoSanguineo: _tipoSanguineoController.text.trim().isEmpty
             ? null
             : _tipoSanguineoController.text.trim(),
@@ -363,9 +358,12 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFBFBFB), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFBFBFB), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Column(
             children: [
@@ -375,6 +373,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                 totalSteps: _totalSteps,
                 stepTitle: _stepTitles[_currentStep],
                 editing: _isEditing,
+                personText: _personText,
               ),
               Expanded(
                 child: AnimatedSwitcher(
@@ -459,7 +458,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(17),
         border: Border.all(
-          color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
+          color:
+              adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
           width: 1.2,
         ),
         boxShadow: const [
@@ -490,7 +490,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
             subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+              color: adaptive(context, const Color(0xFF8A8A8A),
+                  AppDarkColors.textSecondary),
               fontSize: 12.5,
             ),
           ),
@@ -520,7 +521,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF3CB1C3),
                         side: BorderSide(
-                          color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.border),
+                          color: adaptive(context, const Color(0xFF8BD2DC),
+                              AppDarkColors.border),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(17),
@@ -574,6 +576,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   }
 
   Widget _basicoFields() {
+    final personText = _personText;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -612,9 +616,9 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Foto do Idoso',
-                  style: TextStyle(
+                Text(
+                  'Foto ${personText.of}',
+                  style: const TextStyle(
                     color: Color(0xFF249CB0),
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -624,7 +628,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                 Text(
                   'toque para adicionar',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
+                    color: adaptive(context, const Color(0xFF9B9B9B),
+                        AppDarkColors.textMuted),
                     fontSize: 11,
                   ),
                 ),
@@ -674,8 +679,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                   const _FieldLabel('Idade'),
                   _InputBox(
                     controller: _idadeController,
-                    hintText: 'Ex:63',
-                    keyboardType: TextInputType.number,
+                    hintText: 'Calculada automaticamente',
+                    readOnly: true,
                   ),
                 ],
               ),
@@ -687,11 +692,11 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         _SelectBox(
           value: _sexo,
           onChanged: (value) {
-            setState(() => _sexo = value);
+            setState(() => _sexo = normalizeSexo(value));
           },
         ),
         const SizedBox(height: 10),
-        const _FieldLabel('Tipo sanguineo'),
+        const _FieldLabel('Tipo sanguíneo'),
         _BloodTypeField(controller: _tipoSanguineoController),
       ],
     );
@@ -786,8 +791,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
             onTap: () => context.go('/idoso/acessos'),
             borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               child: Row(
                 children: [
                   const Icon(
@@ -800,14 +804,16 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                     child: Text(
                       'Acessos',
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF073248),
+                            AppDarkColors.textPrimary),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                   Icon(
                     Icons.chevron_right_rounded,
-                    color: adaptive(context, const Color(0xFF6E7C83), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF6E7C83),
+                        AppDarkColors.textSecondary),
                   ),
                 ],
               ),
@@ -853,7 +859,8 @@ class _MonitoramentosStep extends StatelessWidget {
           Text(
             'O que voce deseja monitorar',
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 24,
               fontWeight: FontWeight.w700,
               height: 1.1,
@@ -951,7 +958,8 @@ class _MonitoramentoCard extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           decoration: BoxDecoration(
             color: selected
-                ? adaptive(context, const Color(0xFFE0F0F3), AppDarkColors.tintedInfo)
+                ? adaptive(
+                    context, const Color(0xFFE0F0F3), AppDarkColors.tintedInfo)
                 : adaptive(context, Colors.white, AppDarkColors.surface),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: borderColor, width: 1),
@@ -977,7 +985,8 @@ class _MonitoramentoCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: adaptive(context, const Color(0xFF394B52), AppDarkColors.textPrimary),
+                          color: adaptive(context, const Color(0xFF394B52),
+                              AppDarkColors.textPrimary),
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           height: 1.1,
@@ -1015,7 +1024,8 @@ class _MonitoramentoIcon extends StatelessWidget {
       decoration: BoxDecoration(
         color: selected
             ? adaptive(context, Colors.white, AppDarkColors.surface)
-            : adaptive(context, const Color(0xFFE9F5F7), AppDarkColors.surfaceAlt),
+            : adaptive(
+                context, const Color(0xFFE9F5F7), AppDarkColors.surfaceAlt),
         borderRadius: BorderRadius.circular(11),
       ),
       child: Icon(
@@ -1055,6 +1065,7 @@ class _CadastroHeader extends StatelessWidget {
     required this.totalSteps,
     required this.stepTitle,
     required this.editing,
+    required this.personText,
   });
 
   final VoidCallback onBack;
@@ -1062,6 +1073,7 @@ class _CadastroHeader extends StatelessWidget {
   final int totalSteps;
   final String stepTitle;
   final bool editing;
+  final ElderText personText;
 
   @override
   Widget build(BuildContext context) {
@@ -1087,7 +1099,9 @@ class _CadastroHeader extends StatelessWidget {
                 ),
               ),
               Text(
-                editing ? 'Editar idoso' : 'Cadastro do idoso',
+                editing
+                    ? 'Editar ${personText.singular}'
+                    : 'Cadastro ${personText.of}',
                 style: const TextStyle(
                   color: Color(0xFF249CB0),
                   fontSize: 16,
@@ -1108,7 +1122,8 @@ class _CadastroHeader extends StatelessWidget {
                 builder: (context, value, _) => LinearProgressIndicator(
                   minHeight: 8,
                   value: value,
-                  backgroundColor: adaptive(context, const Color(0xFFE7EEF0), AppDarkColors.border),
+                  backgroundColor: adaptive(
+                      context, const Color(0xFFE7EEF0), AppDarkColors.border),
                   valueColor: const AlwaysStoppedAnimation<Color>(
                     Color(0xFF3BA7B8),
                   ),
@@ -1125,7 +1140,8 @@ class _CadastroHeader extends StatelessWidget {
                   child: Text(
                     stepTitle,
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                      color: adaptive(context, const Color(0xFF17324D),
+                          AppDarkColors.textPrimary),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       height: 1,
@@ -1135,7 +1151,8 @@ class _CadastroHeader extends StatelessWidget {
                 Text(
                   '$current/$totalSteps',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
+                    color: adaptive(context, const Color(0xFF8A8A8A),
+                        AppDarkColors.textMuted),
                     fontSize: 12,
                     height: 1,
                   ),
@@ -1209,10 +1226,16 @@ class _InputBox extends StatelessWidget {
         inputFormatters: inputFormatters,
         minLines: minLines,
         maxLines: maxLines,
-        style: TextStyle(fontSize: 14, color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
+        style: TextStyle(
+            fontSize: 14,
+            color: adaptive(
+                context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(color: adaptive(context, const Color(0xFF9D9D9D), AppDarkColors.textMuted), fontSize: 14),
+          hintStyle: TextStyle(
+              color: adaptive(
+                  context, const Color(0xFF9D9D9D), AppDarkColors.textMuted),
+              fontSize: 14),
           suffixIcon: suffixIcon == null
               ? null
               : Icon(suffixIcon, color: const Color(0xFF2697AA), size: 17),
@@ -1227,15 +1250,21 @@ class _InputBox extends StatelessWidget {
           errorStyle: const TextStyle(fontSize: 9, height: 0.8),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+            borderSide: BorderSide(
+                color: adaptive(
+                    context, const Color(0xFFD0D0D0), AppDarkColors.border)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+            borderSide: BorderSide(
+                color: adaptive(
+                    context, const Color(0xFFD0D0D0), AppDarkColors.border)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: BorderSide(color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.borderStrong)),
+            borderSide: BorderSide(
+                color: adaptive(context, const Color(0xFF8BD2DC),
+                    AppDarkColors.borderStrong)),
           ),
         ),
       ),
@@ -1256,27 +1285,41 @@ class _SelectBox extends StatelessWidget {
       child: DropdownButtonFormField<String>(
         initialValue: value,
         onChanged: onChanged,
+        validator: (value) =>
+            normalizeSexo(value) == null ? 'Informe o sexo.' : null,
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           color: Color(0xFF2697AA),
           size: 19,
         ),
-        style: TextStyle(fontSize: 14, color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
+        style: TextStyle(
+            fontSize: 14,
+            color: adaptive(
+                context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
         decoration: InputDecoration(
           hintText: 'Selecione',
-          hintStyle: TextStyle(color: adaptive(context, const Color(0xFF9D9D9D), AppDarkColors.textMuted), fontSize: 14),
+          hintStyle: TextStyle(
+              color: adaptive(
+                  context, const Color(0xFF9D9D9D), AppDarkColors.textMuted),
+              fontSize: 14),
           contentPadding: const EdgeInsets.symmetric(horizontal: 10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+            borderSide: BorderSide(
+                color: adaptive(
+                    context, const Color(0xFFD0D0D0), AppDarkColors.border)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+            borderSide: BorderSide(
+                color: adaptive(
+                    context, const Color(0xFFD0D0D0), AppDarkColors.border)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: BorderSide(color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.borderStrong)),
+            borderSide: BorderSide(
+                color: adaptive(context, const Color(0xFF8BD2DC),
+                    AppDarkColors.borderStrong)),
           ),
         ),
         items: const [
@@ -1344,15 +1387,19 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
               final text = value?.trim();
               if (text == null || text.isEmpty) return null;
               if (!_BloodTypeField._options.contains(text)) {
-                return 'Selecione um tipo sanguineo valido.';
+                return 'Selecione um tipo sanguíneo válido.';
               }
               return null;
             },
-            style: TextStyle(fontSize: 14, color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
+            style: TextStyle(
+                fontSize: 14,
+                color: adaptive(context, const Color(0xFF17324D),
+                    AppDarkColors.textPrimary)),
             decoration: InputDecoration(
               hintText: 'Ex: O+',
               hintStyle: TextStyle(
-                color: adaptive(context, const Color(0xFF9D9D9D), AppDarkColors.textMuted),
+                color: adaptive(
+                    context, const Color(0xFF9D9D9D), AppDarkColors.textMuted),
                 fontSize: 14,
               ),
               suffixIcon: const Icon(
@@ -1371,15 +1418,21 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
               errorStyle: const TextStyle(fontSize: 9, height: 0.8),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
-                borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+                borderSide: BorderSide(
+                    color: adaptive(context, const Color(0xFFD0D0D0),
+                        AppDarkColors.border)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
-                borderSide: BorderSide(color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+                borderSide: BorderSide(
+                    color: adaptive(context, const Color(0xFFD0D0D0),
+                        AppDarkColors.border)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
-                borderSide: BorderSide(color: adaptive(context, const Color(0xFF8BD2DC), AppDarkColors.borderStrong)),
+                borderSide: BorderSide(
+                    color: adaptive(context, const Color(0xFF8BD2DC),
+                        AppDarkColors.borderStrong)),
               ),
             ),
           ),
@@ -1426,10 +1479,12 @@ class _ConditionChip extends StatelessWidget {
       height: 35,
       padding: const EdgeInsets.only(left: 10, right: 6),
       decoration: BoxDecoration(
-        color: adaptive(context, const Color(0xFFE0F4F6), AppDarkColors.surfaceAlt),
+        color: adaptive(
+            context, const Color(0xFFE0F4F6), AppDarkColors.surfaceAlt),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: adaptive(context, const Color(0xFF9FD9E1), AppDarkColors.border),
+          color:
+              adaptive(context, const Color(0xFF9FD9E1), AppDarkColors.border),
         ),
       ),
       child: Row(

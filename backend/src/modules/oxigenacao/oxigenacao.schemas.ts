@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+import { isFutureInstant } from "../../common/utils/date-utils.js";
+
+const dataNaoFuturaSchema = z
+  .string()
+  .datetime("Data deve estar em formato ISO.")
+  .refine(
+    (value) => !isFutureInstant(value),
+    "Nao e permitido registrar uma data futura.",
+  );
+
 const valorSaturacaoSchema = z
   .number()
   .int("Valor deve ser um numero inteiro.")
@@ -16,7 +26,7 @@ export const criarOxigenacaoSchema = z.object({
   idosoId: z.string().min(1, "Idoso e obrigatorio."),
   saturacao: valorSaturacaoSchema,
   pulso: valorPulsoSchema.optional(),
-  medidoEm: z.string().datetime("Data deve estar em formato ISO."),
+  medidoEm: dataNaoFuturaSchema,
   observacoes: z.string().optional(),
   registradoPorId: z.string().uuid().optional(),
 });

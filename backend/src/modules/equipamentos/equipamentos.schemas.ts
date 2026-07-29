@@ -18,8 +18,7 @@ const normalizarEquipamento = (value: unknown) => {
     idosoId: input.idosoId ?? input.idoso_id,
     dataAquisicao: input.dataAquisicao ?? input.data_aquisicao,
     validade: input.validade,
-    ultimaManutencaoEm:
-      input.ultimaManutencaoEm ?? input.ultima_manutencao_em,
+    ultimaManutencaoEm: input.ultimaManutencaoEm ?? input.ultima_manutencao_em,
     localGuardado: input.localGuardado ?? input.local_guardado,
     responsavelId: input.responsavelId ?? input.responsavel_id,
     criadoPorId: input.criadoPorId ?? input.criado_por_id,

@@ -376,9 +376,12 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -598,7 +601,8 @@ class _ResumoView extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onHistorico,
               style: OutlinedButton.styleFrom(
-                foregroundColor: adaptive(context, const Color(0xFF245066), AppDarkColors.textPrimary),
+                foregroundColor: adaptive(context, const Color(0xFF245066),
+                    AppDarkColors.textPrimary),
                 side: const BorderSide(color: Color(0xFF2FA3B5)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),
@@ -643,7 +647,8 @@ class _Header extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -701,7 +706,8 @@ class _ProximoMedicamentoCard extends StatelessWidget {
                 Text(
                   atrasado ? 'Medicamento atrasado' : 'Próximo medicamento',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF727272),
+                        AppDarkColors.textSecondary),
                     fontSize: 12.5,
                   ),
                 ),
@@ -711,7 +717,8 @@ class _ProximoMedicamentoCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
@@ -720,7 +727,8 @@ class _ProximoMedicamentoCard extends StatelessWidget {
                   Text(
                     'Dose: ${medicamento.dosagem}',
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
+                      color: adaptive(context, const Color(0xFF607178),
+                          AppDarkColors.textSecondary),
                       fontSize: 12.5,
                     ),
                   ),
@@ -801,7 +809,8 @@ class _MedicamentoCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                                color: adaptive(context, Colors.black,
+                                    AppDarkColors.textPrimary),
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -869,7 +878,8 @@ class _MedicamentoCard extends StatelessWidget {
                       ),
                       Icon(
                         Icons.chevron_right_rounded,
-                        color: adaptive(context, const Color(0xFF9AA0A6), AppDarkColors.textSecondary),
+                        color: adaptive(context, const Color(0xFF9AA0A6),
+                            AppDarkColors.textSecondary),
                         size: 24,
                       ),
                     ],
@@ -897,7 +907,8 @@ class _EmptyState extends StatelessWidget {
             width: 92,
             height: 92,
             decoration: BoxDecoration(
-              color: adaptive(context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
+              color: adaptive(
+                  context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -911,7 +922,8 @@ class _EmptyState extends StatelessWidget {
             'Nenhum medicamento cadastrado',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -923,7 +935,8 @@ class _EmptyState extends StatelessWidget {
               'Cadastre o primeiro medicamento para organizar os horários e o estoque.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
+                color: adaptive(context, const Color(0xFF607178),
+                    AppDarkColors.textSecondary),
                 fontSize: 13,
               ),
             ),
@@ -993,7 +1006,8 @@ class _MedicamentoFormView extends StatelessWidget {
   Future<void> _escolherFormato(BuildContext context) async {
     final escolhido = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
+      backgroundColor:
+          adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
@@ -1025,7 +1039,8 @@ class _MedicamentoFormView extends StatelessWidget {
   Future<void> _escolherFrequencia(BuildContext context) async {
     final escolha = await showModalBottomSheet<_FrequenciaEscolha>(
       context: context,
-      backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
+      backgroundColor:
+          adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
@@ -1223,7 +1238,8 @@ class _MedicamentoFormView extends StatelessWidget {
                             child: Text(
                               'Ativar lembretes',
                               style: TextStyle(
-                                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                                color: adaptive(context, Colors.black,
+                                    AppDarkColors.textPrimary),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1263,7 +1279,10 @@ class _MedicamentoFormView extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: saving ? null : onCancel,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: adaptive(context, const Color(0xFF245066), AppDarkColors.textPrimary),
+                          foregroundColor: adaptive(
+                              context,
+                              const Color(0xFF245066),
+                              AppDarkColors.textPrimary),
                           side: const BorderSide(color: Color(0xFF2FA3B5)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(9),
@@ -1331,14 +1350,19 @@ class _TextField extends StatelessWidget {
       maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: TextStyle(color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted), fontSize: 13.5),
+        hintStyle: TextStyle(
+            color: adaptive(
+                context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
+            fontSize: 13.5),
         filled: true,
         fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(9),
-          borderSide: BorderSide(color: adaptive(context, const Color(0xFFD7E0E3), AppDarkColors.border)),
+          borderSide: BorderSide(
+              color: adaptive(
+                  context, const Color(0xFFD7E0E3), AppDarkColors.border)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(9),
@@ -1367,7 +1391,9 @@ class _DateField extends StatelessWidget {
         decoration: BoxDecoration(
           color: adaptive(context, Colors.white, AppDarkColors.surface),
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: adaptive(context, const Color(0xFFD7E0E3), AppDarkColors.border)),
+          border: Border.all(
+              color: adaptive(
+                  context, const Color(0xFFD7E0E3), AppDarkColors.border)),
         ),
         child: Row(
           children: [
@@ -1376,15 +1402,18 @@ class _DateField extends StatelessWidget {
                 value == null ? 'selecionar data' : _formatDate(value!),
                 style: TextStyle(
                   color: value == null
-                      ? adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted)
-                      : adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                      ? adaptive(context, const Color(0xFF9B9B9B),
+                          AppDarkColors.textMuted)
+                      : adaptive(
+                          context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 13.5,
                 ),
               ),
             ),
             Icon(
               Icons.calendar_month_rounded,
-              color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
+              color: adaptive(
+                  context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
               size: 18,
             ),
           ],
@@ -1425,7 +1454,8 @@ class _ChipsField extends StatelessWidget {
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
             ),
-            backgroundColor: adaptive(context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
+            backgroundColor: adaptive(
+                context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
             deleteIcon: const Icon(Icons.close_rounded, size: 16),
             deleteIconColor: const Color(0xFF0E6F7E),
             onDeleted: () => onRemove(i),
@@ -1476,7 +1506,8 @@ class _OptionSheet extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -1565,7 +1596,8 @@ class _FrequenciaSheetState extends State<_FrequenciaSheet> {
               Text(
                 'Frequência',
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                  color: adaptive(context, const Color(0xFF073248),
+                      AppDarkColors.textPrimary),
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
@@ -1726,7 +1758,8 @@ class _HistoricoView extends StatelessWidget {
             'Histórico de Remédios',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 21,
               fontWeight: FontWeight.w800,
             ),
@@ -1839,13 +1872,15 @@ class _HistoricoVazio extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.history_rounded, color: Color(0xFF2FA3B5), size: 48),
+            const Icon(Icons.history_rounded,
+                color: Color(0xFF2FA3B5), size: 48),
             const SizedBox(height: 10),
             Text(
               'Nenhum registro neste período',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
@@ -1854,7 +1889,10 @@ class _HistoricoVazio extends StatelessWidget {
             Text(
               'Altere o período ou registre um medicamento.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+              style: TextStyle(
+                  color: adaptive(context, const Color(0xFF607178),
+                      AppDarkColors.textSecondary),
+                  fontSize: 13),
             ),
           ],
         ),
@@ -1907,7 +1945,8 @@ class _HistoricoItem extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1916,7 +1955,8 @@ class _HistoricoItem extends StatelessWidget {
                 Text(
                   entrada.medicamentoNome,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
+                    color: adaptive(context, const Color(0xFF808080),
+                        AppDarkColors.textMuted),
                     fontSize: 12,
                   ),
                 ),
@@ -1929,12 +1969,16 @@ class _HistoricoItem extends StatelessWidget {
             children: [
               Text(
                 _formatDate(entrada.dataHora),
-                style: TextStyle(color: adaptive(context, const Color(0xFF9AA0A6), AppDarkColors.textSecondary), fontSize: 10),
+                style: TextStyle(
+                    color: adaptive(context, const Color(0xFF9AA0A6),
+                        AppDarkColors.textSecondary),
+                    fontSize: 10),
               ),
               Text(
                 _formatTime(entrada.dataHora),
                 style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                  color: adaptive(
+                      context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -2045,7 +2089,8 @@ class _DetalheView extends StatelessWidget {
                   child: Text(
                     'Registrar dose agora',
                     style: TextStyle(
-                      color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                      color: adaptive(
+                          context, Colors.black, AppDarkColors.textPrimary),
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -2075,7 +2120,8 @@ class _DetalheView extends StatelessWidget {
                 Text(
                   'Últimas doses',
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -2092,7 +2138,10 @@ class _DetalheView extends StatelessWidget {
                 else if (administracoes.isEmpty)
                   Text(
                     'Nenhuma dose registrada ainda.',
-                    style: TextStyle(color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted), fontSize: 12.5),
+                    style: TextStyle(
+                        color: adaptive(context, const Color(0xFF8A8A8A),
+                            AppDarkColors.textMuted),
+                        fontSize: 12.5),
                   )
                 else
                   for (var i = 0; i < administracoes.length; i++) ...[
@@ -2128,14 +2177,18 @@ class _DetailRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: TextStyle(color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted), fontSize: 12.5),
+              style: TextStyle(
+                  color: adaptive(context, const Color(0xFF8A8A8A),
+                      AppDarkColors.textMuted),
+                  fontSize: 12.5),
             ),
           ),
           Expanded(
             child: Text(
               value,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF17324D),
+                    AppDarkColors.textPrimary),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -2183,7 +2236,8 @@ class _AdministracaoTile extends StatelessWidget {
             child: Text(
               info.$2,
               style: TextStyle(
-                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                color:
+                    adaptive(context, Colors.black, AppDarkColors.textPrimary),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -2192,7 +2246,10 @@ class _AdministracaoTile extends StatelessWidget {
           if (data != null)
             Text(
               '${_formatDate(data)} ${_formatTime(data)}',
-              style: TextStyle(color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted), fontSize: 11.5),
+              style: TextStyle(
+                  color: adaptive(context, const Color(0xFF8A8A8A),
+                      AppDarkColors.textMuted),
+                  fontSize: 11.5),
             ),
         ],
       ),
@@ -2219,16 +2276,20 @@ class _NoIdosoState extends StatelessWidget {
             'Escolha uma ficha',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Selecione um idoso para gerenciar os medicamentos.',
+            'Selecione uma pessoa idosa para gerenciar os medicamentos.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+            style: TextStyle(
+                color: adaptive(context, const Color(0xFF607178),
+                    AppDarkColors.textSecondary),
+                fontSize: 13),
           ),
           const SizedBox(height: 16),
           FilledButton(
@@ -2264,7 +2325,8 @@ class _ErrorState extends StatelessWidget {
             'Não foi possível carregar',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -2273,7 +2335,10 @@ class _ErrorState extends StatelessWidget {
           Text(
             'Confira a conexão com a API e tente novamente.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+            style: TextStyle(
+                color: adaptive(context, const Color(0xFF607178),
+                    AppDarkColors.textSecondary),
+                fontSize: 13),
           ),
           const SizedBox(height: 18),
           FilledButton(

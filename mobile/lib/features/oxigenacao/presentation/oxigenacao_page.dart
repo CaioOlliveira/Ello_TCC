@@ -111,7 +111,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
       context: _pickerContext,
       locale: const Locale('pt', 'BR'),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       initialDate: _referenceDate,
     );
 
@@ -126,7 +126,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
       context: _pickerContext,
       locale: const Locale('pt', 'BR'),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       initialDate: _medicaoDate,
     );
     if (selected != null) setState(() => _medicaoDate = selected);
@@ -190,9 +190,12 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFF7F7F7), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFF7F7F7), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -210,6 +213,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
   Widget _buildContent(IdosoResumo idoso) {
     _ensureResumo(idoso.id);
     _ensureHistorico(idoso.id);
+    final feelingHint = idoso.elderText.howFeeling();
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 260),
@@ -235,6 +239,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
               observacoesController: _observacoesController,
               selectedDate: _medicaoDate,
               selectedTime: _medicaoTime,
+              observationHint: feelingHint,
               saving: _saving,
               onSelectDate: _selectDate,
               onSelectTime: _selectTime,
@@ -456,7 +461,8 @@ class _OxigenacaoHeader extends StatelessWidget {
                     Text(
                       'Voltar',
                       style: TextStyle(
-                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                        color: adaptive(
+                            context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -541,7 +547,8 @@ class _NavRow extends StatelessWidget {
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -549,7 +556,8 @@ class _NavRow extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: adaptive(context, const Color(0xFF9AA0A6), AppDarkColors.textMuted),
+                color: adaptive(
+                    context, const Color(0xFF9AA0A6), AppDarkColors.textMuted),
                 size: 24,
               ),
             ],
@@ -582,7 +590,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 width: 92,
                 height: 92,
                 decoration: BoxDecoration(
-                  color: adaptive(context, const Color(0xFFD8F1F4), AppDarkColors.tintedInfo),
+                  color: adaptive(context, const Color(0xFFD8F1F4),
+                      AppDarkColors.tintedInfo),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -596,7 +605,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 'Faça a primeira medição',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                  color: adaptive(context, const Color(0xFF073248),
+                      AppDarkColors.textPrimary),
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
@@ -606,7 +616,8 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 'Ainda não ha registros de oxigenação para $idosoNome. Comece registrando a medicao atual.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
+                  color: adaptive(context, const Color(0xFF607178),
+                      AppDarkColors.textSecondary),
                   fontSize: 13,
                   height: 1.25,
                 ),
@@ -686,7 +697,8 @@ class _MediaOxigenacaoCard extends StatelessWidget {
                 Text(
                   'Média da saturação',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF727272),
+                        AppDarkColors.textSecondary),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -699,7 +711,8 @@ class _MediaOxigenacaoCard extends StatelessWidget {
                       ? 'Sem pulso registrado'
                       : 'Pulso médio: ${mediaPulso.round()} bpm',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
+                    color: adaptive(context, const Color(0xFF808080),
+                        AppDarkColors.textMuted),
                     fontSize: 11,
                   ),
                 ),
@@ -813,8 +826,10 @@ class _ChartCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: point.valor == null
-                                    ? adaptive(context, const Color(0xFFADB3BB), AppDarkColors.textMuted)
-                                    : adaptive(context, const Color(0xFF8E95A1), AppDarkColors.textSecondary),
+                                    ? adaptive(context, const Color(0xFFADB3BB),
+                                        AppDarkColors.textMuted)
+                                    : adaptive(context, const Color(0xFF8E95A1),
+                                        AppDarkColors.textSecondary),
                                 fontSize: 10,
                               ),
                             ),
@@ -1010,7 +1025,8 @@ class _AnalysisCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: adaptive(context, const Color(0xFFC9E7ED), AppDarkColors.tintedInfo),
+      color:
+          adaptive(context, const Color(0xFFC9E7ED), AppDarkColors.tintedInfo),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -1048,7 +1064,8 @@ class _AnalysisCard extends StatelessWidget {
                     Text(
                       'Análise da oxigenação',
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF2F4853),
+                            AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -1059,7 +1076,8 @@ class _AnalysisCard extends StatelessWidget {
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF2F4853),
+                            AppDarkColors.textPrimary),
                         fontSize: 10,
                         height: 1.08,
                       ),
@@ -1069,7 +1087,8 @@ class _AnalysisCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 size: 30,
               ),
             ],
@@ -1148,7 +1167,8 @@ class _HistoricoVazio extends StatelessWidget {
               'Nenhum registro neste período',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
@@ -1157,7 +1177,10 @@ class _HistoricoVazio extends StatelessWidget {
             Text(
               'Altere o período ou registre uma nova medicao.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+              style: TextStyle(
+                  color: adaptive(context, const Color(0xFF607178),
+                      AppDarkColors.textSecondary),
+                  fontSize: 13),
             ),
           ],
         ),
@@ -1203,7 +1226,8 @@ class _HistoricoItemCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1214,7 +1238,8 @@ class _HistoricoItemCard extends StatelessWidget {
                       ? '${entrada.saturacao}% SpOâ‚‚${entrada.pulso != null ? ' · ${entrada.pulso} bpm' : ''}'
                       : 'Sem valor registrado',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF808080), AppDarkColors.textMuted),
+                    color: adaptive(context, const Color(0xFF808080),
+                        AppDarkColors.textMuted),
                     fontSize: 12,
                   ),
                 ),
@@ -1228,14 +1253,16 @@ class _HistoricoItemCard extends StatelessWidget {
               Text(
                 _formatDate(entrada.dataHora),
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF9AA0A6), AppDarkColors.textMuted),
+                  color: adaptive(context, const Color(0xFF9AA0A6),
+                      AppDarkColors.textMuted),
                   fontSize: 10,
                 ),
               ),
               Text(
                 _formatTime(entrada.dataHora),
                 style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                  color: adaptive(
+                      context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1275,6 +1302,7 @@ class _RegistrarOxigenacaoView extends StatelessWidget {
     required this.observacoesController,
     required this.selectedDate,
     required this.selectedTime,
+    required this.observationHint,
     required this.saving,
     required this.onSelectDate,
     required this.onSelectTime,
@@ -1288,6 +1316,7 @@ class _RegistrarOxigenacaoView extends StatelessWidget {
   final TextEditingController observacoesController;
   final DateTime selectedDate;
   final TimeOfDay selectedTime;
+  final String observationHint;
   final bool saving;
   final VoidCallback onSelectDate;
   final VoidCallback onSelectTime;
@@ -1324,7 +1353,7 @@ class _RegistrarOxigenacaoView extends StatelessWidget {
             _ObservationCard(
               controller: observacoesController,
               title: 'Observações',
-              hintText: 'Como o idoso está se sentindo?',
+              hintText: observationHint,
             ),
             const SizedBox(height: 22),
             _SaveCancelButtons(
@@ -1433,7 +1462,8 @@ class _NumericValueCard extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF6F636B), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF6F636B),
+                        AppDarkColors.textSecondary),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1441,7 +1471,8 @@ class _NumericValueCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: adaptive(context, const Color(0xFFF2FBFC), AppDarkColors.tintedInfo),
+                    color: adaptive(context, const Color(0xFFF2FBFC),
+                        AppDarkColors.tintedInfo),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: const Color(0xFF2FA3B5),
@@ -1462,7 +1493,8 @@ class _NumericValueCard extends StatelessWidget {
                           maxLines: 1,
                           textAlignVertical: TextAlignVertical.center,
                           style: TextStyle(
-                            color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                            color: adaptive(context, Colors.black,
+                                AppDarkColors.textPrimary),
                             fontSize: 30,
                             fontWeight: FontWeight.w700,
                             height: 1.1,
@@ -1470,7 +1502,8 @@ class _NumericValueCard extends StatelessWidget {
                           decoration: InputDecoration(
                             hintText: hintText,
                             hintStyle: TextStyle(
-                              color: adaptive(context, const Color(0xFFBFCBCE), AppDarkColors.textMuted),
+                              color: adaptive(context, const Color(0xFFBFCBCE),
+                                  AppDarkColors.textMuted),
                               fontSize: 30,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1544,7 +1577,8 @@ class _PickerCard extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                        color: adaptive(
+                            context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         height: 1,
@@ -1554,7 +1588,8 @@ class _PickerCard extends StatelessWidget {
                     Text(
                       value,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF8D8D8D), AppDarkColors.textMuted),
+                        color: adaptive(context, const Color(0xFF8D8D8D),
+                            AppDarkColors.textMuted),
                         fontSize: 12,
                         height: 1,
                       ),
@@ -1599,7 +1634,8 @@ class _ObservationCard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                  color: adaptive(
+                      context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1613,7 +1649,9 @@ class _ObservationCard extends StatelessWidget {
             maxLines: 4,
             decoration: InputDecoration(
               hintText: hintText,
-              hintStyle: TextStyle(color: adaptive(context, const Color(0xFF8D8D8D), AppDarkColors.textMuted)),
+              hintStyle: TextStyle(
+                  color: adaptive(context, const Color(0xFF8D8D8D),
+                      AppDarkColors.textMuted)),
               contentPadding: const EdgeInsets.all(9),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
@@ -1747,16 +1785,20 @@ class _NoIdosoState extends StatelessWidget {
             'Escolha uma ficha',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Selecione um idoso para registrar a oxigenação.',
+            'Selecione uma pessoa idosa para registrar a oxigenação.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+            style: TextStyle(
+                color: adaptive(context, const Color(0xFF607178),
+                    AppDarkColors.textSecondary),
+                fontSize: 13),
           ),
           const SizedBox(height: 16),
           FilledButton(
@@ -1792,7 +1834,8 @@ class _ErrorState extends StatelessWidget {
             'Não foi possível carregar',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -1801,7 +1844,10 @@ class _ErrorState extends StatelessWidget {
           Text(
             'Confira a conexão com a API e tente novamente.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary), fontSize: 13),
+            style: TextStyle(
+                color: adaptive(context, const Color(0xFF607178),
+                    AppDarkColors.textSecondary),
+                fontSize: 13),
           ),
           const SizedBox(height: 18),
           FilledButton(

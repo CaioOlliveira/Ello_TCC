@@ -22,7 +22,22 @@ export const googleCadastroSchema = googleLoginSchema.extend({
   telefone: z.string().optional(),
 });
 
+export const alterarSenhaSchema = z
+  .object({
+    usuarioId: z.string().uuid("Usuario invalido."),
+    senhaAtual: z.string().min(1, "Senha atual e obrigatoria."),
+    novaSenha: z
+      .string()
+      .min(6, "A nova senha deve ter pelo menos 6 caracteres."),
+    confirmarNovaSenha: z.string().min(1, "Confirme a nova senha."),
+  })
+  .refine((data) => data.novaSenha === data.confirmarNovaSenha, {
+    message: "As senhas precisam ser iguais.",
+    path: ["confirmarNovaSenha"],
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CadastroInput = z.infer<typeof cadastroSchema>;
 export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
 export type GoogleCadastroInput = z.infer<typeof googleCadastroSchema>;
+export type AlterarSenhaInput = z.infer<typeof alterarSenhaSchema>;

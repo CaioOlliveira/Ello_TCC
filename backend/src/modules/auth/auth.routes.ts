@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import {
+  alterarSenha,
   cadastrar,
   cadastrarGoogle,
   login,
@@ -15,3 +16,4 @@ authRoutes.post("/login", login);
 authRoutes.post("/google", loginGoogle);
 authRoutes.post("/google/cadastro", cadastrarGoogle);
 authRoutes.post("/cadastro", cadastrar);
+authRoutes.patch("/senha", alterarSenha);
