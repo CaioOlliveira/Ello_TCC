@@ -45,7 +45,7 @@ class SelecionarIdosoPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 9),
                     const Text(
-                      'Selecione a ficha do idoso que deseja\nacompanhar agora',
+                      'Selecione a ficha da pessoa idosa que deseja\nacompanhar agora',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Color(0xFF4C4C4C),
@@ -653,7 +653,8 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF37AFC3), width: 1.4),
+                borderSide:
+                    const BorderSide(color: Color(0xFF37AFC3), width: 1.4),
               ),
             ),
           ),

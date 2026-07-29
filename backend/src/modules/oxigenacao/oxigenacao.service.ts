@@ -6,6 +6,13 @@ import {
   getRowById,
   updateRow,
 } from "../../database/simple-crud.js";
+import {
+  formatLocalDate,
+  parseLocalDate,
+  periodRange,
+  sameLocalDay,
+  startOfLocalDay,
+} from "../../common/utils/date-utils.js";
 import type {
   AtualizarOxigenacaoInput,
   CriarOxigenacaoInput,
@@ -86,19 +93,8 @@ const mapearOxigenacao = (row: OxigenacaoRow): RegistroOxigenacao => ({
 
 const round = (value: number) => Math.round(value);
 
-const startOfDay = (date: Date) => {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-};
-
-const sameDay = (value: Date, reference: Date) =>
-  value.getFullYear() === reference.getFullYear() &&
-  value.getMonth() === reference.getMonth() &&
-  value.getDate() === reference.getDate();
-
 const startOfWeek = (date: Date) => {
-  const copy = startOfDay(date);
+  const copy = startOfLocalDay(date);
   const day = copy.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   copy.setDate(copy.getDate() + diff);
@@ -152,18 +148,18 @@ const criarSerieDiaria = (
   registros: RegistroOxigenacao[],
   dataReferencia: Date,
 ) => {
-  const inicio = startOfDay(dataReferencia);
+  const inicio = startOfLocalDay(dataReferencia);
   inicio.setDate(inicio.getDate() - 6);
 
   return Array.from({ length: 7 }, (_, index) => {
     const dia = new Date(inicio);
     dia.setDate(inicio.getDate() + index);
     const valores = registros
-      .filter((registro) => sameDay(new Date(registro.medidoEm), dia))
+      .filter((registro) => sameLocalDay(new Date(registro.medidoEm), dia))
       .map((registro) => registro.saturacao);
 
     return {
-      data: dia.toISOString().substring(0, 10),
+      data: formatLocalDate(dia),
       rotulo: dia.toLocaleDateString("pt-BR", {
         day: "2-digit",
         month: "2-digit",
@@ -193,7 +189,7 @@ const criarSerieSemanal = (
       .map((registro) => registro.saturacao);
 
     return {
-      data: semanaInicio.toISOString().substring(0, 10),
+      data: formatLocalDate(semanaInicio),
       rotulo: semanaInicio.toLocaleDateString("pt-BR", {
         day: "2-digit",
         month: "2-digit",
@@ -232,7 +228,7 @@ const criarSerieMensal = (
       .map((registro) => registro.saturacao);
 
     return {
-      data: mesInicio.toISOString().substring(0, 10),
+      data: formatLocalDate(mesInicio),
       rotulo: mesInicio.toLocaleDateString("pt-BR", { month: "short" }),
       valor: average(valores),
     };
@@ -244,7 +240,8 @@ const criarSerie = (
   dataReferencia: Date,
   periodo: PeriodoOxigenacao,
 ) => {
-  if (periodo === "semanal") return criarSerieSemanal(registros, dataReferencia);
+  if (periodo === "semanal")
+    return criarSerieSemanal(registros, dataReferencia);
   if (periodo === "mes") return criarSerieMensal(registros, dataReferencia);
   return criarSerieDiaria(registros, dataReferencia);
 };
@@ -303,10 +300,10 @@ const montarResumo = (
     (a, b) => new Date(b.medidoEm).getTime() - new Date(a.medidoEm).getTime(),
   );
 
-  const ultima = ordenados[0] ?? null;
   const registrosDoDia = ordenados.filter((registro) =>
-    sameDay(new Date(registro.medidoEm), dataReferencia),
+    sameLocalDay(new Date(registro.medidoEm), dataReferencia),
   );
+  const ultima = registrosDoDia[0] ?? null;
   const mediaSaturacaoDia = average(
     registrosDoDia.map((registro) => registro.saturacao),
   );
@@ -322,7 +319,7 @@ const montarResumo = (
 
   return {
     ultima,
-    totalRegistros: ordenados.length,
+    totalRegistros: registrosDoDia.length,
     mediaSaturacaoDia,
     mediaPulsoDia,
     proximaMedicao,
@@ -393,8 +390,14 @@ const dadosDoRegistro = (dados: Record<string, unknown> | null | undefined) => {
   const saturacao = dados.saturacao ?? dados.spo2;
   const pulso = dados.pulso ?? dados.frequencia_cardiaca;
   return {
-    saturacao: typeof saturacao === "number" ? saturacao : Number(saturacao) || null,
-    pulso: pulso == null ? null : typeof pulso === "number" ? pulso : Number(pulso) || null,
+    saturacao:
+      typeof saturacao === "number" ? saturacao : Number(saturacao) || null,
+    pulso:
+      pulso == null
+        ? null
+        : typeof pulso === "number"
+          ? pulso
+          : Number(pulso) || null,
   };
 };
 
@@ -496,25 +499,6 @@ const montarEntradaHistorico = (row: {
   };
 };
 
-const inicioDoPeriodoHistorico = (
-  referencia: Date,
-  periodo: PeriodoOxigenacao,
-) => {
-  if (periodo === "semanal") {
-    const inicio = startOfDay(referencia);
-    inicio.setDate(inicio.getDate() - 6);
-    return inicio;
-  }
-
-  if (periodo === "mes") {
-    const inicio = startOfDay(referencia);
-    inicio.setDate(inicio.getDate() - 29);
-    return inicio;
-  }
-
-  return startOfDay(referencia);
-};
-
 export const oxigenacaoService = {
   async listar(limit: number, offset: number, idosoId?: string) {
     if (!isDatabaseEnabled) {
@@ -574,9 +558,7 @@ export const oxigenacaoService = {
     dataReferencia?: string,
     periodo: PeriodoOxigenacao = "dia",
   ) {
-    const referencia = dataReferencia
-      ? new Date(`${dataReferencia}T12:00:00`)
-      : new Date();
+    const referencia = parseLocalDate(dataReferencia);
     const registros = await buscarOxigenacoes(idosoId);
 
     return montarResumo(registros, referencia, periodo);
@@ -587,17 +569,19 @@ export const oxigenacaoService = {
     dataReferencia?: string,
     periodo: PeriodoOxigenacao = "dia",
   ): Promise<HistoricoOxigenacaoEntrada[]> {
-    const referencia = dataReferencia
-      ? new Date(`${dataReferencia}T12:00:00`)
-      : new Date();
-    const inicio = inicioDoPeriodoHistorico(referencia, periodo);
+    const referencia = parseLocalDate(dataReferencia);
+    const { start: inicio, endExclusive: fim } = periodRange(
+      referencia,
+      periodo,
+    );
 
     if (!isDatabaseEnabled) {
       return oxigenacoesMemoria
         .filter(
           (registro) =>
             registro.idosoId === idosoId &&
-            new Date(registro.medidoEm) >= inicio,
+            new Date(registro.medidoEm) >= inicio &&
+            new Date(registro.medidoEm) < fim,
         )
         .map((registro) =>
           montarEntradaHistorico({
@@ -634,10 +618,11 @@ export const oxigenacaoService = {
         where h.idoso_id = $1
           and h.tipo_entidade = $2
           and h.criado_em >= $3
+          and h.criado_em < $4
         order by h.criado_em desc
         limit 100
       `,
-      [idosoId, table, inicio.toISOString()],
+      [idosoId, table, inicio.toISOString(), fim.toISOString()],
     );
 
     return result.rows.map((row) =>

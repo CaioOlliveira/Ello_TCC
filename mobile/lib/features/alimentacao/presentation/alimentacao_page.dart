@@ -106,6 +106,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
   Future<void> _addWater() async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
+    final personText = idoso.elderText;
 
     final now = DateTime.now();
     final last30 = _hidratacoes
@@ -118,8 +119,8 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Atenção'),
-          content: const Text(
-            'Tomar muita água de uma vez pode ser prejudicial ao idoso. Continue adicionando apenas se esse consumo realmente aconteceu.',
+          content: Text(
+            'Tomar muita água de uma vez pode ser prejudicial ${personText.to}. Continue adicionando apenas se esse consumo realmente aconteceu.',
           ),
           actions: [
             FilledButton(
@@ -481,9 +482,9 @@ class _WaterCardState extends State<_WaterCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Peso do idoso',
-              style: TextStyle(
+            Text(
+              'Peso ${widget.idoso?.elderText.of ?? 'da pessoa idosa'}',
+              style: const TextStyle(
                 color: Color(0xFF073248),
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
@@ -684,7 +685,7 @@ class _MealCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(_mealIcon(refeicao.tipoRefeicao),
+          Icon(_mealIcon(_normalizeMealType(refeicao.tipoRefeicao)),
               color: const Color(0xFF098CA1), size: 35),
           const SizedBox(width: 12),
           Expanded(
@@ -695,7 +696,7 @@ class _MealCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        refeicao.tipoRefeicao,
+                        _normalizeMealType(refeicao.tipoRefeicao),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -811,7 +812,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
   final _observacoesController = TextEditingController();
   final List<AlimentoConsumido> _alimentos = [];
 
-  String _tipo = 'Cafe da manha';
+  String _tipo = 'Café da manhã';
   String _aceitacao = 'comeu_tudo';
   bool _saving = false;
   String? _error;
@@ -827,7 +828,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
       return;
     }
 
-    _tipo = initial.tipoRefeicao;
+    _tipo = _normalizeMealType(initial.tipoRefeicao);
     _aceitacao = initial.aceitacao;
     _dataController.text = initial.dataConsumo == null
         ? _formatDate(now)
@@ -1006,11 +1007,14 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
             ),
             items: const [
               DropdownMenuItem(
-                  value: 'Cafe da manha', child: Text('Cafe da manha')),
-              DropdownMenuItem(value: 'Almoco', child: Text('Almoco')),
+                  value: 'Café da manhã', child: Text('Café da manhã')),
               DropdownMenuItem(
-                  value: 'Cafe da tarde', child: Text('Cafe da tarde')),
-              DropdownMenuItem(value: 'Janta', child: Text('Janta')),
+                  value: 'Lanche da manhã', child: Text('Lanche da manhã')),
+              DropdownMenuItem(value: 'Almoço', child: Text('Almoço')),
+              DropdownMenuItem(
+                  value: 'Lanche da tarde', child: Text('Lanche da tarde')),
+              DropdownMenuItem(value: 'Jantar', child: Text('Jantar')),
+              DropdownMenuItem(value: 'Ceia', child: Text('Ceia')),
             ],
             onChanged: (value) => setState(() => _tipo = value ?? _tipo),
           ),
@@ -1489,10 +1493,28 @@ String _acceptanceLabel(String value) {
   };
 }
 
+String _normalizeMealType(String value) {
+  final lower = value.trim().toLowerCase();
+  return switch (lower) {
+    'cafe da manha' || 'café da manhã' => 'Café da manhã',
+    'lanche da manha' || 'lanche da manhã' => 'Lanche da manhã',
+    'almoco' || 'almoço' => 'Almoço',
+    'cafe da tarde' ||
+    'café da tarde' ||
+    'lanche da tarde' =>
+      'Lanche da tarde',
+    'janta' || 'jantar' => 'Jantar',
+    'ceia' => 'Ceia',
+    _ => value,
+  };
+}
+
 IconData _mealIcon(String value) {
   final lower = value.toLowerCase();
-  if (lower.contains('almoco')) return Icons.lunch_dining_outlined;
-  if (lower.contains('janta')) return Icons.dinner_dining_outlined;
+  if (lower.contains('almo')) return Icons.lunch_dining_outlined;
+  if (lower.contains('janta') || lower.contains('jantar')) {
+    return Icons.dinner_dining_outlined;
+  }
   return Icons.bakery_dining_outlined;
 }
 

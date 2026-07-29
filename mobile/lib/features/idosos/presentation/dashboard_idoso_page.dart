@@ -87,8 +87,8 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                 children: [
                   StaggeredEntry(
                     index: 0,
-                    child:
-                        _DashboardHeader(onProfile: () => context.go('/perfil')),
+                    child: _DashboardHeader(
+                        onProfile: () => context.go('/perfil')),
                   ),
                   const SizedBox(height: 10),
                   StaggeredEntry(
@@ -253,6 +253,7 @@ class _Greeting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = idoso?.nome.split(' ').first;
+    final personText = idoso?.elderText;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -269,7 +270,7 @@ class _Greeting extends StatelessWidget {
         Text(
           name == null
               ? 'Selecione uma ficha para comecar'
-              : 'cuidando de $name hoje',
+              : 'cuidando ${personText!.of} $name hoje',
           style: const TextStyle(
             color: Color(0xFF333333),
             fontSize: 12,
@@ -651,7 +652,6 @@ class _TipCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: Color(0xFF073248)),
         ],
       ),
     );

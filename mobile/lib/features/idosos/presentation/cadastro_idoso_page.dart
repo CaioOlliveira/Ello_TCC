@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/utils/avatar_image.dart';
+import '../../../core/utils/elder_text.dart';
 import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
 class CadastroIdosoPage extends ConsumerStatefulWidget {
@@ -33,8 +34,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   final _contatoNomeController = TextEditingController();
   final _contatoParentescoController = TextEditingController();
   final _observacoesController = TextEditingController();
-  final _picker = ImagePicker();
-
   final List<String> _condicoes = [];
   String? _sexo;
   Uint8List? _fotoBytes;
@@ -53,6 +52,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
 
   bool get _isEditing => widget.edicao;
   int get _totalSteps => _isEditing ? 3 : 4;
+  ElderText get _personText => ElderText.fromSexo(_sexo);
   String get _backRoute =>
       widget.from == 'idoso-perfil' ? '/idoso/perfil' : '/dashboard';
 
@@ -65,14 +65,15 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     if (idoso == null) return;
 
     _nomeController.text = idoso.nome;
-    if (idoso.idade > 0) _idadeController.text = idoso.idade.toString();
     if (idoso.dataNascimento != null && idoso.dataNascimento!.length >= 10) {
       final parsed = DateTime.tryParse(idoso.dataNascimento!.substring(0, 10));
       if (parsed != null) {
         _dataNascimentoController.text = _formatBrazilianDate(parsed);
+        _idadeController.text =
+            _calculateAge(parsed, DateTime.now()).toString();
       }
     }
-    _sexo = idoso.sexo;
+    _sexo = normalizeSexo(idoso.sexo) ?? idoso.sexo;
     _tipoSanguineoController.text = idoso.tipoSanguineo ?? '';
     _limitacoesController.text = idoso.limitacoes ?? '';
     _alergiasController.text = idoso.alergiasRestricoes ?? '';
@@ -127,14 +128,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   }
 
   Future<void> _selecionarFoto() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 900,
-      imageQuality: 85,
-    );
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
+    final bytes = await pickAvatarImage(context);
+    if (bytes == null) return;
     if (!mounted) return;
     setState(() => _fotoBytes = bytes);
   }
@@ -255,7 +250,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       final usuarioId = ref.read(authSessionProvider)?.id;
       final fotoUrl = _fotoBytes == null
           ? _fotoUrl
-          : 'data:image/jpeg;base64,${base64Encode(_fotoBytes!)}';
+          : 'data:image/png;base64,${base64Encode(_fotoBytes!)}';
       final dataNascimento = _toIsoDate(_dataNascimentoController.text.trim());
       final selectedIdoso = ref.read(selectedIdosoProvider);
       final response = _isEditing && selectedIdoso != null
@@ -267,7 +262,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                   'criadoPorId': usuarioId,
                 if (dataNascimento != null) 'dataNascimento': dataNascimento,
                 if (fotoUrl != null && fotoUrl.isNotEmpty) 'urlFoto': fotoUrl,
-                if (_sexo != null && _sexo!.isNotEmpty) 'sexo': _sexo,
+                if (normalizeSexo(_sexo) != null) 'sexo': normalizeSexo(_sexo),
                 if (_tipoSanguineoController.text.trim().isNotEmpty)
                   'tipoSanguineo': _tipoSanguineoController.text.trim(),
                 'condicoesSaude': _condicoes,
@@ -292,7 +287,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
               criadoPorId: usuarioId,
               dataNascimento: dataNascimento,
               urlFoto: fotoUrl,
-              sexo: _sexo,
+              sexo: normalizeSexo(_sexo),
               tipoSanguineo: _tipoSanguineoController.text.trim(),
               condicoesSaude: _condicoes,
               monitoramentos: _monitoramentosSelecionados.toList(),
@@ -326,7 +321,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         idade: int.tryParse(_idadeController.text.trim()) ?? 0,
         urlFoto: fotoUrl,
         dataNascimento: dataNascimento,
-        sexo: _sexo,
+        sexo: normalizeSexo(_sexo),
         tipoSanguineo: _tipoSanguineoController.text.trim().isEmpty
             ? null
             : _tipoSanguineoController.text.trim(),
@@ -383,6 +378,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                 totalSteps: _totalSteps,
                 stepTitle: _stepTitles[_currentStep],
                 editing: _isEditing,
+                personText: _personText,
               ),
               Expanded(
                 child: AnimatedSwitcher(
@@ -574,6 +570,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   }
 
   Widget _basicoFields() {
+    final personText = _personText;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -609,19 +607,19 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
               ),
             ),
             const SizedBox(width: 16),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Foto do Idoso',
-                  style: TextStyle(
+                  'Foto ${personText.of}',
+                  style: const TextStyle(
                     color: Color(0xFF249CB0),
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 1),
-                Text(
+                const SizedBox(height: 1),
+                const Text(
                   'toque para adicionar',
                   style: TextStyle(color: Color(0xFF9B9B9B), fontSize: 11),
                 ),
@@ -671,8 +669,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                   const _FieldLabel('Idade'),
                   _InputBox(
                     controller: _idadeController,
-                    hintText: 'Ex:63',
-                    keyboardType: TextInputType.number,
+                    hintText: 'Calculada automaticamente',
+                    readOnly: true,
                   ),
                 ],
               ),
@@ -684,11 +682,11 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         _SelectBox(
           value: _sexo,
           onChanged: (value) {
-            setState(() => _sexo = value);
+            setState(() => _sexo = normalizeSexo(value));
           },
         ),
         const SizedBox(height: 10),
-        const _FieldLabel('Tipo sanguineo'),
+        const _FieldLabel('Tipo sanguíneo'),
         _BloodTypeField(controller: _tipoSanguineoController),
       ],
     );
@@ -783,8 +781,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
             onTap: () => context.go('/idoso/acessos'),
             borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               child: const Row(
                 children: [
                   Icon(
@@ -1048,6 +1045,7 @@ class _CadastroHeader extends StatelessWidget {
     required this.totalSteps,
     required this.stepTitle,
     required this.editing,
+    required this.personText,
   });
 
   final VoidCallback onBack;
@@ -1055,6 +1053,7 @@ class _CadastroHeader extends StatelessWidget {
   final int totalSteps;
   final String stepTitle;
   final bool editing;
+  final ElderText personText;
 
   @override
   Widget build(BuildContext context) {
@@ -1080,7 +1079,9 @@ class _CadastroHeader extends StatelessWidget {
                 ),
               ),
               Text(
-                editing ? 'Editar idoso' : 'Cadastro do idoso',
+                editing
+                    ? 'Editar ${personText.singular}'
+                    : 'Cadastro ${personText.of}',
                 style: const TextStyle(
                   color: Color(0xFF249CB0),
                   fontSize: 16,
@@ -1249,6 +1250,8 @@ class _SelectBox extends StatelessWidget {
       child: DropdownButtonFormField<String>(
         initialValue: value,
         onChanged: onChanged,
+        validator: (value) =>
+            normalizeSexo(value) == null ? 'Informe o sexo.' : null,
         icon: const Icon(
           Icons.keyboard_arrow_down_rounded,
           color: Color(0xFF2697AA),
@@ -1337,7 +1340,7 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
               final text = value?.trim();
               if (text == null || text.isEmpty) return null;
               if (!_BloodTypeField._options.contains(text)) {
-                return 'Selecione um tipo sanguineo valido.';
+                return 'Selecione um tipo sanguíneo válido.';
               }
               return null;
             },

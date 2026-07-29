@@ -282,7 +282,8 @@ class _EmptyAdminState extends StatelessWidget {
               'Você ainda não é administrador de nenhuma ficha. '
               'Fichas que você criar aparecerão aqui.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
+              style: TextStyle(
+                  color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
             ),
           ],
         ),

@@ -35,9 +35,8 @@ export const buscarGlicemia: RequestHandler = asyncHandler(async (req, res) => {
 
 export const obterResumoGlicemia: RequestHandler = asyncHandler(
   async (req, res) => {
-    const { idosoId, dataReferencia, periodo } = resumoGlicemiaQuerySchema.parse(
-      req.query,
-    );
+    const { idosoId, dataReferencia, periodo } =
+      resumoGlicemiaQuerySchema.parse(req.query);
     res.json({
       dados: await glicemiaService.resumo(idosoId, dataReferencia, periodo),
     });
@@ -46,9 +45,8 @@ export const obterResumoGlicemia: RequestHandler = asyncHandler(
 
 export const obterHistoricoGlicemia: RequestHandler = asyncHandler(
   async (req, res) => {
-    const { idosoId, dataReferencia, periodo } = historicoGlicemiaQuerySchema.parse(
-      req.query,
-    );
+    const { idosoId, dataReferencia, periodo } =
+      historicoGlicemiaQuerySchema.parse(req.query);
     res.json({
       dados: await glicemiaService.historico(idosoId, dataReferencia, periodo),
     });

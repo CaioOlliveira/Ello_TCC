@@ -22,11 +22,13 @@ class PerfilIdosoPage extends ConsumerWidget {
         body: Center(
           child: FilledButton(
             onPressed: () => context.go('/idosos'),
-            child: const Text('Selecionar idoso'),
+            child: const Text('Selecionar pessoa idosa'),
           ),
         ),
       );
     }
+
+    final personText = idoso.elderText;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -52,15 +54,13 @@ class PerfilIdosoPage extends ConsumerWidget {
                       ActionIconButton(
                         tooltip: 'Compartilhar ficha',
                         icon: Icons.ios_share_rounded,
-                        onTap: () =>
-                            _showCompartilharSheet(context, idoso.id),
+                        onTap: () => _showCompartilharSheet(context, idoso.id),
                       ),
                       const SizedBox(width: 10),
                       ActionIconButton(
                         tooltip: 'Perfil do cuidador',
                         icon: Icons.person_rounded,
-                        onTap: () =>
-                            context.go('/perfil?from=idoso-perfil'),
+                        onTap: () => context.go('/perfil?from=idoso-perfil'),
                       ),
                     ],
                   ),
@@ -73,41 +73,49 @@ class PerfilIdosoPage extends ConsumerWidget {
                     index: 2,
                     child: _InfoCard(
                       icon: Icons.water_drop_rounded,
-                      title: 'Tipo Sanguineo',
+                      title: 'Tipo sanguíneo',
                       value: idoso.tipoSanguineo!,
+                    ),
+                  ),
+                if (idoso.sexo?.isNotEmpty == true)
+                  StaggeredEntry(
+                    index: 3,
+                    child: _InfoCard(
+                      icon: Icons.badge_rounded,
+                      title: 'Sexo',
+                      value: idoso.sexo!,
                     ),
                   ),
                 if (idoso.condicoes.isNotEmpty)
                   StaggeredEntry(
-                    index: 3,
+                    index: 4,
                     child: _InfoCard(
                       icon: Icons.monitor_heart_rounded,
-                      title: 'Doencas',
+                      title: 'Condições de saúde',
                       value: idoso.condicoes.join(' e '),
                     ),
                   ),
                 if (idoso.contatoEmergenciaNome?.isNotEmpty == true ||
                     idoso.contatoEmergenciaTelefone?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 4,
+                    index: 5,
                     child: _InfoCard(
                       icon: Icons.phone_rounded,
-                      title: 'Contato de Emergencia',
+                      title: 'Contato de emergência',
                       value: [
                         if (idoso.contatoEmergenciaNome?.isNotEmpty == true)
                           '${idoso.contatoEmergenciaNome}${idoso.contatoEmergenciaParentesco?.isNotEmpty == true ? ' (${idoso.contatoEmergenciaParentesco})' : ''}',
-                        if (idoso.contatoEmergenciaTelefone?.isNotEmpty ==
-                            true)
+                        if (idoso.contatoEmergenciaTelefone?.isNotEmpty == true)
                           _formatPhone(idoso.contatoEmergenciaTelefone!),
                       ].join('\n'),
                     ),
                   ),
                 if (idoso.alergiasRestricoes?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 5,
+                    index: 6,
                     child: _InfoCard(
                       icon: Icons.warning_amber_rounded,
-                      title: 'Alergias',
+                      title: 'Alergias ${personText.of}',
                       value:
                           _joinWithAnd(_splitList(idoso.alergiasRestricoes!)),
                     ),
@@ -253,7 +261,8 @@ class _CompartilharFichaSheetState
               'Peca para a outra pessoa abrir o Ello, tocar em\n'
               '"Entrar com convite" e colar o codigo abaixo.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
+              style: TextStyle(
+                  color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
             ),
             const SizedBox(height: 22),
             AnimatedSwitcher(
@@ -298,7 +307,8 @@ class _CompartilharFichaSheetState
                               borderRadius: BorderRadius.circular(14),
                               child: Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 18),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 18),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7F4F6),
                                   borderRadius: BorderRadius.circular(14),

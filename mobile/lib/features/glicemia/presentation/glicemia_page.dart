@@ -132,7 +132,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
       context: _pickerContext,
       locale: const Locale('pt', 'BR'),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       initialDate: _referenceDate,
     );
 
@@ -167,7 +167,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
       context: _pickerContext,
       locale: const Locale('pt', 'BR'),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       initialDate: initialDate,
     );
   }
@@ -295,6 +295,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
   Widget _buildContent(IdosoResumo idoso) {
     _ensureResumo(idoso.id);
     _ensureHistorico(idoso.id);
+    final feelingHint = idoso.elderText.howFeeling();
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 260),
@@ -320,6 +321,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
               selectedDate: _glicemiaDate,
               selectedTime: _glicemiaTime,
               contexto: _contexto,
+              observationHint: feelingHint,
               saving: _saving,
               onContextoChanged: (value) {
                 if (value != null) setState(() => _contexto = value);
@@ -338,6 +340,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
               nomeInsulina: _nomeInsulina,
               tipoInsulina: _tipoInsulina,
               localAplicacao: _localAplicacao,
+              observationHint: feelingHint,
               saving: _saving,
               onNomeChanged: (value) {
                 if (value != null) setState(() => _nomeInsulina = value);
@@ -1578,6 +1581,7 @@ class _RegistrarGlicemiaView extends StatelessWidget {
     required this.selectedDate,
     required this.selectedTime,
     required this.contexto,
+    required this.observationHint,
     required this.saving,
     required this.onContextoChanged,
     required this.onSelectDate,
@@ -1592,6 +1596,7 @@ class _RegistrarGlicemiaView extends StatelessWidget {
   final DateTime selectedDate;
   final TimeOfDay selectedTime;
   final String contexto;
+  final String observationHint;
   final bool saving;
   final ValueChanged<String?> onContextoChanged;
   final VoidCallback onSelectDate;
@@ -1641,7 +1646,7 @@ class _RegistrarGlicemiaView extends StatelessWidget {
             _ObservationCard(
               controller: observacoesController,
               title: 'Observações',
-              hintText: 'Como o idoso está se sentindo?',
+              hintText: observationHint,
             ),
             const SizedBox(height: 22),
             _SaveCancelButtons(
@@ -1666,6 +1671,7 @@ class _RegistrarInsulinaView extends StatelessWidget {
     required this.nomeInsulina,
     required this.tipoInsulina,
     required this.localAplicacao,
+    required this.observationHint,
     required this.saving,
     required this.onNomeChanged,
     required this.onTipoChanged,
@@ -1684,6 +1690,7 @@ class _RegistrarInsulinaView extends StatelessWidget {
   final String nomeInsulina;
   final String tipoInsulina;
   final String localAplicacao;
+  final String observationHint;
   final bool saving;
   final ValueChanged<String?> onNomeChanged;
   final ValueChanged<String> onTipoChanged;
@@ -1740,7 +1747,7 @@ class _RegistrarInsulinaView extends StatelessWidget {
             _ObservationCard(
               controller: observacoesController,
               title: 'Observações',
-              hintText: 'Como o idoso está se sentindo?',
+              hintText: observationHint,
             ),
             const SizedBox(height: 22),
             _SaveCancelButtons(
@@ -2334,7 +2341,7 @@ class _NoIdosoState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Selecione um idoso para registrar glicemia e uso de insulina.',
+            'Selecione uma pessoa idosa para registrar glicemia e uso de insulina.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF607178), fontSize: 13),
           ),

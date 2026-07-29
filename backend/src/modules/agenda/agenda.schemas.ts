@@ -32,10 +32,7 @@ const normalizarFrequencia = (value: unknown) => {
   return values[normalized] ?? value;
 };
 
-const primeiroDefinido = (
-  input: Record<string, unknown>,
-  keys: string[],
-) => {
+const primeiroDefinido = (input: Record<string, unknown>, keys: string[]) => {
   for (const key of keys) {
     if (input[key] !== undefined) return input[key];
   }

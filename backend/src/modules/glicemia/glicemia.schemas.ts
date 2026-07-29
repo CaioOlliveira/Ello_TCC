@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+import { isFutureInstant } from "../../common/utils/date-utils.js";
+
+const dataNaoFuturaSchema = z
+  .string()
+  .datetime("Data deve estar em formato ISO.")
+  .refine(
+    (value) => !isFutureInstant(value),
+    "Nao e permitido registrar uma data futura.",
+  );
+
 const valorGlicemiaSchema = z
   .number()
   .int("Valor deve ser um numero inteiro.")
@@ -14,7 +24,7 @@ export const criarGlicemiaSchema = z.object({
   idosoId: z.string().min(1, "Idoso e obrigatorio."),
   valor: valorGlicemiaSchema,
   contexto: z.string().min(1, "Contexto e obrigatorio."),
-  medidoEm: z.string().datetime("Data deve estar em formato ISO."),
+  medidoEm: dataNaoFuturaSchema,
   observacoes: z.string().optional(),
   sintomas: z.string().optional(),
   registradoPorId: z.string().uuid().optional(),
@@ -39,7 +49,7 @@ export const criarInsulinaSchema = z.object({
     .number()
     .positive("Dose deve ser positiva.")
     .max(200, "Dose maxima permitida e 200 unidades."),
-  aplicadoEm: z.string().datetime("Data deve estar em formato ISO."),
+  aplicadoEm: dataNaoFuturaSchema,
   localAplicacao: z.string().optional(),
   observacoes: z.string().optional(),
   registradoPorId: z.string().uuid().optional(),

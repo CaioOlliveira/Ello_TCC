@@ -34,6 +34,7 @@ const idosos: Idoso[] = [
     id: "idoso-1",
     nome: "Maria Aparecida",
     idade: 78,
+    sexo: "Feminino",
     monitoramentos: [
       "Medicacoes",
       "Humor",
@@ -115,8 +116,7 @@ const prepararInput = <T extends AtualizarIdosoInput | CriarIdosoInput>(
   input: T,
 ): Record<string, unknown> => ({
   ...input,
-  observacoesSaude:
-    input.observacoesSaude ?? input.condicoesSaude?.join(", "),
+  observacoesSaude: input.observacoesSaude ?? input.condicoesSaude?.join(", "),
   limitacoes: input.limitacoes,
   alergiasRestricoes: input.alergiasRestricoes,
 });

@@ -28,8 +28,7 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
   List<SolicitacaoPendente> _pendentes = const [];
   String? _acaoEmAndamentoId;
 
-  String? get _idosoId =>
-      widget.idosoId ?? ref.read(selectedIdosoProvider)?.id;
+  String? get _idosoId => widget.idosoId ?? ref.read(selectedIdosoProvider)?.id;
 
   @override
   void initState() {
@@ -210,6 +209,9 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
   @override
   Widget build(BuildContext context) {
     final backRoute = widget.idosoId != null ? '/permissoes' : '/idoso/perfil';
+    final title = _idoso == null
+        ? 'Acessos da ficha'
+        : 'Acessos da ficha ${_idoso!.elderText.of}';
 
     return Scaffold(
       backgroundColor: const Color(0xFFFCFCFC),
@@ -233,9 +235,9 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
                             size: 32,
                           ),
                         ),
-                        const Text(
-                          'Acesso ficha do idoso',
-                          style: TextStyle(
+                        Text(
+                          title,
+                          style: const TextStyle(
                             color: Colors.black,
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -522,7 +524,8 @@ class _CompartilharCard extends StatelessWidget {
         children: [
           const Text(
             'Qualquer pessoa com este código poderá solicitar acesso à ficha.',
-            style: TextStyle(color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
+            style: TextStyle(
+                color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
           ),
           const SizedBox(height: 14),
           if (convite == null || convite.codigo.isEmpty)
@@ -1149,9 +1152,8 @@ class _CargoOption extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: selected
-                  ? const Color(0xFF2BA8BA)
-                  : const Color(0xFFE4EFF1),
+              color:
+                  selected ? const Color(0xFF2BA8BA) : const Color(0xFFE4EFF1),
               width: selected ? 1.4 : 1,
             ),
           ),

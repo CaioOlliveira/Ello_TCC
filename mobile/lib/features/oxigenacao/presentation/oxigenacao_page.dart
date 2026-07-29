@@ -110,7 +110,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
       context: _pickerContext,
       locale: const Locale('pt', 'BR'),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       initialDate: _referenceDate,
     );
 
@@ -125,7 +125,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
       context: _pickerContext,
       locale: const Locale('pt', 'BR'),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now(),
       initialDate: _medicaoDate,
     );
     if (selected != null) setState(() => _medicaoDate = selected);
@@ -212,6 +212,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
   Widget _buildContent(IdosoResumo idoso) {
     _ensureResumo(idoso.id);
     _ensureHistorico(idoso.id);
+    final feelingHint = idoso.elderText.howFeeling();
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 260),
@@ -237,6 +238,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
               observacoesController: _observacoesController,
               selectedDate: _medicaoDate,
               selectedTime: _medicaoTime,
+              observationHint: feelingHint,
               saving: _saving,
               onSelectDate: _selectDate,
               onSelectTime: _selectTime,
@@ -1277,6 +1279,7 @@ class _RegistrarOxigenacaoView extends StatelessWidget {
     required this.observacoesController,
     required this.selectedDate,
     required this.selectedTime,
+    required this.observationHint,
     required this.saving,
     required this.onSelectDate,
     required this.onSelectTime,
@@ -1290,6 +1293,7 @@ class _RegistrarOxigenacaoView extends StatelessWidget {
   final TextEditingController observacoesController;
   final DateTime selectedDate;
   final TimeOfDay selectedTime;
+  final String observationHint;
   final bool saving;
   final VoidCallback onSelectDate;
   final VoidCallback onSelectTime;
@@ -1326,7 +1330,7 @@ class _RegistrarOxigenacaoView extends StatelessWidget {
             _ObservationCard(
               controller: observacoesController,
               title: 'Observações',
-              hintText: 'Como o idoso está se sentindo?',
+              hintText: observationHint,
             ),
             const SizedBox(height: 22),
             _SaveCancelButtons(
@@ -1756,7 +1760,7 @@ class _NoIdosoState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Selecione um idoso para registrar a oxigenação.',
+            'Selecione uma pessoa idosa para registrar a oxigenação.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF607178), fontSize: 13),
           ),

@@ -199,7 +199,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                     StaggeredEntry(
                       index: 1,
                       child: Text(
-                        'Como ${_firstName(idoso?.nome ?? 'o idoso')} esta hoje?',
+                        'Como ${_moodTarget(idoso)} esta hoje?',
                         style: const TextStyle(
                           color: Color(0xFF242424),
                           fontSize: 17,
@@ -353,12 +353,20 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(
+        TextButton.icon(
           onPressed: onBack,
           icon: const Icon(
             Icons.chevron_left_rounded,
             color: Color(0xFF238FA1),
-            size: 34,
+            size: 28,
+          ),
+          label: const Text(
+            'Voltar',
+            style: TextStyle(
+              color: Color(0xFF238FA1),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         const Expanded(
@@ -738,8 +746,15 @@ const _moods = [
 
 String _firstName(String nome) {
   final trimmed = nome.trim();
-  if (trimmed.isEmpty) return 'Idoso';
+  if (trimmed.isEmpty) return 'Pessoa idosa';
   return trimmed.split(RegExp(r'\s+')).first;
+}
+
+String _moodTarget(IdosoResumo? idoso) {
+  if (idoso == null || idoso.nome.trim().isEmpty) {
+    return idoso?.elderText.withArticle ?? 'a pessoa idosa';
+  }
+  return _firstName(idoso.nome);
 }
 
 Uint8List? _dataImageBytes(String? value) {

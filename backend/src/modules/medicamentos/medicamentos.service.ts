@@ -1,6 +1,8 @@
 import { registrarHistorico } from "../../database/audit.js";
 import { getPool } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
+import { AppError } from "../../common/errors/app-error.js";
+import { parseLocalDate, periodRange } from "../../common/utils/date-utils.js";
 import {
   deleteRow,
   getRowById,
@@ -51,25 +53,6 @@ const startOfDay = (date: Date) => {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
   return copy;
-};
-
-const inicioDoPeriodoHistorico = (
-  referencia: Date,
-  periodo: PeriodoMedicamentos,
-) => {
-  if (periodo === "semanal") {
-    const inicio = startOfDay(referencia);
-    inicio.setDate(inicio.getDate() - 6);
-    return inicio;
-  }
-
-  if (periodo === "mes") {
-    const inicio = startOfDay(referencia);
-    inicio.setDate(inicio.getDate() - 29);
-    return inicio;
-  }
-
-  return startOfDay(referencia);
 };
 
 const NOMES_DIAS_SEMANA = [
@@ -153,12 +136,14 @@ const proximaOcorrencia = (
       continue;
     }
 
-    if (candidata.getTime() > agora.getTime()) {
+    const atrasoMs = agora.getTime() - candidata.getTime();
+
+    if (atrasoMs < 0) {
       return { data: candidata, atrasado: false };
     }
 
     if (!jaAdministradoEm(candidata, administracoesHoje)) {
-      return { data: candidata, atrasado: true };
+      return { data: candidata, atrasado: atrasoMs > TOLERANCIA_ATRASO_MS };
     }
   }
 
@@ -171,6 +156,7 @@ const formatarHorario = (valor: unknown) => {
 };
 
 const TOLERANCIA_ATRASO_MINUTOS = 30;
+const TOLERANCIA_ATRASO_MS = TOLERANCIA_ATRASO_MINUTOS * 60 * 1000;
 
 const rotuloStatusAdministracao = (
   status: string,
@@ -195,7 +181,11 @@ const rotuloStatusAdministracao = (
           };
         }
       }
-      return { descricao: "marcou como tomado", texto: "Tomado", cor: "normal" as const };
+      return {
+        descricao: "marcou como tomado",
+        texto: "Tomado",
+        cor: "normal" as const,
+      };
     }
     case "atrasado":
       return {
@@ -512,10 +502,11 @@ export const medicamentosService = {
     dataReferencia?: string,
     periodo: PeriodoMedicamentos = "dia",
   ): Promise<HistoricoMedicamentoEntrada[]> {
-    const referencia = dataReferencia
-      ? new Date(`${dataReferencia}T12:00:00`)
-      : new Date();
-    const inicio = inicioDoPeriodoHistorico(referencia, periodo);
+    const referencia = parseLocalDate(dataReferencia);
+    const { start: inicio, endExclusive: fim } = periodRange(
+      referencia,
+      periodo,
+    );
 
     const result = await getPool().query<{
       id: string;
@@ -542,10 +533,11 @@ export const medicamentosService = {
         where h.idoso_id = $1
           and h.tipo_entidade in ('medicamentos', 'administracoes_medicamentos', 'horarios_medicamentos')
           and h.criado_em >= $2
+          and h.criado_em < $3
         order by h.criado_em desc
         limit 100
       `,
-      [idosoId, inicio.toISOString()],
+      [idosoId, inicio.toISOString(), fim.toISOString()],
     );
 
     const medicamentoIds = new Set<string>();
@@ -564,10 +556,9 @@ export const medicamentosService = {
       const nomesResult = await getPool().query<{
         id: string;
         nome: string;
-      }>(
-        "select id, nome from medicamentos where id = any($1::uuid[])",
-        [Array.from(medicamentoIds)],
-      );
+      }>("select id, nome from medicamentos where id = any($1::uuid[])", [
+        Array.from(medicamentoIds),
+      ]);
       for (const row of nomesResult.rows) {
         nomesPorId.set(row.id, row.nome);
       }
@@ -662,44 +653,128 @@ export const medicamentosService = {
     const registradoPorId = await resolverUsuarioRegistroId(
       input.registradoPorId,
     );
-    const administracao = await insertRow<
-      Record<string, unknown>,
-      Record<string, unknown>
-    >(
-      "administracoes_medicamentos",
-      { ...input, medicamentoId, registradoPorId },
-      {
-        medicamentoId: "medicamento_id",
-        idosoId: "idoso_id",
-        horarioPrevisto: "horario_previsto",
-        administradoEm: "administrado_em",
-        status: "status",
-        quantidadeDose: "quantidade_dose",
-        registradoPorId: "registrado_por_id",
-        observacoes: "observacoes",
-      },
-    );
+    const pool = getPool();
+    const client = await pool.connect();
 
-    if (input.status === "tomado" && input.quantidadeDose) {
-      await getPool().query(
-        `
-          update medicamentos
-          set quantidade_estoque = greatest(coalesce(quantidade_estoque, 0) - $1, 0)
-          where id = $2
-        `,
-        [input.quantidadeDose, medicamentoId],
+    try {
+      await client.query("begin");
+      await client.query(
+        "select pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+        [medicamentoId, input.horarioPrevisto],
       );
+
+      const medicamentoResult = await client.query<{
+        id: string;
+        idoso_id: string;
+      }>(
+        `
+          select id, idoso_id
+          from medicamentos
+          where id = $1
+          for update
+        `,
+        [medicamentoId],
+      );
+
+      const medicamento = medicamentoResult.rows[0];
+      if (!medicamento || medicamento.idoso_id !== input.idosoId) {
+        throw new AppError(
+          "MEDICAMENTO_NAO_ENCONTRADO",
+          "Medicamento nao encontrado para esta ficha.",
+          404,
+        );
+      }
+
+      const duplicadoResult = await client.query<{ id: string }>(
+        `
+          select id
+          from administracoes_medicamentos
+          where medicamento_id = $1
+            and idoso_id = $2
+            and horario_previsto = $3
+          limit 1
+        `,
+        [medicamentoId, input.idosoId, input.horarioPrevisto],
+      );
+
+      if ((duplicadoResult.rowCount ?? 0) > 0) {
+        throw new AppError(
+          "DOSE_JA_ADMINISTRADA",
+          "Esta medicacao ja foi registrada como administrada neste horario.",
+          409,
+        );
+      }
+
+      const administracaoResult = await client.query<Record<string, unknown>>(
+        `
+          insert into administracoes_medicamentos (
+            medicamento_id,
+            idoso_id,
+            horario_previsto,
+            administrado_em,
+            status,
+            quantidade_dose,
+            registrado_por_id,
+            observacoes
+          )
+          values ($1, $2, $3, $4, $5, $6, $7, $8)
+          returning *
+        `,
+        [
+          medicamentoId,
+          input.idosoId,
+          input.horarioPrevisto,
+          input.administradoEm ?? null,
+          input.status,
+          input.quantidadeDose ?? null,
+          registradoPorId,
+          input.observacoes ?? null,
+        ],
+      );
+      const administracao = administracaoResult.rows[0];
+
+      if (input.status === "tomado" && input.quantidadeDose) {
+        await client.query(
+          `
+            update medicamentos
+            set quantidade_estoque = greatest(coalesce(quantidade_estoque, 0) - $1, 0)
+            where id = $2
+          `,
+          [input.quantidadeDose, medicamentoId],
+        );
+      }
+
+      await client.query(
+        `
+          insert into historico_alteracoes (
+            idoso_id,
+            usuario_id,
+            acao,
+            tipo_entidade,
+            entidade_id,
+            dados_anteriores,
+            dados_novos
+          )
+          values ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [
+          input.idosoId,
+          registradoPorId,
+          "registrar_administracao",
+          "administracoes_medicamentos",
+          String(administracao.id),
+          null,
+          JSON.stringify(administracao),
+        ],
+      );
+
+      await client.query("commit");
+      return administracao;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
     }
-
-    await registrarHistorico({
-      usuarioId: registradoPorId,
-      idosoId: input.idosoId,
-      acao: "registrar_administracao",
-      tipoEntidade: "administracoes_medicamentos",
-      entidadeId: String(administracao.id),
-      dadosNovos: administracao,
-    });
-
-    return administracao;
   },
 };

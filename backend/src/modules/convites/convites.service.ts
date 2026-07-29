@@ -181,11 +181,7 @@ export const convitesService = {
     const membroExistente = existente.rows[0];
 
     if (membroExistente?.status === "ativo") {
-      throw new AppError(
-        "JA_MEMBRO",
-        "Voce ja tem acesso a essa ficha.",
-        409,
-      );
+      throw new AppError("JA_MEMBRO", "Voce ja tem acesso a essa ficha.", 409);
     }
 
     if (membroExistente?.status === "pendente") {

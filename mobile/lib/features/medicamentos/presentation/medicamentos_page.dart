@@ -2230,7 +2230,7 @@ class _NoIdosoState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Selecione um idoso para gerenciar os medicamentos.',
+            'Selecione uma pessoa idosa para gerenciar os medicamentos.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF607178), fontSize: 13),
           ),
@@ -2333,8 +2333,7 @@ String _formatNumber(double value) {
 const _kToleranciaAtrasoMinutos = 30;
 
 String _statusComAtraso(DateTime administradoEm, DateTime horarioPrevisto) {
-  final atrasoMinutos =
-      administradoEm.difference(horarioPrevisto).inMinutes;
+  final atrasoMinutos = administradoEm.difference(horarioPrevisto).inMinutes;
   return atrasoMinutos > _kToleranciaAtrasoMinutos ? 'atrasado' : 'tomado';
 }
 

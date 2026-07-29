@@ -9,6 +9,7 @@ import { OAuth2Client } from "google-auth-library";
 import { AppError } from "../../common/errors/app-error.js";
 import { getPool } from "../../database/pool.js";
 import type {
+  AlterarSenhaInput,
   CadastroInput,
   GoogleCadastroInput,
   GoogleLoginInput,
@@ -82,6 +83,15 @@ const buscarUsuarioPorEmail = async (email: string) => {
   const result = await getPool().query<UsuarioAuthRow>(
     "select * from usuarios where lower(email) = lower($1) limit 1",
     [email.trim()],
+  );
+
+  return result.rows[0];
+};
+
+const buscarUsuarioPorId = async (usuarioId: string) => {
+  const result = await getPool().query<UsuarioAuthRow>(
+    "select * from usuarios where id = $1 limit 1",
+    [usuarioId],
   );
 
   return result.rows[0];
@@ -249,5 +259,41 @@ export const authService = {
     return {
       usuario: toUsuarioPublico(result.rows[0]),
     };
+  },
+
+  async alterarSenha(input: AlterarSenhaInput) {
+    const usuario = await buscarUsuarioPorId(input.usuarioId);
+
+    if (!usuario) {
+      throw new AppError(
+        "USUARIO_NAO_ENCONTRADO",
+        "Usuario nao encontrado.",
+        404,
+      );
+    }
+
+    if (usuario.senha === "google-auth") {
+      throw new AppError(
+        "SENHA_NAO_CONFIGURADA",
+        "Esta conta usa login com Google. Cadastre uma senha antes de altera-la.",
+        409,
+      );
+    }
+
+    if (!senhaConfere(input.senhaAtual, usuario.senha)) {
+      throw new AppError("SENHA_ATUAL_INVALIDA", "Senha atual incorreta.", 401);
+    }
+
+    const result = await getPool().query<UsuarioAuthRow>(
+      `
+        update usuarios
+        set senha = $1, atualizado_em = now()
+        where id = $2
+        returning *
+      `,
+      [criarHashSenha(input.novaSenha), input.usuarioId],
+    );
+
+    return { usuario: toUsuarioPublico(result.rows[0]) };
   },
 };

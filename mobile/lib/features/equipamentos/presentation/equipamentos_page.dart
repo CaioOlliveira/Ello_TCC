@@ -326,6 +326,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
             ? _EquipamentosList(
                 loading: _loading,
                 equipamentos: _equipamentos,
+                personOf: idoso?.elderText.of ?? 'da pessoa idosa',
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
                 onHistory: () => context.push('/equipamentos/historico'),
@@ -361,6 +362,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
             : _EquipamentosList(
                 loading: _loading,
                 equipamentos: _equipamentos,
+                personOf: idoso.elderText.of,
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
                 onHistory: () => context.push('/equipamentos/historico'),
@@ -418,6 +420,7 @@ class _EquipamentosList extends StatelessWidget {
   const _EquipamentosList({
     required this.loading,
     required this.equipamentos,
+    required this.personOf,
     required this.onAdd,
     required this.onOpen,
     required this.onHistory,
@@ -425,6 +428,7 @@ class _EquipamentosList extends StatelessWidget {
 
   final bool loading;
   final List<Equipamento> equipamentos;
+  final String personOf;
   final VoidCallback onAdd;
   final ValueChanged<Equipamento> onOpen;
   final VoidCallback onHistory;
@@ -451,10 +455,10 @@ class _EquipamentosList extends StatelessWidget {
                   child: CircularProgressIndicator(color: Color(0xFF38AFC0)),
                 )
               : equipamentos.isEmpty
-                  ? const _MessageState(
+                  ? _MessageState(
                       icon: Icons.medical_services_outlined,
                       title: 'Nenhum equipamento',
-                      message: 'Cadastre o primeiro equipamento do idoso.',
+                      message: 'Cadastre o primeiro equipamento $personOf.',
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(0, 2, 0, 18),

@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/utils/avatar_image.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class PerfilPage extends ConsumerWidget {
@@ -53,7 +53,7 @@ class PerfilPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const StaggeredEntry(index: 2, child: _MenuCard()),
+                StaggeredEntry(index: 2, child: _MenuCard(from: from)),
                 const SizedBox(height: 16),
                 const Text(
                   'Preferências',
@@ -141,8 +141,6 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
   final _telefoneController = TextEditingController();
-  final _picker = ImagePicker();
-
   String? _urlFoto;
   bool _loading = false;
   String? _erro;
@@ -166,22 +164,11 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
   }
 
   Future<void> _selecionarFoto() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 600,
-      imageQuality: 75,
-    );
-    if (picked == null) return;
-
-    final bytes = await picked.readAsBytes();
-    final extension = picked.name.toLowerCase().endsWith('.png')
-        ? 'png'
-        : picked.name.toLowerCase().endsWith('.webp')
-            ? 'webp'
-            : 'jpeg';
+    final bytes = await pickAvatarImage(context);
+    if (bytes == null) return;
 
     setState(() {
-      _urlFoto = 'data:image/$extension;base64,${base64Encode(bytes)}';
+      _urlFoto = 'data:image/png;base64,${base64Encode(bytes)}';
     });
   }
 
@@ -323,6 +310,245 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
   }
 }
 
+class SegurancaPerfilPage extends ConsumerStatefulWidget {
+  const SegurancaPerfilPage({super.key});
+
+  @override
+  ConsumerState<SegurancaPerfilPage> createState() =>
+      _SegurancaPerfilPageState();
+}
+
+class _SegurancaPerfilPageState extends ConsumerState<SegurancaPerfilPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _senhaAtualController = TextEditingController();
+  final _novaSenhaController = TextEditingController();
+  final _confirmacaoController = TextEditingController();
+  bool _loading = false;
+  String? _erro;
+
+  @override
+  void dispose() {
+    _senhaAtualController.dispose();
+    _novaSenhaController.dispose();
+    _confirmacaoController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _salvar() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final usuario = ref.read(authSessionProvider);
+    if (usuario == null) return;
+
+    setState(() {
+      _loading = true;
+      _erro = null;
+    });
+
+    try {
+      await ref.read(apiClientProvider).alterarSenha(
+            usuarioId: usuario.id,
+            senhaAtual: _senhaAtualController.text,
+            novaSenha: _novaSenhaController.text,
+            confirmarNovaSenha: _confirmacaoController.text,
+          );
+
+      if (!mounted) return;
+      _senhaAtualController.clear();
+      _novaSenhaController.clear();
+      _confirmacaoController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Senha alterada com sucesso.')),
+      );
+      context.go(_perfilRouteFromCurrent(context));
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _erro = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro = 'Não foi possível alterar a senha.');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFCFCFC),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PerfilHeader(
+                    onBack: () => context.go(_perfilRouteFromCurrent(context))),
+                const SizedBox(height: 16),
+                const Text(
+                  'Segurança',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF238FA1),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _Panel(
+                  child: Column(
+                    children: [
+                      _Input(
+                        controller: _senhaAtualController,
+                        label: 'Senha atual',
+                        obscureText: true,
+                        validator: _obrigatorio,
+                      ),
+                      const SizedBox(height: 12),
+                      _Input(
+                        controller: _novaSenhaController,
+                        label: 'Nova senha',
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Campo obrigatório.';
+                          }
+                          if (value.length < 6) {
+                            return 'A senha deve ter pelo menos 6 caracteres.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _Input(
+                        controller: _confirmacaoController,
+                        label: 'Confirmar nova senha',
+                        obscureText: true,
+                        validator: (value) {
+                          if (value != _novaSenhaController.text) {
+                            return 'As senhas precisam ser iguais.';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                if (_erro != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _erro!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFC0392B),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 46,
+                  child: FilledButton(
+                    onPressed: _loading ? null : _salvar,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0B6985),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Alterar senha'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SobreAppPage extends StatelessWidget {
+  const SobreAppPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFCFCFC),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _PerfilHeader(
+                  onBack: () => context.go(_perfilRouteFromCurrent(context))),
+              const SizedBox(height: 16),
+              const Text(
+                'Sobre o App',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF238FA1),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const _Panel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Text(
+                        'ello',
+                        style: TextStyle(
+                          color: Color(0xFF0E6F7E),
+                          fontSize: 34,
+                          fontWeight: FontWeight.w300,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Versão 0.1.0',
+                      style: TextStyle(
+                        color: Color(0xFF0B6985),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'O ELLO organiza rotinas de cuidado, registros de saúde, compromissos, insumos e comunicação de apoio em uma única experiência.',
+                      style: TextStyle(
+                        color: Color(0xFF4F6268),
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PerfilHeader extends StatelessWidget {
   const _PerfilHeader({required this.onBack});
 
@@ -424,14 +650,25 @@ class _UsuarioCard extends StatelessWidget {
 }
 
 class _MenuCard extends StatelessWidget {
-  const _MenuCard();
+  const _MenuCard({this.from});
+
+  final String? from;
 
   @override
   Widget build(BuildContext context) {
+    final suffix = from == null ? '' : '?from=$from';
     final items = [
       (Icons.person_outline_rounded, 'Informações pessoais', null),
-      (Icons.shield_outlined, 'Segurança', null),
-      (Icons.info_outline_rounded, 'Sobre o app', null),
+      (
+        Icons.shield_outlined,
+        'Segurança',
+        () => context.go('/perfil/seguranca$suffix'),
+      ),
+      (
+        Icons.info_outline_rounded,
+        'Sobre o App',
+        () => context.go('/perfil/sobre$suffix'),
+      ),
       (
         Icons.tune_rounded,
         'Permissões',
@@ -644,12 +881,14 @@ class _Input extends StatelessWidget {
     required this.label,
     this.keyboardType,
     this.validator,
+    this.obscureText = false,
   });
 
   final TextEditingController controller;
   final String label;
   final TextInputType? keyboardType;
   final FormFieldValidator<String>? validator;
+  final bool obscureText;
 
   @override
   Widget build(BuildContext context) {
@@ -657,6 +896,7 @@ class _Input extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
+      obscureText: obscureText,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
@@ -748,4 +988,9 @@ String _routeFromOrigin(String? from) {
     'idoso-perfil' => '/idoso/perfil',
     _ => '/dashboard',
   };
+}
+
+String _perfilRouteFromCurrent(BuildContext context) {
+  final from = GoRouterState.of(context).uri.queryParameters['from'];
+  return from == null ? '/perfil' : '/perfil?from=$from';
 }
