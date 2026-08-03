@@ -93,7 +93,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
     }
     final validade = _parseBrazilianDate(_validadeController.text);
     if (validade != null && _isBeforeToday(validade)) {
-      setState(() => _error = 'A validade nao pode ser anterior a hoje.');
+      setState(() => _error = 'A validade não pode ser anterior a hoje.');
       return;
     }
     if (consumo != null && consumo > 0 && _frequenciaUso == null) {
@@ -140,7 +140,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Nao foi possivel salvar o insumo.');
+      setState(() => _error = 'Não foi possível salvar o insumo.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -172,7 +172,10 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
           const SizedBox(height: 2),
           Text(
             'Cadastre itens de uso diario para controlar estoque e validade',
-            style: TextStyle(color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary), fontSize: 9.5),
+            style: TextStyle(
+                color: adaptive(context, const Color(0xFF8A8A8A),
+                    AppDarkColors.textSecondary),
+                fontSize: 9.5),
           ),
           const SizedBox(height: 14),
           _LabeledField(label: 'Nome do Insumo', controller: _nomeController),
@@ -280,7 +283,8 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
                     child: Text(
                       _fotoUrl == null ? 'Anexar imagem' : 'Imagem anexada',
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF6B6B6B), AppDarkColors.textSecondary),
+                        color: adaptive(context, const Color(0xFF6B6B6B),
+                            AppDarkColors.textSecondary),
                         fontSize: 12,
                       ),
                     ),
@@ -334,7 +338,8 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
             child: OutlinedButton(
               onPressed: _saving ? null : widget.onCancel,
               style: OutlinedButton.styleFrom(
-                foregroundColor: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                foregroundColor: adaptive(context, const Color(0xFF17324D),
+                    AppDarkColors.textPrimary),
                 side: const BorderSide(color: Color(0xFF3BA7B8)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -378,8 +383,10 @@ class _UnitSelector extends StatelessWidget {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: selected == unit
-                            ? adaptive(context, const Color(0xFFD6EEF2), AppDarkColors.tintedInfo)
-                            : adaptive(context, Colors.white, AppDarkColors.surface),
+                            ? adaptive(context, const Color(0xFFD6EEF2),
+                                AppDarkColors.tintedInfo)
+                            : adaptive(
+                                context, Colors.white, AppDarkColors.surface),
                         border: Border.all(color: const Color(0xFF3BA7B8)),
                       ),
                       child: Text(
@@ -387,7 +394,8 @@ class _UnitSelector extends StatelessWidget {
                         style: TextStyle(
                           color: selected == unit
                               ? const Color(0xFF006B7E)
-                              : adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                              : adaptive(context, const Color(0xFF17324D),
+                                  AppDarkColors.textPrimary),
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
@@ -421,7 +429,10 @@ class _FrequencySelector extends StatelessWidget {
             initialValue: value,
             onChanged: onChanged,
             decoration: _inputDecoration(context, 'Selecione a frequencia'),
-            style: TextStyle(color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary), fontSize: 11),
+            style: TextStyle(
+                color: adaptive(context, const Color(0xFF17324D),
+                    AppDarkColors.textPrimary),
+                fontSize: 11),
             icon: const Icon(
               Icons.keyboard_arrow_down_rounded,
               color: Color(0xFF2CA0B4),

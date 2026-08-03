@@ -126,7 +126,7 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
       return;
     }
     if (adicao < 0 || subtracao < 0) {
-      setState(() => _error = 'Adicao e subtracao nao podem ser negativas.');
+      setState(() => _error = 'Adição e subtração não podem ser negativas.');
       return;
     }
     if (subtracao >= insumo.quantidadeUnidades + adicao) {
@@ -141,7 +141,7 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
     }
     final validade = _parseBrazilianDate(_validadeController.text);
     if (validade != null && _isBeforeToday(validade)) {
-      setState(() => _error = 'A validade nao pode ser anterior a hoje.');
+      setState(() => _error = 'A validade não pode ser anterior a hoje.');
       return;
     }
     if (consumo != null && consumo > 0 && _frequenciaUso == null) {
@@ -211,7 +211,7 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Nao foi possivel atualizar o insumo.');
+      setState(() => _error = 'Não foi possível atualizar o insumo.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -222,7 +222,7 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
     final insumo = widget.insumo;
     if (insumo == null) {
       return _ErrorState(
-        message: 'Insumo nao encontrado.',
+        message: 'Insumo não encontrado.',
         onRetry: widget.onCancel,
       );
     }

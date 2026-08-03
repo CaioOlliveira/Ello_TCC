@@ -58,7 +58,7 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Nao foi possivel carregar o historico.');
+      setState(() => _error = 'Não foi possível carregar o histórico.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -117,7 +117,8 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
     final config = _HistoricoConfig.fromTipo(widget.tipo);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -158,7 +159,8 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
                     config.title,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                      color: adaptive(context, const Color(0xFF073248),
+                          AppDarkColors.textPrimary),
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                     ),
@@ -223,7 +225,7 @@ class _PeriodTabs extends StatelessWidget {
     const options = [
       (_HistoricoPeriodo.dia, 'Dia'),
       (_HistoricoPeriodo.semana, 'Semanal'),
-      (_HistoricoPeriodo.mes, 'Mes'),
+      (_HistoricoPeriodo.mes, 'Mês'),
     ];
 
     return Container(
@@ -341,7 +343,8 @@ class _HistoricoCard extends StatelessWidget {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: adaptive(context, const Color(0xFFD5EEF3), AppDarkColors.tintedInfo),
+              color: adaptive(
+                  context, const Color(0xFFD5EEF3), AppDarkColors.tintedInfo),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -351,7 +354,11 @@ class _HistoricoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Container(width: 1, height: 56, color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.divider)),
+          Container(
+              width: 1,
+              height: 56,
+              color: adaptive(
+                  context, const Color(0xFFD0D0D0), AppDarkColors.divider)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -362,7 +369,8 @@ class _HistoricoCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
@@ -373,7 +381,8 @@ class _HistoricoCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF868686), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF868686),
+                        AppDarkColors.textSecondary),
                     fontSize: 11,
                   ),
                 ),
@@ -381,7 +390,11 @@ class _HistoricoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Container(width: 1, height: 56, color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.divider)),
+          Container(
+              width: 1,
+              height: 56,
+              color: adaptive(
+                  context, const Color(0xFFD0D0D0), AppDarkColors.divider)),
           const SizedBox(width: 10),
           SizedBox(
             width: 66,
@@ -391,7 +404,8 @@ class _HistoricoCard extends StatelessWidget {
                 Text(
                   _formatDate(registro.criadoEm.toLocal()),
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textMuted),
+                    color: adaptive(context, const Color(0xFF8A8A8A),
+                        AppDarkColors.textMuted),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -399,7 +413,8 @@ class _HistoricoCard extends StatelessWidget {
                 Text(
                   _formatTime(registro.criadoEm.toLocal()),
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF073248),
+                        AppDarkColors.textPrimary),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -470,8 +485,8 @@ class _HistoricoConfig {
 }
 
 final _insumos = _HistoricoConfig(
-  title: 'Historico dos insumos',
-  emptyMessage: 'Nenhuma movimentacao de insumo neste periodo.',
+  title: 'Histórico dos insumos',
+  emptyMessage: 'Nenhuma movimentação de insumo neste período.',
   icon: (registro) {
     final tipo = registro.dadosNovos['tipo']?.toString();
     if (tipo == 'saida') return Icons.remove_circle_outline_rounded;
@@ -511,18 +526,18 @@ final _insumos = _HistoricoConfig(
 );
 
 final _alimentacao = _HistoricoConfig(
-  title: 'Historico da alimentacao',
-  emptyMessage: 'Nenhuma alteracao de alimentacao neste periodo.',
+  title: 'Histórico da alimentação',
+  emptyMessage: 'Nenhuma alteração de alimentação neste período.',
   icon: (registro) {
     if (registro.acao == 'concluir') return Icons.restaurant_rounded;
     if (registro.acao == 'atualizar') return Icons.edit_outlined;
     return Icons.local_cafe_outlined;
   },
   actionLabel: (registro) {
-    if (registro.acao == 'concluir') return 'marcou refeicao completa';
-    if (registro.acao == 'atualizar') return 'atualizou refeicao';
-    if (registro.acao == 'remover') return 'removeu refeicao';
-    return 'registrou refeicao';
+    if (registro.acao == 'concluir') return 'marcou refeição completa';
+    if (registro.acao == 'atualizar') return 'atualizou refeição';
+    if (registro.acao == 'remover') return 'removeu refeição';
+    return 'registrou refeição';
   },
   detail: (registro) {
     final alimentos = registro.dadosNovos['alimentos'];
@@ -545,13 +560,14 @@ final _alimentacao = _HistoricoConfig(
 );
 
 final _humor = _HistoricoConfig(
-  title: 'Historico de Humor',
-  emptyMessage: 'Nenhum humor registrado neste periodo.',
+  title: 'Histórico de humor',
+  emptyMessage: 'Nenhum humor registrado neste período.',
   icon: (registro) => switch (registro.itemNome.toLowerCase()) {
+    'calma' || 'calmo' => Icons.sentiment_neutral_rounded,
     'triste' => Icons.sentiment_dissatisfied_rounded,
-    'chorona' => Icons.sentiment_very_dissatisfied_rounded,
-    'irritada' => Icons.mood_bad_rounded,
-    'sonolenta' => Icons.nights_stay_rounded,
+    'chorona' || 'chorão' => Icons.sentiment_very_dissatisfied_rounded,
+    'irritada' || 'irritado' => Icons.mood_bad_rounded,
+    'sonolenta' || 'sonolento' => Icons.nights_stay_rounded,
     _ => Icons.sentiment_satisfied_alt_rounded,
   },
   actionLabel: (registro) {
@@ -578,7 +594,10 @@ class _HistoricoEmpty extends StatelessWidget {
       child: Text(
         config.emptyMessage,
         textAlign: TextAlign.center,
-        style: TextStyle(color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary), fontSize: 14),
+        style: TextStyle(
+            color: adaptive(
+                context, const Color(0xFF777777), AppDarkColors.textSecondary),
+            fontSize: 14),
       ),
     );
   }
@@ -661,7 +680,7 @@ String _formatTime(DateTime date) {
 
 String _firstName(String nome) {
   final trimmed = nome.trim();
-  if (trimmed.isEmpty) return 'Usuario';
+  if (trimmed.isEmpty) return 'Usuário';
   return trimmed.split(RegExp(r'\s+')).first;
 }
 
@@ -669,7 +688,7 @@ String _monthName(int month) {
   const names = [
     'Janeiro',
     'Fevereiro',
-    'Marco',
+    'Março',
     'Abril',
     'Maio',
     'Junho',

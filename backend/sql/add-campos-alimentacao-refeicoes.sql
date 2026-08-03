@@ -5,6 +5,7 @@ alter table public.registros_alimentacao
 add column if not exists data_consumo date,
 add column if not exists hora_consumo time,
 add column if not exists alimentos_consumidos jsonb default '[]'::jsonb,
+add column if not exists recordatorio text,
 add column if not exists concluida_em timestamptz;
 
 update public.registros_alimentacao

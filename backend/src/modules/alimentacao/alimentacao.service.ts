@@ -23,6 +23,7 @@ type RefeicaoRow = Record<string, unknown> & {
   hora_consumo?: string;
   alimentos_consumidos?: unknown;
   aceitacao?: string;
+  recordatorio?: string | null;
   observacoes?: string | null;
   registrado_por_id?: string | null;
   concluida_em?: string | null;
@@ -51,6 +52,7 @@ const mapearRefeicao = (row: RefeicaoRow) => ({
     ? row.alimentos_consumidos
     : [],
   aceitacao: row.aceitacao,
+  recordatorio: row.recordatorio,
   observacoes: row.observacoes,
   registradoPorId: row.registrado_por_id,
   concluidaEm: row.concluida_em,
@@ -137,10 +139,11 @@ export const alimentacaoService = {
           hora_consumo,
           alimentos_consumidos,
           aceitacao,
+          recordatorio,
           observacoes,
           registrado_por_id
         )
-        values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)
+        values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10)
         returning *
       `,
       [
@@ -151,6 +154,7 @@ export const alimentacaoService = {
         input.horaConsumo ?? alimentouEm.slice(11, 16),
         JSON.stringify(input.alimentos),
         input.aceitacao,
+        input.recordatorio ?? null,
         input.observacoes ?? null,
         registradoPorId,
       ],
@@ -193,8 +197,9 @@ export const alimentacaoService = {
           hora_consumo = coalesce($4, hora_consumo),
           alimentos_consumidos = coalesce($5::jsonb, alimentos_consumidos),
           aceitacao = coalesce($6, aceitacao),
-          observacoes = $7
-        where id = $8
+          recordatorio = coalesce($7, recordatorio),
+          observacoes = $8
+        where id = $9
         returning *
       `,
       [
@@ -204,6 +209,7 @@ export const alimentacaoService = {
         input.horaConsumo,
         input.alimentos ? JSON.stringify(input.alimentos) : null,
         input.aceitacao,
+        input.recordatorio,
         input.observacoes ?? null,
         id,
       ],

@@ -17,6 +17,8 @@ dependencies:
   go_router: ^14.6.2
   google_sign_in: 7.2.0
   image_picker: ^1.1.2
+  pdf: ^3.11.3
+  printing: ^5.14.2
   speech_to_text: ^7.0.0
   shared_preferences: ^2.5.5
 

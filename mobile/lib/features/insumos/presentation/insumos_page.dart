@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
@@ -69,7 +71,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'Nao foi possivel carregar os insumos.');
+      setState(() => _error = 'Não foi possível carregar os insumos.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -169,7 +171,80 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel excluir o insumo.')),
+        const SnackBar(content: Text('Não foi possível excluir o insumo.')),
+      );
+    }
+  }
+
+  Future<void> _generateExpiredPdf() async {
+    final idoso = ref.read(selectedIdosoProvider);
+    if (idoso == null) {
+      context.go('/idosos');
+      return;
+    }
+
+    try {
+      final vencidos = await ref.read(apiClientProvider).listarInsumos(
+            idosoId: idoso.id,
+            filtro: 'vencidos',
+          );
+
+      if (!mounted) return;
+      if (vencidos.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não há insumos vencidos para listar.')),
+        );
+        return;
+      }
+
+      final document = pw.Document();
+      document.addPage(
+        pw.MultiPage(
+          build: (context) => [
+            pw.Text(
+              'Insumos vencidos',
+              style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text('Idoso monitorado: ${idoso.nome}'),
+            pw.Text('Gerado em: ${_formatBrazilianDate(DateTime.now())}'),
+            pw.SizedBox(height: 18),
+            pw.TableHelper.fromTextArray(
+              headers: const [
+                'Insumo',
+                'Estoque',
+                'Unidade',
+                'Validade',
+                'Observações',
+              ],
+              data: [
+                for (final insumo in vencidos)
+                  [
+                    insumo.nome,
+                    _stockLabel(insumo.quantidadeUnidades),
+                    _contentPerUnitLabel(insumo),
+                    insumo.dataValidade == null
+                        ? 'Não informada'
+                        : _formatBrazilianDate(insumo.dataValidade!),
+                    insumo.observacoes ?? '',
+                  ],
+              ],
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              cellStyle: const pw.TextStyle(fontSize: 10),
+              cellAlignment: pw.Alignment.centerLeft,
+            ),
+          ],
+        ),
+      );
+
+      await Printing.sharePdf(
+        bytes: await document.save(),
+        filename: 'insumos-vencidos-${_formatIsoDate(DateTime.now())}.pdf',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível gerar o PDF.')),
       );
     }
   }
@@ -179,9 +254,12 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -211,6 +289,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
                         onBack: () => context.go('/monitoramento'),
                         onAdd: _showCadastro,
                         onHistory: () => context.push('/historico/insumos'),
+                        onGeneratePdf: _generateExpiredPdf,
                         onOpen: _showDetalhe,
                         selectedFilter: _selectedFilter,
                         onFilterChanged: _selectFilter,
@@ -252,6 +331,7 @@ class _InsumosListView extends StatelessWidget {
     required this.onBack,
     required this.onAdd,
     required this.onHistory,
+    required this.onGeneratePdf,
     required this.onOpen,
     required this.selectedFilter,
     required this.onFilterChanged,
@@ -265,6 +345,7 @@ class _InsumosListView extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onAdd;
   final VoidCallback onHistory;
+  final VoidCallback onGeneratePdf;
   final ValueChanged<InsumoResumo> onOpen;
   final String selectedFilter;
   final ValueChanged<String> onFilterChanged;
@@ -292,8 +373,9 @@ class _InsumosListView extends StatelessWidget {
                 child: Text(
                   'Insumos',
                   style: TextStyle(
-                    color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-                    fontSize: 20,
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
+                    fontSize: 23,
                     fontWeight: FontWeight.w800,
                     height: 1,
                   ),
@@ -306,8 +388,9 @@ class _InsumosListView extends StatelessWidget {
             child: Text(
               'Controle de estoque dos produtos usados no cuidado',
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
-                fontSize: 11.5,
+                color: adaptive(context, const Color(0xFF8A8A8A),
+                    AppDarkColors.textSecondary),
+                fontSize: 12.5,
               ),
             ),
           ),
@@ -334,7 +417,7 @@ class _InsumosListView extends StatelessWidget {
                               crossAxisCount: 3,
                               mainAxisSpacing: 14,
                               crossAxisSpacing: 13,
-                              mainAxisExtent: 142,
+                              mainAxisExtent: 154,
                             ),
                             itemBuilder: (context, index) {
                               final insumo = insumos[index];
@@ -349,7 +432,7 @@ class _InsumosListView extends StatelessWidget {
                           ),
           ),
           SizedBox(
-            height: 52,
+            height: 56,
             child: FilledButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.add_circle_rounded, size: 20),
@@ -369,11 +452,12 @@ class _InsumosListView extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 46,
+            height: 50,
             child: OutlinedButton(
               onPressed: onHistory,
               style: OutlinedButton.styleFrom(
-                foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                foregroundColor: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 side: const BorderSide(color: Color(0xFF2CA0B4), width: 1.4),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -383,7 +467,27 @@ class _InsumosListView extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              child: const Text('Ver Historico'),
+              child: const Text('Ver histórico'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: onGeneratePdf,
+              icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+              label: const Text('PDF dos vencidos'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF0A7D8D),
+                side: const BorderSide(color: Color(0xFF2CA0B4), width: 1.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
         ],
@@ -413,7 +517,8 @@ class _StatusFilters extends StatelessWidget {
           Expanded(
             child: Material(
               color: selected == filter.$1
-                  ? adaptive(context, const Color(0xFFDDF2F5), AppDarkColors.tintedInfo)
+                  ? adaptive(context, const Color(0xFFDDF2F5),
+                      AppDarkColors.tintedInfo)
                   : adaptive(context, Colors.white, AppDarkColors.surface),
               borderRadius: BorderRadius.circular(999),
               child: InkWell(
@@ -443,7 +548,8 @@ class _StatusFilters extends StatelessWidget {
                           style: TextStyle(
                             color: selected == filter.$1
                                 ? const Color(0xFF006B7E)
-                                : adaptive(context, const Color(0xFF6A6A6A), AppDarkColors.textSecondary),
+                                : adaptive(context, const Color(0xFF6A6A6A),
+                                    AppDarkColors.textSecondary),
                             fontSize: 11.2,
                             fontWeight: selected == filter.$1
                                 ? FontWeight.w800
@@ -487,7 +593,7 @@ class _InsumoCard extends StatelessWidget {
           child: Column(
             children: [
               Expanded(
-                child: _ProductImage(value: insumo.fotoUrl, size: 61),
+                child: _ProductImage(value: insumo.fotoUrl, size: 70),
               ),
               Text(
                 insumo.nome,
@@ -495,8 +601,9 @@ class _InsumoCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-                  fontSize: 11.5,
+                  color: adaptive(
+                      context, Colors.black, AppDarkColors.textPrimary),
+                  fontSize: 12.4,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -506,8 +613,9 @@ class _InsumoCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-                  fontSize: 9.5,
+                  color: adaptive(
+                      context, Colors.black, AppDarkColors.textPrimary),
+                  fontSize: 10.4,
                 ),
               ),
               const SizedBox(height: 5),
@@ -557,7 +665,8 @@ class _LabeledField extends StatelessWidget {
           minLines: minLines,
           maxLines: maxLines,
           style: TextStyle(
-            color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+            color: adaptive(
+                context, const Color(0xFF17324D), AppDarkColors.textPrimary),
             fontSize: 14,
           ),
           decoration: _inputDecoration(
@@ -609,7 +718,8 @@ class _DetailRow extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                color:
+                    adaptive(context, Colors.black, AppDarkColors.textPrimary),
                 fontSize: 12,
               ),
             ),
@@ -618,7 +728,8 @@ class _DetailRow extends StatelessWidget {
             value,
             textAlign: TextAlign.right,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -679,7 +790,8 @@ class _ProductImage extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: adaptive(context, const Color(0xFFE9F5F7), AppDarkColors.tintedInfo),
+        color: adaptive(
+            context, const Color(0xFFE9F5F7), AppDarkColors.tintedInfo),
         borderRadius: BorderRadius.circular(6),
         image: provider == null
             ? null
@@ -719,7 +831,9 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: adaptive(context, const Color(0xFF555555), AppDarkColors.textSecondary)),
+              style: TextStyle(
+                  color: adaptive(context, const Color(0xFF555555),
+                      AppDarkColors.textSecondary)),
             ),
             const SizedBox(height: 12),
             OutlinedButton(onPressed: onRetry, child: const Text('Voltar')),
@@ -744,7 +858,10 @@ class _EmptyState extends StatelessWidget {
     return Center(
       child: Text(
         message,
-        style: TextStyle(color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary), fontSize: 13),
+        style: TextStyle(
+            color: adaptive(
+                context, const Color(0xFF777777), AppDarkColors.textSecondary),
+            fontSize: 13),
       ),
     );
   }
@@ -773,7 +890,8 @@ InputDecoration _inputDecoration(
   return InputDecoration(
     hintText: hint,
     hintStyle: TextStyle(
-      color: adaptive(context, const Color(0xFF9A9A9A), AppDarkColors.textMuted),
+      color:
+          adaptive(context, const Color(0xFF9A9A9A), AppDarkColors.textMuted),
       fontSize: 11,
     ),
     filled: true,
@@ -781,7 +899,10 @@ InputDecoration _inputDecoration(
     isDense: true,
     contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 13),
     suffixText: suffixText,
-    suffixStyle: TextStyle(color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary), fontSize: 12),
+    suffixStyle: TextStyle(
+        color: adaptive(
+            context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+        fontSize: 12),
     suffixIcon: suffixIcon == null
         ? null
         : Icon(suffixIcon, color: const Color(0xFF2CA0B4), size: 17),
@@ -805,8 +926,10 @@ ButtonStyle _primaryButtonStyle(BuildContext context) {
   return FilledButton.styleFrom(
     backgroundColor: const Color(0xFF3BA7B8),
     foregroundColor: Colors.white,
-    disabledBackgroundColor: adaptive(context, const Color(0xFF8ABEC7), AppDarkColors.borderStrong),
-    disabledForegroundColor: adaptive(context, Colors.white, AppDarkColors.textMuted),
+    disabledBackgroundColor:
+        adaptive(context, const Color(0xFF8ABEC7), AppDarkColors.borderStrong),
+    disabledForegroundColor:
+        adaptive(context, Colors.white, AppDarkColors.textMuted),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     minimumSize: const Size.fromHeight(52),
     textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
@@ -881,13 +1004,13 @@ String _stockLabel(double value) {
 
 String _contentPerUnitLabel(InsumoResumo insumo) {
   final quantity = insumo.quantidadePorUnidade;
-  if (quantity == null) return 'Nao informado';
+  if (quantity == null) return 'Não informado';
   return _quantityLabel(quantity, insumo.tipoUnidade);
 }
 
 String _forecastLabel(InsumoResumo insumo) {
   final consumo = insumo.consumoMedioDiario;
-  if (consumo == null || consumo <= 0) return 'Sem previsao';
+  if (consumo == null || consumo <= 0) return 'Sem previsão';
   final periods = insumo.quantidadeUnidades / consumo;
   final days = (periods * _frequencyDays(insumo.frequenciaUso)).floor();
   if (days <= 0) return 'Hoje';
@@ -906,7 +1029,7 @@ int _frequencyDays(String? frequency) {
 String _frequencySuffix(String? frequency) {
   return switch (frequency) {
     'Semanal' => 'por semana',
-    'Mensal' => 'por mes',
+    'Mensal' => 'por mês',
     _ => 'por dia',
   };
 }
@@ -926,6 +1049,12 @@ String _formatBrazilianDate(DateTime date) {
   return '${date.day.toString().padLeft(2, '0')}/'
       '${date.month.toString().padLeft(2, '0')}/'
       '${date.year.toString().padLeft(4, '0')}';
+}
+
+String _formatIsoDate(DateTime date) {
+  return '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 }
 
 DateTime? _parseBrazilianDate(String value) {

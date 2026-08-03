@@ -474,7 +474,7 @@ class GlicemiaAnalise {
           ? (json?['totalForaDaFaixa'] as num).toInt()
           : 0,
       texto: json?['texto']?.toString() ??
-          'Ainda nao ha medicoes suficientes para gerar uma analise.',
+          'Ainda não há medições suficientes para gerar uma análise.',
     );
   }
 
@@ -697,7 +697,7 @@ class PressaoAnalise {
           ? (json?['totalForaDaFaixa'] as num).toInt()
           : 0,
       texto: json?['texto']?.toString() ??
-          'Ainda nao ha medicoes suficientes para gerar uma analise.',
+          'Ainda não há medições suficientes para gerar uma análise.',
     );
   }
 
@@ -911,7 +911,7 @@ class OxigenacaoAnalise {
           ? (json?['totalForaDaFaixa'] as num).toInt()
           : 0,
       texto: json?['texto']?.toString() ??
-          'Ainda nao ha medicoes suficientes para gerar uma analise.',
+          'Ainda não há medições suficientes para gerar uma análise.',
     );
   }
 
@@ -994,8 +994,7 @@ class TemperaturaRegistro {
     return TemperaturaRegistro(
       id: json['id']?.toString() ?? '',
       idosoId: json['idosoId']?.toString() ?? '',
-      temperatura:
-          temperatura is num ? temperatura.toDouble() : 0,
+      temperatura: temperatura is num ? temperatura.toDouble() : 0,
       medidoEm: (DateTime.tryParse(json['medidoEm']?.toString() ?? '') ??
               DateTime.now())
           .toLocal(),
@@ -1114,7 +1113,7 @@ class TemperaturaAnalise {
           ? (json?['totalForaDaFaixa'] as num).toInt()
           : 0,
       texto: json?['texto']?.toString() ??
-          'Ainda nao ha medicoes suficientes para gerar uma analise.',
+          'Ainda não há medições suficientes para gerar uma análise.',
     );
   }
 
@@ -1522,6 +1521,7 @@ class RefeicaoResumo {
     required this.aceitacao,
     this.dataConsumo,
     this.horaConsumo,
+    this.recordatorio,
     this.observacoes,
     this.registradoPorId,
     this.concluidaEm,
@@ -1549,6 +1549,8 @@ class RefeicaoResumo {
       ),
       horaConsumo:
           json['horaConsumo']?.toString() ?? json['hora_consumo']?.toString(),
+      recordatorio: json['recordatorio']?.toString() ??
+          json['recordatorio_url']?.toString(),
       observacoes: json['observacoes']?.toString(),
       registradoPorId: json['registradoPorId']?.toString() ??
           json['registrado_por_id']?.toString(),
@@ -1567,6 +1569,7 @@ class RefeicaoResumo {
   final String aceitacao;
   final DateTime? dataConsumo;
   final String? horaConsumo;
+  final String? recordatorio;
   final String? observacoes;
   final String? registradoPorId;
   final DateTime? concluidaEm;
@@ -1632,7 +1635,7 @@ class HistoricoRegistro {
           json['usuarioId']?.toString() ?? json['usuario_id']?.toString(),
       usuarioNome: json['usuarioNome']?.toString() ??
           json['usuario_nome']?.toString() ??
-          'Usuario',
+          'Usuário',
       criadoEm: DateTime.tryParse(
             json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
           ) ??
@@ -1966,7 +1969,7 @@ class ApiClient {
       if (dados is Map<String, dynamic>) {
         return IdosoResumo.fromJson(dados);
       }
-      throw const ApiException('Ficha nao encontrada.');
+      throw const ApiException('Ficha não encontrada.');
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao buscar ficha.');
     }
@@ -2078,7 +2081,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel acessar a ficha com esse codigo.',
+        fallback: 'Não foi possível acessar a ficha com esse código.',
       );
     }
   }
@@ -2234,7 +2237,7 @@ class ApiClient {
       if (dados is Map<String, dynamic>) {
         return MembroFicha.fromJson(dados);
       }
-      throw const ApiException('Membro nao encontrado.');
+      throw const ApiException('Membro não encontrado.');
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao buscar membro.');
     }
@@ -2269,7 +2272,7 @@ class ApiClient {
       if (dados is Map<String, dynamic>) {
         return MembroFicha.fromJson(dados);
       }
-      throw const ApiException('Nao foi possivel atualizar o membro.');
+      throw const ApiException('Não foi possível atualizar o membro.');
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao atualizar membro.');
     }
@@ -2328,7 +2331,7 @@ class ApiClient {
       }
       return const [];
     } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar refeicoes.');
+      throw _toApiException(error, fallback: 'Erro ao listar refeições.');
     }
   }
 
@@ -2340,11 +2343,11 @@ class ApiClient {
       final dados = response.data?['dados'];
       if (dados is Map<String, dynamic>) {
         return dados['texto']?.toString() ??
-            'Refeicoes nutritivas fazem toda a diferenca.';
+            'Refeições nutritivas fazem toda a diferença.';
       }
-      return 'Refeicoes nutritivas fazem toda a diferenca.';
+      return 'Refeições nutritivas fazem toda a diferença.';
     } on DioException {
-      return 'Refeicoes nutritivas fazem toda a diferenca.';
+      return 'Refeições nutritivas fazem toda a diferença.';
     }
   }
 
@@ -2356,11 +2359,11 @@ class ApiClient {
       final dados = response.data?['dados'];
       if (dados is Map<String, dynamic>) {
         return dados['texto']?.toString() ??
-            'Incentive pequenas pausas e hidratacao ao longo do dia.';
+            'Incentive pequenas pausas e hidratação ao longo do dia.';
       }
-      return 'Incentive pequenas pausas e hidratacao ao longo do dia.';
+      return 'Incentive pequenas pausas e hidratação ao longo do dia.';
     } on DioException {
-      return 'Incentive pequenas pausas e hidratacao ao longo do dia.';
+      return 'Incentive pequenas pausas e hidratação ao longo do dia.';
     }
   }
 
@@ -2376,7 +2379,7 @@ class ApiClient {
       if (dados is Map<String, dynamic>) return RefeicaoResumo.fromJson(dados);
       return RefeicaoResumo.fromJson(const <String, dynamic>{});
     } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao salvar refeicao.');
+      throw _toApiException(error, fallback: 'Erro ao salvar refeição.');
     }
   }
 
@@ -2393,7 +2396,7 @@ class ApiClient {
       if (dados is Map<String, dynamic>) return RefeicaoResumo.fromJson(dados);
       return RefeicaoResumo.fromJson(const <String, dynamic>{});
     } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao atualizar refeicao.');
+      throw _toApiException(error, fallback: 'Erro ao atualizar refeição.');
     }
   }
 
@@ -2412,7 +2415,7 @@ class ApiClient {
       if (dados is Map<String, dynamic>) return RefeicaoResumo.fromJson(dados);
       return RefeicaoResumo.fromJson(const <String, dynamic>{});
     } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao concluir refeicao.');
+      throw _toApiException(error, fallback: 'Erro ao concluir refeição.');
     }
   }
 
@@ -2434,7 +2437,7 @@ class ApiClient {
       }
       return const [];
     } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar hidratacoes.');
+      throw _toApiException(error, fallback: 'Erro ao listar hidratações.');
     }
   }
 
@@ -2455,7 +2458,7 @@ class ApiClient {
         },
       );
     } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao registrar agua.');
+      throw _toApiException(error, fallback: 'Erro ao registrar água.');
     }
   }
 
@@ -2484,7 +2487,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel carregar os chats.',
+        fallback: 'Não foi possível carregar os chats.',
       );
     }
   }
@@ -2508,7 +2511,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel criar um novo chat.',
+        fallback: 'Não foi possível criar um novo chat.',
       );
     }
   }
@@ -2539,7 +2542,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel abrir este chat.',
+        fallback: 'Não foi possível abrir este chat.',
       );
     }
   }
@@ -2570,7 +2573,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel falar com a IA agora.',
+        fallback: 'Não foi possível falar com a IA agora.',
       );
     }
   }
@@ -2597,7 +2600,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel carregar o relatorio da IA.',
+        fallback: 'Não foi possível carregar o relatório da IA.',
       );
     }
   }
@@ -2778,7 +2781,7 @@ class ApiClient {
 
       return const [];
     } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar historico.');
+      throw _toApiException(error, fallback: 'Erro ao listar histórico.');
     }
   }
 
@@ -2848,7 +2851,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao listar historico da agenda.',
+        fallback: 'Erro ao listar histórico da agenda.',
       );
     }
   }
@@ -2982,7 +2985,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao listar historico de equipamentos.',
+        fallback: 'Erro ao listar histórico de equipamentos.',
       );
     }
   }
@@ -3136,7 +3139,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao consultar historico de glicemia.',
+        fallback: 'Erro ao consultar histórico de glicemia.',
       );
     }
   }
@@ -3238,7 +3241,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao consultar historico de pressão.',
+        fallback: 'Erro ao consultar histórico de pressão.',
       );
     }
   }
@@ -3340,7 +3343,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao consultar historico de oxigenação.',
+        fallback: 'Erro ao consultar histórico de oxigenação.',
       );
     }
   }
@@ -3574,7 +3577,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao consultar historico de medicamentos.',
+        fallback: 'Erro ao consultar histórico de medicamentos.',
       );
     }
   }
@@ -3815,7 +3818,7 @@ class ApiClient {
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.connectionError) {
       return ApiException(
-        'Nao foi possivel conectar ao servidor. Verifique se a API esta aberta e tente novamente.',
+        'Não foi possível conectar ao servidor. Verifique se a API está aberta e tente novamente.',
         statusCode: error.response?.statusCode,
       );
     }

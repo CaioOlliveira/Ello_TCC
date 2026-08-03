@@ -202,7 +202,11 @@ class AppShell extends StatelessWidget {
     final hideBottomNav = location == '/agenda' ||
         location == '/agenda/historico' ||
         location == '/equipamentos' ||
-        location == '/equipamentos/historico';
+        location == '/equipamentos/historico' ||
+        location == '/alimentacao' ||
+        location == '/insumos' ||
+        location == '/humor' ||
+        location.startsWith('/historico/');
 
     return Scaffold(
       body: child,

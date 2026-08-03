@@ -1,13 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 
-enum _AlimentacaoView { lista, form }
+enum _AlimentacaoView { lista, tipo, form, galeria }
 
 class AlimentacaoPage extends ConsumerStatefulWidget {
   const AlimentacaoPage({super.key});
@@ -21,6 +24,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
   List<RefeicaoResumo> _refeicoes = const [];
   List<HidratacaoRegistro> _hidratacoes = const [];
   RefeicaoResumo? _editing;
+  String _draftTipo = 'Café da manhã';
   bool _loading = true;
   String? _error;
 
@@ -165,6 +169,18 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
               ),
             ),
             const SizedBox(height: 12),
+            if (_imageProvider(refeicao.recordatorio) != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image(
+                  image: _imageProvider(refeicao.recordatorio)!,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             for (final alimento in refeicao.alimentos)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -238,21 +254,34 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                   onRetry: _load,
                   onSaveWeight: _saveWeight,
                   onAddWater: _addWater,
+                  onGallery: () =>
+                      setState(() => _view = _AlimentacaoView.galeria),
                   onHistory: () => context.push('/historico/alimentacao'),
                   onAdd: () => setState(() {
                     _editing = null;
-                    _view = _AlimentacaoView.form;
+                    _draftTipo = 'Café da manhã';
+                    _view = _AlimentacaoView.tipo;
                   }),
                   onDetails: _showDetails,
                   onEdit: (refeicao) => setState(() {
                     _editing = refeicao;
+                    _draftTipo = _normalizeMealType(refeicao.tipoRefeicao);
                     _view = _AlimentacaoView.form;
                   }),
                   onConclude: _concluir,
                 ),
+              _AlimentacaoView.tipo => _MealTypePickerView(
+                  selected: _draftTipo,
+                  onBack: () => setState(() => _view = _AlimentacaoView.lista),
+                  onSelected: (tipo) => setState(() {
+                    _draftTipo = tipo;
+                    _view = _AlimentacaoView.form;
+                  }),
+                ),
               _AlimentacaoView.form => _RefeicaoFormView(
                   idosoId: idoso?.id ?? '',
                   usuarioId: ref.watch(authSessionProvider)?.id,
+                  initialTipo: _draftTipo,
                   initial: _editing,
                   refeicoes: _refeicoes,
                   onCancel: () => setState(() {
@@ -267,6 +296,10 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                     _load();
                   },
                   onConfirmTwoHourWarning: _confirmTwoHourWarning,
+                ),
+              _AlimentacaoView.galeria => _RecordatorioGalleryView(
+                  refeicoes: _refeicoes,
+                  onBack: () => setState(() => _view = _AlimentacaoView.lista),
                 ),
             },
           ),
@@ -286,6 +319,7 @@ class _AlimentacaoListView extends StatelessWidget {
     required this.onRetry,
     required this.onSaveWeight,
     required this.onAddWater,
+    required this.onGallery,
     required this.onHistory,
     required this.onAdd,
     required this.onDetails,
@@ -303,6 +337,7 @@ class _AlimentacaoListView extends StatelessWidget {
   final VoidCallback onRetry;
   final ValueChanged<double> onSaveWeight;
   final VoidCallback onAddWater;
+  final VoidCallback onGallery;
   final VoidCallback onHistory;
   final VoidCallback onAdd;
   final ValueChanged<RefeicaoResumo> onDetails;
@@ -312,6 +347,9 @@ class _AlimentacaoListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final todayMeals = refeicoes.where(_isTodayMeal).toList();
+    final recordatorios = refeicoes
+        .where((item) => _imageProvider(item.recordatorio) != null)
+        .toList();
 
     return Column(
       children: [
@@ -330,12 +368,12 @@ class _AlimentacaoListView extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  'Alimentacao',
+                  'Alimentação',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF073248),
                         AppDarkColors.textPrimary),
-                    fontSize: 29,
+                    fontSize: 31,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -356,9 +394,16 @@ class _AlimentacaoListView extends StatelessWidget {
                   onSaveWeight: onSaveWeight,
                   onAddWater: onAddWater,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
+                if (recordatorios.isNotEmpty) ...[
+                  _RecordatorioStrip(
+                    refeicoes: recordatorios,
+                    onOpen: onGallery,
+                  ),
+                  const SizedBox(height: 22),
+                ],
                 Text(
-                  'Refeicoes do dia',
+                  'Refeições do dia',
                   style: TextStyle(
                     color: adaptive(
                         context, Colors.black, AppDarkColors.textPrimary),
@@ -397,7 +442,7 @@ class _AlimentacaoListView extends StatelessWidget {
           child: Column(
             children: [
               SizedBox(
-                height: 52,
+                height: 56,
                 child: OutlinedButton.icon(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_rounded, size: 27),
@@ -410,7 +455,7 @@ class _AlimentacaoListView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(13),
                     ),
                     textStyle: const TextStyle(
-                      fontSize: 17,
+                      fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -418,7 +463,7 @@ class _AlimentacaoListView extends StatelessWidget {
               ),
               const SizedBox(height: 9),
               SizedBox(
-                height: 46,
+                height: 50,
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: onHistory,
@@ -497,7 +542,7 @@ class _WaterCardState extends State<_WaterCard> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Informe o peso para calcular a meta diaria de agua.',
+              'Informe o peso para calcular a meta diária de água.',
               style: TextStyle(
                   color: adaptive(context, const Color(0xFF6E7C83),
                       AppDarkColors.textSecondary),
@@ -561,7 +606,7 @@ class _WaterCardState extends State<_WaterCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Agua consumida',
+            'Água consumida',
             style: TextStyle(
               color: adaptive(
                   context, const Color(0xFF073248), AppDarkColors.textPrimary),
@@ -621,7 +666,7 @@ class _WaterCardState extends State<_WaterCard> {
             children: [
               Expanded(
                 child: Text(
-                  'Adicionar agua',
+                  'Adicionar água',
                   style: TextStyle(
                       color: adaptive(context, const Color(0xFF777777),
                           AppDarkColors.textSecondary),
@@ -696,7 +741,289 @@ class _WaterCup extends StatelessWidget {
             filled ? Icons.local_drink_rounded : Icons.local_drink_outlined,
             key: ValueKey(filled),
             color: const Color(0xFF098CA1),
-            size: 32,
+            size: 36,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecordatorioStrip extends StatelessWidget {
+  const _RecordatorioStrip({
+    required this.refeicoes,
+    required this.onOpen,
+  });
+
+  final List<RefeicaoResumo> refeicoes;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = refeicoes.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Recordatório alimentar',
+                style: TextStyle(
+                  color: adaptive(
+                    context,
+                    const Color(0xFF073248),
+                    AppDarkColors.textPrimary,
+                  ),
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: onOpen,
+              child: const Text('Ver tudo'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 78,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: preview.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 9),
+            itemBuilder: (context, index) {
+              final refeicao = preview[index];
+              return InkWell(
+                onTap: onOpen,
+                borderRadius: BorderRadius.circular(10),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image(
+                    image: _imageProvider(refeicao.recordatorio)!,
+                    width: 78,
+                    height: 78,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecordatorioGalleryView extends StatelessWidget {
+  const _RecordatorioGalleryView({
+    required this.refeicoes,
+    required this.onBack,
+  });
+
+  final List<RefeicaoResumo> refeicoes;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _groupRecordatoriosByDate(refeicoes);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
+          child: Row(
+            children: [
+              TextButton.icon(
+                onPressed: onBack,
+                icon: const Icon(Icons.chevron_left_rounded, size: 32),
+                label: const Text('Voltar'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF0A7D8D),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  'Recordatório',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: adaptive(
+                      context,
+                      const Color(0xFF073248),
+                      AppDarkColors.textPrimary,
+                    ),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 78),
+            ],
+          ),
+        ),
+        Expanded(
+          child: groups.isEmpty
+              ? const Center(child: Text('Nenhuma foto registrada.'))
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+                  children: [
+                    for (final group in groups.entries) ...[
+                      Text(
+                        group.key,
+                        style: TextStyle(
+                          color: adaptive(
+                            context,
+                            const Color(0xFF073248),
+                            AppDarkColors.textPrimary,
+                          ),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: group.value.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 6,
+                          crossAxisSpacing: 6,
+                        ),
+                        itemBuilder: (context, index) {
+                          final refeicao = group.value[index];
+                          return InkWell(
+                            onTap: () => _showRecordatorioPhoto(
+                              context,
+                              refeicao,
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image(
+                                image: _imageProvider(refeicao.recordatorio)!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 22),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MealTypePickerView extends StatelessWidget {
+  const _MealTypePickerView({
+    required this.selected,
+    required this.onBack,
+    required this.onSelected,
+  });
+
+  final String selected;
+  final VoidCallback onBack;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onBack,
+              icon: const Icon(Icons.chevron_left_rounded, size: 32),
+              label: const Text('Voltar'),
+            ),
+          ),
+          const SizedBox(height: 46),
+          Text(
+            'Qual refeição será registrada?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: adaptive(
+                context,
+                const Color(0xFF073248),
+                AppDarkColors.textPrimary,
+              ),
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 24),
+          for (final tipo in _mealTypeOptions)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _MealTypeOption(
+                label: tipo,
+                selected: selected == tipo,
+                onTap: () => onSelected(tipo),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MealTypeOption extends StatelessWidget {
+  const _MealTypeOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? const Color(0xFFE1F6F8)
+          : adaptive(context, Colors.white, AppDarkColors.surface),
+      elevation: 3,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Row(
+            children: [
+              Icon(_mealIcon(label), color: const Color(0xFF098CA1), size: 34),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: adaptive(
+                      context,
+                      const Color(0xFF073248),
+                      AppDarkColors.textPrimary,
+                    ),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF098CA1),
+              ),
+            ],
           ),
         ),
       ),
@@ -767,7 +1094,7 @@ class _MealCard extends StatelessWidget {
                         style: TextStyle(
                           color: adaptive(context, const Color(0xFF073248),
                               AppDarkColors.textPrimary),
-                          fontSize: 11,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -797,7 +1124,7 @@ class _MealCard extends StatelessWidget {
                     _TinyButton(label: 'Editar', onTap: onEdit),
                     const SizedBox(width: 6),
                     _TinyButton(
-                      label: refeicao.concluida ? 'Concluida' : 'Concluir',
+                      label: refeicao.concluida ? 'Concluída' : 'Concluir',
                       onTap: refeicao.concluida ? null : onConclude,
                     ),
                   ],
@@ -846,6 +1173,7 @@ class _RefeicaoFormView extends ConsumerStatefulWidget {
   const _RefeicaoFormView({
     required this.idosoId,
     required this.refeicoes,
+    required this.initialTipo,
     required this.onCancel,
     required this.onSaved,
     required this.onConfirmTwoHourWarning,
@@ -856,6 +1184,7 @@ class _RefeicaoFormView extends ConsumerStatefulWidget {
   final String idosoId;
   final String? usuarioId;
   final RefeicaoResumo? initial;
+  final String initialTipo;
   final List<RefeicaoResumo> refeicoes;
   final VoidCallback onCancel;
   final VoidCallback onSaved;
@@ -872,9 +1201,11 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
   final _pesoController = TextEditingController();
   final _observacoesController = TextEditingController();
   final List<AlimentoConsumido> _alimentos = [];
+  final _picker = ImagePicker();
 
   String _tipo = 'Café da manhã';
   String _aceitacao = 'comeu_tudo';
+  String? _recordatorio;
   bool _saving = false;
   String? _error;
 
@@ -884,6 +1215,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
     final initial = widget.initial;
     final now = DateTime.now();
     if (initial == null) {
+      _tipo = widget.initialTipo;
       _dataController.text = _formatDate(now);
       _horaController.text = _formatTime(now);
       return;
@@ -895,6 +1227,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
         ? _formatDate(now)
         : _formatDate(initial.dataConsumo!);
     _horaController.text = initial.horaConsumo ?? _formatTime(now);
+    _recordatorio = initial.recordatorio;
     _observacoesController.text = initial.observacoes ?? '';
     _alimentos.addAll(initial.alimentos);
   }
@@ -936,6 +1269,58 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
           : _formatNumber(alimento.pesoGramas!);
       _error = null;
     });
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 72,
+        maxWidth: 1280,
+      );
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      final extension = _imageExtension(image.name);
+      setState(() {
+        _recordatorio = 'data:image/$extension;base64,${base64Encode(bytes)}';
+        _error = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Não foi possível abrir a câmera.');
+    }
+  }
+
+  Future<void> _showMealTypeEditSheet(BuildContext context) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Tipo de refeição',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 10),
+            for (final tipo in _mealTypeOptions)
+              ListTile(
+                leading: Icon(_mealIcon(tipo), color: const Color(0xFF098CA1)),
+                title: Text(tipo),
+                trailing: _tipo == tipo
+                    ? const Icon(Icons.check_rounded, color: Color(0xFF098CA1))
+                    : null,
+                onTap: () => Navigator.of(context).pop(tipo),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null) return;
+    setState(() => _tipo = selected);
   }
 
   DateTime? _scheduledDateTime() {
@@ -1021,6 +1406,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
       'horaConsumo': _horaController.text,
       'alimentos': _alimentos.map((item) => item.toJson()).toList(),
       'aceitacao': _aceitacao,
+      'recordatorio': _recordatorio ?? '',
       if (_observacoesController.text.trim().isNotEmpty)
         'observacoes': _observacoesController.text.trim(),
       if (widget.usuarioId != null && widget.usuarioId!.isNotEmpty)
@@ -1060,27 +1446,26 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DropdownButtonFormField<String>(
-            initialValue: _tipo,
-            decoration: const InputDecoration(border: InputBorder.none),
-            style: TextStyle(
-              color: adaptive(
-                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
-              fontSize: 21,
-              fontWeight: FontWeight.w500,
-            ),
-            items: const [
-              DropdownMenuItem(
-                  value: 'Café da manhã', child: Text('Café da manhã')),
-              DropdownMenuItem(
-                  value: 'Lanche da manhã', child: Text('Lanche da manhã')),
-              DropdownMenuItem(value: 'Almoço', child: Text('Almoço')),
-              DropdownMenuItem(
-                  value: 'Lanche da tarde', child: Text('Lanche da tarde')),
-              DropdownMenuItem(value: 'Jantar', child: Text('Jantar')),
-              DropdownMenuItem(value: 'Ceia', child: Text('Ceia')),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _tipo,
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF073248),
+                        AppDarkColors.textPrimary),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (widget.initial != null)
+                TextButton.icon(
+                  onPressed: () => _showMealTypeEditSheet(context),
+                  icon: const Icon(Icons.swap_horiz_rounded),
+                  label: const Text('Trocar'),
+                ),
             ],
-            onChanged: (value) => setState(() => _tipo = value ?? _tipo),
           ),
           Row(
             children: [
@@ -1140,7 +1525,13 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
               onEdit: () => _editFood(alimento),
               onRemove: () => setState(() => _alimentos.remove(alimento)),
             ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
+          _FoodPhotoPicker(
+            recordatorio: _recordatorio,
+            onTakePhoto: _takePhoto,
+            onRemove: () => setState(() => _recordatorio = null),
+          ),
+          const SizedBox(height: 18),
           const Text('Consumo', style: TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           Row(
@@ -1289,6 +1680,86 @@ class _FoodChip extends StatelessWidget {
   }
 }
 
+class _FoodPhotoPicker extends StatelessWidget {
+  const _FoodPhotoPicker({
+    required this.recordatorio,
+    required this.onTakePhoto,
+    required this.onRemove,
+  });
+
+  final String? recordatorio;
+  final VoidCallback onTakePhoto;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = _imageProvider(recordatorio);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Foto da refeição',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 7),
+        Material(
+          color: adaptive(context, Colors.white, AppDarkColors.surface),
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: onTakePhoto,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: provider == null ? 62 : 172,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF2BA8BA)),
+                image: provider == null
+                    ? null
+                    : DecorationImage(image: provider, fit: BoxFit.cover),
+              ),
+              child: provider == null
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.photo_camera_outlined,
+                          color: Color(0xFF098CA1),
+                          size: 30,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Tirar foto da comida',
+                          style: TextStyle(
+                            color: Color(0xFF073248),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: IconButton.filled(
+                          onPressed: onRemove,
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFFC0392B),
+                          ),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _AcceptanceOption {
   const _AcceptanceOption(this.id, this.label, this.fraction);
 
@@ -1303,6 +1774,13 @@ const _acceptanceOptions = [
   _AcceptanceOption('comeu_metade', 'Comeu metade', .5),
   _AcceptanceOption('comeu_pouco', 'Comeu pouco', .25),
   _AcceptanceOption('nao_comeu', 'Não comeu', null),
+];
+
+const _mealTypeOptions = [
+  'Café da manhã',
+  'Almoço',
+  'Café da tarde',
+  'Jantar',
 ];
 
 class _AcceptanceButton extends StatelessWidget {
@@ -1322,8 +1800,8 @@ class _AcceptanceButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        height: 70,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+        height: 78,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         decoration: BoxDecoration(
           color: selected
               ? adaptive(
@@ -1343,7 +1821,7 @@ class _AcceptanceButton extends StatelessWidget {
               maxLines: 2,
               style: const TextStyle(
                 color: Color(0xFF2A99AB),
-                fontSize: 10,
+                fontSize: 11,
                 height: 1.05,
                 fontWeight: FontWeight.w600,
               ),
@@ -1363,11 +1841,11 @@ class _AcceptanceIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (option.fraction == null) {
-      return const Icon(Icons.close, color: Color(0xFF2A99AB), size: 24);
+      return const Icon(Icons.close, color: Color(0xFF2A99AB), size: 28);
     }
 
     return CustomPaint(
-      size: const Size.square(21),
+      size: const Size.square(25),
       painter: _AcceptanceIconPainter(option.fraction!),
     );
   }
@@ -1586,10 +2064,7 @@ String _normalizeMealType(String value) {
     'cafe da manha' || 'café da manhã' => 'Café da manhã',
     'lanche da manha' || 'lanche da manhã' => 'Lanche da manhã',
     'almoco' || 'almoço' => 'Almoço',
-    'cafe da tarde' ||
-    'café da tarde' ||
-    'lanche da tarde' =>
-      'Lanche da tarde',
+    'cafe da tarde' || 'café da tarde' || 'lanche da tarde' => 'Café da tarde',
     'janta' || 'jantar' => 'Jantar',
     'ceia' => 'Ceia',
     _ => value,
@@ -1645,4 +2120,96 @@ String? _toIsoDate(String value) {
 String _formatNumber(double value) {
   if (value % 1 == 0) return value.toInt().toString();
   return value.toStringAsFixed(1).replaceAll('.', ',');
+}
+
+ImageProvider? _imageProvider(String? value) {
+  if (value == null || value.isEmpty) return null;
+  if (value.startsWith('data:image')) {
+    final comma = value.indexOf(',');
+    if (comma == -1) return null;
+    try {
+      return MemoryImage(base64Decode(value.substring(comma + 1)));
+    } catch (_) {
+      return null;
+    }
+  }
+  final uri = Uri.tryParse(value);
+  if (uri != null && uri.hasScheme && uri.host.isNotEmpty) {
+    return NetworkImage(value);
+  }
+  return null;
+}
+
+String _imageExtension(String fileName) {
+  final lower = fileName.toLowerCase();
+  if (lower.endsWith('.png')) return 'png';
+  if (lower.endsWith('.webp')) return 'webp';
+  return 'jpeg';
+}
+
+Map<String, List<RefeicaoResumo>> _groupRecordatoriosByDate(
+  List<RefeicaoResumo> refeicoes,
+) {
+  final withImages = refeicoes
+      .where((item) => _imageProvider(item.recordatorio) != null)
+      .toList()
+    ..sort((a, b) {
+      final ad = _mealDateTime(a) ?? DateTime(1900);
+      final bd = _mealDateTime(b) ?? DateTime(1900);
+      return bd.compareTo(ad);
+    });
+
+  final grouped = <String, List<RefeicaoResumo>>{};
+  for (final refeicao in withImages) {
+    final date = refeicao.dataConsumo ?? DateTime.now();
+    grouped.putIfAbsent(_formatDate(date), () => []).add(refeicao);
+  }
+  return grouped;
+}
+
+void _showRecordatorioPhoto(BuildContext context, RefeicaoResumo refeicao) {
+  final provider = _imageProvider(refeicao.recordatorio);
+  if (provider == null) return;
+
+  showDialog<void>(
+    context: context,
+    builder: (context) => Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: Stack(
+        children: [
+          Center(
+            child: InteractiveViewer(
+              child: Image(image: provider, fit: BoxFit.contain),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Text(
+                  '${_normalizeMealType(refeicao.tipoRefeicao)} • '
+                  '${refeicao.horaConsumo ?? '--:--'}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

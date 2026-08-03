@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +22,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
   final _dataController = TextEditingController();
   final _horaController = TextEditingController();
 
-  String _selectedMood = 'Feliz';
+  String _selectedMoodId = 'feliz';
   bool _saving = false;
   String? _errorMessage;
 
@@ -88,7 +86,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
     final horarioRegi = _normalizeTime(_horaController.text);
 
     if (dataHumor == null || horarioRegi == null) {
-      setState(() => _errorMessage = 'Informe uma data e um horario validos.');
+      setState(() => _errorMessage = 'Informe uma data e um horário válidos.');
       return;
     }
 
@@ -110,7 +108,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
     try {
       await ref.read(apiClientProvider).criarHumor(
             idosoId: idoso.id,
-            humor: _selectedMood,
+            humor: _moodLabel(_selectedMoodId, idoso),
             dataHumor: dataHumor,
             horarioRegi: horarioRegi,
             registradoPorId: usuario.id,
@@ -147,7 +145,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
             context: context,
             builder: (context) {
               return AlertDialog(
-                title: const Text('Humor ja cadastrado'),
+                title: const Text('Humor já cadastrado'),
                 content: const Text(
                   'Você já cadastrou um humor hoje. Certeza que deseja adicionar outro?',
                 ),
@@ -194,17 +192,15 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                       onBack: () => context.go('/monitoramento'),
                       onProfile: () => context.go('/perfil?from=humor'),
                     ),
-                    const SizedBox(height: 10),
-                    StaggeredEntry(index: 0, child: _IdosoCard(idoso: idoso)),
-                    const SizedBox(height: 19),
+                    const SizedBox(height: 24),
                     StaggeredEntry(
                       index: 1,
                       child: Text(
-                        'Como ${_moodTarget(idoso)} esta hoje?',
+                        'Como ${_moodTarget(idoso)} está hoje?',
                         style: TextStyle(
                           color: adaptive(context, const Color(0xFF242424),
                               AppDarkColors.textPrimary),
-                          fontSize: 17,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -213,10 +209,11 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                     StaggeredEntry(
                       index: 2,
                       child: _MoodSelector(
-                        selectedMood: _selectedMood,
+                        selectedMoodId: _selectedMoodId,
+                        idoso: idoso,
                         onChanged: (value) {
                           setState(() {
-                            _selectedMood = value;
+                            _selectedMoodId = value;
                             _errorMessage = null;
                           });
                         },
@@ -381,11 +378,11 @@ class _Header extends StatelessWidget {
         ),
         const Expanded(
           child: Text(
-            'Registros de humor',
+            'Registro de humor',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF238FA1),
-              fontSize: 19,
+              fontSize: 21,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -400,98 +397,15 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _IdosoCard extends StatelessWidget {
-  const _IdosoCard({required this.idoso});
-
-  final IdosoResumo? idoso;
-
-  @override
-  Widget build(BuildContext context) {
-    final bytes = _dataImageBytes(idoso?.urlFoto);
-
-    return Container(
-      height: 129,
-      padding: const EdgeInsets.fromLTRB(13, 13, 17, 13),
-      decoration: BoxDecoration(
-        color: const Color(0xFF3CAAB6),
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 48,
-            backgroundColor: const Color(0xFFD1F2F6),
-            backgroundImage: bytes != null
-                ? MemoryImage(bytes)
-                : idoso?.urlFoto != null && idoso!.urlFoto!.startsWith('http')
-                    ? NetworkImage(idoso!.urlFoto!) as ImageProvider
-                    : null,
-            child: bytes == null &&
-                    (idoso?.urlFoto == null ||
-                        !idoso!.urlFoto!.startsWith('http'))
-                ? const Icon(
-                    Icons.person_outline_rounded,
-                    color: Color(0xFF238FA1),
-                    size: 58,
-                  )
-                : null,
-          ),
-          const SizedBox(width: 22),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _firstName(idoso?.nome ?? 'Selecione'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Container(width: 94, height: 1.4, color: Colors.white),
-                const SizedBox(height: 9),
-                if (idoso != null)
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.cake_outlined,
-                        color: Colors.white,
-                        size: 17,
-                      ),
-                      const SizedBox(width: 9),
-                      Text(
-                        idoso!.idade > 0
-                            ? '${idoso!.idade} anos'
-                            : 'Idade não informada',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _MoodSelector extends StatelessWidget {
   const _MoodSelector({
-    required this.selectedMood,
+    required this.selectedMoodId,
+    required this.idoso,
     required this.onChanged,
   });
 
-  final String selectedMood;
+  final String selectedMoodId;
+  final IdosoResumo? idoso;
   final ValueChanged<String> onChanged;
 
   @override
@@ -509,16 +423,17 @@ class _MoodSelector extends StatelessWidget {
           itemCount: _moods.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 10,
-            mainAxisExtent: 63,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 12,
+            mainAxisExtent: 78,
           ),
           itemBuilder: (context, index) {
             final mood = _moods[index];
             return _MoodButton(
               mood: mood,
-              selected: selectedMood == mood.label,
-              onTap: () => onChanged(mood.label),
+              label: mood.labelFor(idoso),
+              selected: selectedMoodId == mood.id,
+              onTap: () => onChanged(mood.id),
             );
           },
         ),
@@ -530,11 +445,13 @@ class _MoodSelector extends StatelessWidget {
 class _MoodButton extends StatelessWidget {
   const _MoodButton({
     required this.mood,
+    required this.label,
     required this.selected,
     required this.onTap,
   });
 
   final _Mood mood;
+  final String label;
   final bool selected;
   final VoidCallback onTap;
 
@@ -571,11 +488,11 @@ class _MoodButton extends StatelessWidget {
                   child: child,
                 );
               },
-              child: Icon(mood.icon, color: color, size: 38),
+              child: Icon(mood.icon, color: color, size: 44),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 5),
             Text(
-              mood.label,
+              label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -583,7 +500,7 @@ class _MoodButton extends StatelessWidget {
                     ? const Color(0xFF19796F)
                     : adaptive(context, const Color(0xFF666666),
                         AppDarkColors.textSecondary),
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -753,20 +670,44 @@ class _SmallField extends StatelessWidget {
 }
 
 class _Mood {
-  const _Mood(this.label, this.icon);
+  const _Mood(this.id, this.feminineLabel, this.masculineLabel, this.icon);
 
-  final String label;
+  final String id;
+  final String feminineLabel;
+  final String masculineLabel;
   final IconData icon;
+
+  String labelFor(IdosoResumo? idoso) =>
+      _isMale(idoso) ? masculineLabel : feminineLabel;
 }
 
 const _moods = [
-  _Mood('Feliz', Icons.sentiment_satisfied_alt_rounded),
-  _Mood('Calma', Icons.spa_rounded),
-  _Mood('Triste', Icons.sentiment_dissatisfied_rounded),
-  _Mood('Chorona', Icons.sentiment_very_dissatisfied_rounded),
-  _Mood('Irritada', Icons.mood_bad_rounded),
-  _Mood('Sonolenta', Icons.nights_stay_rounded),
+  _Mood('feliz', 'Feliz', 'Feliz', Icons.sentiment_satisfied_alt_rounded),
+  _Mood('calma', 'Calma', 'Calmo', Icons.sentiment_neutral_rounded),
+  _Mood('triste', 'Triste', 'Triste', Icons.sentiment_dissatisfied_rounded),
+  _Mood(
+    'chorona',
+    'Chorona',
+    'Chorão',
+    Icons.sentiment_very_dissatisfied_rounded,
+  ),
+  _Mood('irritada', 'Irritada', 'Irritado', Icons.mood_bad_rounded),
+  _Mood('sonolenta', 'Sonolenta', 'Sonolento', Icons.nights_stay_rounded),
 ];
+
+String _moodLabel(String id, IdosoResumo? idoso) {
+  return _moods
+      .firstWhere(
+        (mood) => mood.id == id,
+        orElse: () => _moods.first,
+      )
+      .labelFor(idoso);
+}
+
+bool _isMale(IdosoResumo? idoso) {
+  final sexo = idoso?.sexo?.trim().toLowerCase();
+  return sexo == 'masculino' || sexo == 'm';
+}
 
 String _firstName(String nome) {
   final trimmed = nome.trim();
@@ -779,17 +720,6 @@ String _moodTarget(IdosoResumo? idoso) {
     return idoso?.elderText.withArticle ?? 'a pessoa idosa';
   }
   return _firstName(idoso.nome);
-}
-
-Uint8List? _dataImageBytes(String? value) {
-  if (value == null || !value.startsWith('data:image')) return null;
-  final commaIndex = value.indexOf(',');
-  if (commaIndex == -1) return null;
-  try {
-    return base64Decode(value.substring(commaIndex + 1));
-  } catch (_) {
-    return null;
-  }
 }
 
 String _formatBrazilianDate(DateTime date) {

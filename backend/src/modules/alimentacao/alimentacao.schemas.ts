@@ -15,6 +15,8 @@ export const criarRefeicaoSchema = z.object({
     "Lanche da manhã",
     "Almoco",
     "Almoço",
+    "Cafe da tarde",
+    "Café da tarde",
     "Lanche da tarde",
     "Jantar",
     "Ceia",
@@ -32,6 +34,7 @@ export const criarRefeicaoSchema = z.object({
     .string()
     .regex(/^\d{2}:\d{2}$/, "Hora invalida.")
     .optional(),
+  recordatorio: z.string().optional(),
   observacoes: z.string().optional(),
   registradoPorId: z.string().uuid().optional(),
 });

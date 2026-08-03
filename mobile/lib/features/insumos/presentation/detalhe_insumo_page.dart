@@ -17,7 +17,7 @@ class _InsumoDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final item = insumo;
     if (item == null) {
-      return _ErrorState(message: 'Insumo nao encontrado.', onRetry: onBack);
+      return _ErrorState(message: 'Insumo não encontrado.', onRetry: onBack);
     }
 
     final status = _statusFor(item);
@@ -64,7 +64,8 @@ class _InsumoDetailView extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                          color: adaptive(
+                              context, Colors.black, AppDarkColors.textPrimary),
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
@@ -151,7 +152,7 @@ class _DetailPanel extends StatelessWidget {
           _DetailRow(
             label: 'Consumo medio',
             value: insumo.consumoMedioDiario == null
-                ? 'Nao informado'
+                ? 'Não informado'
                 : '${_formatNumber(insumo.consumoMedioDiario!)} un. '
                     '${_frequencySuffix(insumo.frequenciaUso)}',
           ),
@@ -159,7 +160,7 @@ class _DetailPanel extends StatelessWidget {
           _DetailRow(
             label: 'Validade',
             value: insumo.dataValidade == null
-                ? 'Nao informada'
+                ? 'Não informada'
                 : _formatBrazilianDate(insumo.dataValidade!),
           ),
           _DetailRow(
@@ -169,7 +170,7 @@ class _DetailPanel extends StatelessWidget {
           _DetailRow(
             label: 'Estoque minimo',
             value: insumo.alertaMinimoUnidades == null
-                ? 'Nao informado'
+                ? 'Não informado'
                 : _stockLabel(insumo.alertaMinimoUnidades!),
           ),
           const SizedBox(height: 8),
@@ -178,7 +179,8 @@ class _DetailPanel extends StatelessWidget {
             child: Text(
               'Observacoes',
               style: TextStyle(
-                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                color:
+                    adaptive(context, Colors.black, AppDarkColors.textPrimary),
                 fontSize: 12,
               ),
             ),
@@ -191,7 +193,8 @@ class _DetailPanel extends StatelessWidget {
                   ? insumo.observacoes!
                   : 'Sem observacoes.',
               style: TextStyle(
-                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                color:
+                    adaptive(context, Colors.black, AppDarkColors.textPrimary),
                 fontSize: 12,
               ),
             ),
