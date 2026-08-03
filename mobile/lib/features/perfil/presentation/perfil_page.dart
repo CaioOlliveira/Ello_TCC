@@ -387,7 +387,7 @@ class _SegurancaPerfilPageState extends ConsumerState<SegurancaPerfilPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC),
+      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
@@ -498,7 +498,7 @@ class SobreAppPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFC),
+      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
@@ -518,11 +518,11 @@ class SobreAppPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              const _Panel(
+              _Panel(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(
+                    const Center(
                       child: Text(
                         'ello',
                         style: TextStyle(
@@ -533,8 +533,8 @@ class SobreAppPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: 16),
-                    Text(
+                    const SizedBox(height: 16),
+                    const Text(
                       'Versão 0.1.0',
                       style: TextStyle(
                         color: Color(0xFF0B6985),
@@ -542,11 +542,11 @@ class SobreAppPage extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'O ELLO organiza rotinas de cuidado, registros de saúde, compromissos, insumos e comunicação de apoio em uma única experiência.',
                       style: TextStyle(
-                        color: Color(0xFF4F6268),
+                        color: adaptive(context, const Color(0xFF4F6268), AppDarkColors.textSecondary),
                         fontSize: 14,
                         height: 1.35,
                       ),

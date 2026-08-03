@@ -294,7 +294,7 @@ class _PeriodSelector extends StatelessWidget {
             icon: const Icon(Icons.calendar_month_rounded, size: 18),
             label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF073248),
+              foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
               side: const BorderSide(color: Color(0xFF2BA8BA)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),

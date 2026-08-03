@@ -824,7 +824,7 @@ class _MedicamentoCard extends StatelessWidget {
                                       : Icons.access_time_rounded,
                                   color: medicamento.proximoAtrasado
                                       ? const Color(0xFFD73A3A)
-                                      : const Color(0xFF8A8A8A),
+                                      : adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
                                   size: 13,
                                 ),
                                 const SizedBox(width: 4),
@@ -837,7 +837,7 @@ class _MedicamentoCard extends StatelessWidget {
                                   style: TextStyle(
                                     color: medicamento.proximoAtrasado
                                         ? const Color(0xFFD73A3A)
-                                        : const Color(0xFF727272),
+                                        : adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
                                     fontSize: 11.5,
                                     fontWeight: medicamento.proximoAtrasado
                                         ? FontWeight.w700
@@ -853,7 +853,7 @@ class _MedicamentoCard extends StatelessWidget {
                                   Icons.inventory_2_outlined,
                                   color: medicamento.estoqueBaixo
                                       ? const Color(0xFFD73A3A)
-                                      : const Color(0xFF8A8A8A),
+                                      : adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
                                   size: 13,
                                 ),
                                 const SizedBox(width: 4),
@@ -864,7 +864,7 @@ class _MedicamentoCard extends StatelessWidget {
                                   style: TextStyle(
                                     color: medicamento.estoqueBaixo
                                         ? const Color(0xFFD73A3A)
-                                        : const Color(0xFF727272),
+                                        : adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
                                     fontSize: 11.5,
                                     fontWeight: medicamento.estoqueBaixo
                                         ? FontWeight.w700
@@ -1687,12 +1687,16 @@ class _FrequenciaOpcao extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         icon,
-        color: selecionado ? const Color(0xFF0E6F7E) : const Color(0xFF8A8A8A),
+        color: selecionado
+            ? const Color(0xFF0E6F7E)
+            : adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
       ),
       title: Text(
         label,
         style: TextStyle(
-          color: selecionado ? const Color(0xFF0E6F7E) : Colors.black,
+          color: selecionado
+              ? const Color(0xFF0E6F7E)
+              : adaptive(context, Colors.black, AppDarkColors.textPrimary),
           fontWeight: selecionado ? FontWeight.w700 : FontWeight.w400,
         ),
       ),

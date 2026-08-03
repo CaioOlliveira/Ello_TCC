@@ -992,7 +992,7 @@ class _MealTypeOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: selected
-          ? const Color(0xFFE1F6F8)
+          ? adaptive(context, const Color(0xFFE1F6F8), AppDarkColors.tintedInfo)
           : adaptive(context, Colors.white, AppDarkColors.surface),
       elevation: 3,
       borderRadius: BorderRadius.circular(14),
@@ -1720,19 +1720,19 @@ class _FoodPhotoPicker extends StatelessWidget {
                     : DecorationImage(image: provider, fit: BoxFit.cover),
               ),
               child: provider == null
-                  ? const Row(
+                  ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.photo_camera_outlined,
                           color: Color(0xFF098CA1),
                           size: 30,
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Text(
                           'Tirar foto da comida',
                           style: TextStyle(
-                            color: Color(0xFF073248),
+                            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                             fontWeight: FontWeight.w800,
                           ),
                         ),

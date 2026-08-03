@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../theme/app_palette.dart';
+
 Future<Uint8List?> pickAvatarImage(BuildContext context) async {
   final source = await showModalBottomSheet<ImageSource>(
     context: context,
@@ -168,7 +170,7 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
             child: SizedBox.square(
               dimension: _boxSize,
               child: DecoratedBox(
-                decoration: const BoxDecoration(color: Color(0xFFEAF5F6)),
+                decoration: BoxDecoration(color: adaptive(context, const Color(0xFFEAF5F6), AppDarkColors.tintedInfo)),
                 child: InteractiveViewer(
                   constrained: false,
                   minScale: 1,
@@ -188,10 +190,10 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Arraste e aproxime para enquadrar a foto.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Color(0xFF5E6E72)),
+            style: TextStyle(fontSize: 13, color: adaptive(context, const Color(0xFF5E6E72), AppDarkColors.textSecondary)),
           ),
         ],
       ),

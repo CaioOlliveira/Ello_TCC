@@ -476,8 +476,8 @@ class _FichaResumoCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${idoso.idade} anos',
-                    style: const TextStyle(
-                      color: Color(0xFF8A8A8A),
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
                       fontSize: 12.5,
                     ),
                   ),
@@ -496,8 +496,8 @@ class _FichaResumoCard extends StatelessWidget {
               Text(
                 '$totalParticipantes ${totalParticipantes == 1 ? 'participante' : 'participantes'}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF5E6B73),
+                style: TextStyle(
+                  color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -539,10 +539,10 @@ class _CompartilharCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Qualquer pessoa com este código poderá solicitar acesso à ficha.',
             style: TextStyle(
-                color: Color(0xFF5E6B73), fontSize: 12.5, height: 1.35),
+                color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary), fontSize: 12.5, height: 1.35),
           ),
           const SizedBox(height: 14),
           if (convite == null || convite.codigo.isEmpty)
@@ -567,7 +567,7 @@ class _CompartilharCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE7F4F6),
+                  color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -596,7 +596,7 @@ class _CompartilharCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'O codigo expira em ${_formatarData(convite.expiraEm!)}.',
-                style: const TextStyle(color: Color(0xFF9B9B9B), fontSize: 11),
+                style: TextStyle(color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted), fontSize: 11),
               ),
             ],
             const SizedBox(height: 14),
@@ -685,34 +685,34 @@ class _PendenteCard extends StatelessWidget {
                   solicitacao.nome,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF17324D),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   'Solicitou acesso como ${_cargoLabel(solicitacao.funcao)}',
-                  style: const TextStyle(
-                    color: Color(0xFF5E6B73),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
                     fontSize: 11.5,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.schedule_rounded,
                       size: 12,
-                      color: Color(0xFF9B9B9B),
+                      color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
                     ),
                     const SizedBox(width: 3),
                     Text(
                       dias <= 0
                           ? 'Solicitado hoje'
                           : 'Aguardando ha $dias ${dias == 1 ? 'dia' : 'dias'}',
-                      style: const TextStyle(
-                        color: Color(0xFF9B9B9B),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
                         fontSize: 10.5,
                       ),
                     ),
@@ -857,8 +857,8 @@ class _ParticipanteCard extends StatelessWidget {
                             membro.nome,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF17324D),
+                            style: TextStyle(
+                              color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                               fontSize: 14.5,
                               fontWeight: FontWeight.w700,
                             ),
@@ -882,8 +882,8 @@ class _ParticipanteCard extends StatelessWidget {
                               : (membro.telefone ?? '')),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF5E6B73),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
                         fontSize: 11.5,
                       ),
                     ),
@@ -905,7 +905,7 @@ class _ParticipanteCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE7F4F6),
+                    color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: const Text(
@@ -959,7 +959,7 @@ class _CargoMenu extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFE7F4F6),
+          color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
@@ -1054,7 +1054,7 @@ class _CargoSheet extends StatelessWidget {
                 width: 42,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0E0E0),
+                  color: adaptive(context, const Color(0xFFE0E0E0), AppDarkColors.border),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -1065,8 +1065,8 @@ class _CargoSheet extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xFF073248),
+              style: TextStyle(
+                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
@@ -1103,11 +1103,11 @@ class _CargoSheet extends StatelessWidget {
                       size: 22,
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Administrador',
                         style: TextStyle(
-                          color: Color(0xFF17324D),
+                          color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                           fontSize: 14.5,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1167,7 +1167,9 @@ class _CargoOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const Color(0xFFE7F4F6) : Colors.white,
+      color: selected
+          ? adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo)
+          : adaptive(context, Colors.white, AppDarkColors.surface),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -1177,8 +1179,9 @@ class _CargoOption extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color:
-                  selected ? const Color(0xFF2BA8BA) : const Color(0xFFE4EFF1),
+              color: selected
+                  ? const Color(0xFF2BA8BA)
+                  : adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
               width: selected ? 1.4 : 1,
             ),
           ),
@@ -1190,7 +1193,7 @@ class _CargoOption extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: selected
                       ? const Color(0xFF2BA8BA)
-                      : const Color(0xFFE7F4F6),
+                      : adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -1206,16 +1209,16 @@ class _CargoOption extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Color(0xFF17324D),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF8A8A8A),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
                         fontSize: 11.5,
                       ),
                     ),
