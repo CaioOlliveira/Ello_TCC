@@ -463,6 +463,13 @@ class _HistoricoConfig {
     return switch (tipo) {
       'alimentacao' => _alimentacao,
       'humor' => _humor,
+      'equipamentos' => _equipamentos,
+      'medicamentos' => _medicamentos,
+      'temperatura' => _temperatura,
+      'agenda' => _agenda,
+      'glicemia' => _glicemia,
+      'pressao' => _pressao,
+      'oxigenacao' => _oxigenacao,
       _ => _insumos,
     };
   }
@@ -566,6 +573,227 @@ final _humor = _HistoricoConfig(
     return ('Registrado', const Color(0xFF4E88C7));
   },
 );
+
+final _equipamentos = _HistoricoConfig(
+  title: 'Histórico dos equipamentos',
+  emptyMessage: 'Nenhuma alteração de equipamento neste período.',
+  icon: (registro) => registro.acao == 'registrar_manutencao'
+      ? Icons.build_circle_outlined
+      : registro.acao == 'atualizar'
+          ? Icons.edit_outlined
+          : Icons.medical_services_outlined,
+  actionLabel: (registro) => switch (registro.acao) {
+    'criar' => 'cadastrou equipamento',
+    'remover' => 'removeu equipamento',
+    'registrar_manutencao' => 'registrou manutenção',
+    _ => 'atualizou equipamento',
+  },
+  detail: (registro) {
+    final manutencao = _historyValue(registro, const [
+      'tipoManutencao',
+      'tipo_manutencao',
+      'descricaoServico',
+      'descricao_servico',
+    ]);
+    return manutencao == null
+        ? registro.itemNome
+        : '${registro.itemNome} - $manutencao';
+  },
+  tag: _defaultHistoryTag,
+);
+
+final _medicamentos = _HistoricoConfig(
+  title: 'Histórico de remédios',
+  emptyMessage: 'Nenhuma alteração de remédio neste período.',
+  icon: (registro) {
+    if (registro.tipoEntidade == 'administracoes_medicamentos') {
+      return Icons.medication_liquid_outlined;
+    }
+    if (registro.tipoEntidade == 'horarios_medicamentos') {
+      return Icons.schedule_rounded;
+    }
+    return registro.acao == 'atualizar'
+        ? Icons.edit_outlined
+        : Icons.medication_outlined;
+  },
+  actionLabel: (registro) {
+    if (registro.tipoEntidade == 'administracoes_medicamentos') {
+      return 'registrou administração';
+    }
+    if (registro.tipoEntidade == 'horarios_medicamentos') {
+      return 'atualizou horários';
+    }
+    return switch (registro.acao) {
+      'criar' => 'cadastrou remédio',
+      'remover' => 'removeu remédio',
+      _ => 'atualizou remédio',
+    };
+  },
+  detail: (registro) {
+    final dose = _historyValue(registro, const [
+      'quantidadeDose',
+      'quantidade_dose',
+      'dosagem',
+    ]);
+    final unidade = _historyValue(
+      registro,
+      const ['unidadeDose', 'unidade_dose'],
+    );
+    if (dose == null) return registro.itemNome;
+    return '${registro.itemNome} - $dose${unidade == null ? '' : ' $unidade'}';
+  },
+  tag: (registro) {
+    if (registro.tipoEntidade == 'administracoes_medicamentos') {
+      return ('Administrado', const Color(0xFF27B35F));
+    }
+    return _defaultHistoryTag(registro);
+  },
+);
+
+final _temperatura = _HistoricoConfig(
+  title: 'Histórico da temperatura',
+  emptyMessage: 'Nenhuma temperatura registrada neste período.',
+  icon: (registro) => Icons.thermostat_rounded,
+  actionLabel: (registro) => _measurementAction(registro, 'temperatura'),
+  detail: (registro) {
+    final valor = _historyValue(
+      registro,
+      const ['temperatura', 'temperatura_celsius'],
+    );
+    return valor == null ? 'Temperatura' : 'Temperatura: $valor °C';
+  },
+  tag: _defaultHistoryTag,
+);
+
+final _agenda = _HistoricoConfig(
+  title: 'Histórico da agenda',
+  emptyMessage: 'Nenhum compromisso alterado neste período.',
+  icon: (registro) => registro.acao == 'atualizar_ocorrencia'
+      ? Icons.event_available_outlined
+      : Icons.calendar_month_outlined,
+  actionLabel: (registro) => switch (registro.acao) {
+    'criar' => 'adicionou compromisso',
+    'remover' => 'removeu compromisso',
+    'atualizar_ocorrencia' => 'alterou situação',
+    _ => 'atualizou compromisso',
+  },
+  detail: (registro) {
+    final status = _historyValue(registro, const ['status']);
+    return status == null
+        ? registro.itemNome
+        : '${registro.itemNome} - ${_capitalize(status)}';
+  },
+  tag: (registro) {
+    final status = _historyValue(registro, const ['status'])?.toLowerCase();
+    if (status == 'concluido' || status == 'concluida') {
+      return ('Concluído', const Color(0xFF27B35F));
+    }
+    if (status == 'cancelado' || status == 'cancelada') {
+      return ('Cancelado', const Color(0xFFE85D75));
+    }
+    return _defaultHistoryTag(registro);
+  },
+);
+
+final _glicemia = _HistoricoConfig(
+  title: 'Histórico da glicemia',
+  emptyMessage: 'Nenhuma glicemia registrada neste período.',
+  icon: (registro) => registro.tipoEntidade == 'registros_insulina'
+      ? Icons.vaccines_outlined
+      : Icons.water_drop_outlined,
+  actionLabel: (registro) {
+    if (registro.tipoEntidade == 'registros_insulina') {
+      return 'registrou aplicação de insulina';
+    }
+    return _measurementAction(registro, 'glicemia');
+  },
+  detail: (registro) {
+    if (registro.tipoEntidade == 'registros_insulina') {
+      final dose = _historyValue(
+        registro,
+        const ['doseUnidades', 'dose_unidades'],
+      );
+      return dose == null
+          ? registro.itemNome
+          : '${registro.itemNome} - $dose unidade(s)';
+    }
+    final valor = _historyValue(
+      registro,
+      const ['valor', 'valorMgDl', 'valor_mg_dl'],
+    );
+    return valor == null ? 'Glicemia' : 'Glicemia: $valor mg/dL';
+  },
+  tag: _defaultHistoryTag,
+);
+
+final _pressao = _HistoricoConfig(
+  title: 'Histórico da pressão',
+  emptyMessage: 'Nenhuma pressão registrada neste período.',
+  icon: (registro) => Icons.favorite_outline_rounded,
+  actionLabel: (registro) => _measurementAction(registro, 'pressão'),
+  detail: (registro) {
+    final sistolica = _historyValue(registro, const ['sistolica']);
+    final diastolica = _historyValue(registro, const ['diastolica']);
+    if (sistolica == null || diastolica == null) return 'Pressão arterial';
+    return 'Pressão: $sistolica/$diastolica mmHg';
+  },
+  tag: _defaultHistoryTag,
+);
+
+final _oxigenacao = _HistoricoConfig(
+  title: 'Histórico da oxigenação',
+  emptyMessage: 'Nenhuma oxigenação registrada neste período.',
+  icon: (registro) => Icons.air_rounded,
+  actionLabel: (registro) => _measurementAction(registro, 'oxigenação'),
+  detail: (registro) {
+    final saturacao = _historyValue(
+      registro,
+      const ['saturacao', 'spo2'],
+    );
+    return saturacao == null ? 'Oxigenação' : 'Saturação: $saturacao%';
+  },
+  tag: _defaultHistoryTag,
+);
+
+String _measurementAction(HistoricoRegistro registro, String subject) {
+  return switch (registro.acao) {
+    'remover' => 'removeu registro de $subject',
+    'atualizar' => 'atualizou $subject',
+    _ => 'registrou $subject',
+  };
+}
+
+(String, Color) _defaultHistoryTag(HistoricoRegistro registro) {
+  return switch (registro.acao) {
+    'remover' => ('Removido', const Color(0xFFE85D75)),
+    'atualizar' || 'atualizar_ocorrencia' => (
+        'Atualizado',
+        const Color(0xFF8C52D6)
+      ),
+    'registrar_manutencao' => ('Manutenção', const Color(0xFFF09A37)),
+    _ => ('Registrado', const Color(0xFF4E88C7)),
+  };
+}
+
+String? _historyValue(
+  HistoricoRegistro registro,
+  List<String> keys,
+) {
+  for (final source in [registro.dadosNovos, registro.dadosAnteriores]) {
+    for (final key in keys) {
+      final value = source[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString();
+      }
+    }
+  }
+  return null;
+}
+
+String _capitalize(String value) {
+  if (value.isEmpty) return value;
+  return '${value[0].toUpperCase()}${value.substring(1)}';
+}
 
 class _HistoricoEmpty extends StatelessWidget {
   const _HistoricoEmpty({required this.config});

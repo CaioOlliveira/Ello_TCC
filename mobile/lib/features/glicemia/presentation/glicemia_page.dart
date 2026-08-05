@@ -414,7 +414,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
                     setState(() => _mode = _GlicemiaMode.registrarInsulina);
                   },
                   onViewHistorico: () {
-                    setState(() => _mode = _GlicemiaMode.historico);
+                    context.push('/historico/glicemia');
                   },
                   onCalendar: () => _openCalendar(idoso.id),
                   onPeriodChanged: (period) {

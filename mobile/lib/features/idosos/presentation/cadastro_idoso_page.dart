@@ -1351,7 +1351,7 @@ class _SelectBox extends StatelessWidget {
   }
 }
 
-class _BloodTypeField extends StatefulWidget {
+class _BloodTypeField extends StatelessWidget {
   const _BloodTypeField({required this.controller});
 
   static const _options = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -1359,10 +1359,76 @@ class _BloodTypeField extends StatefulWidget {
   final TextEditingController controller;
 
   @override
-  State<_BloodTypeField> createState() => _BloodTypeFieldState();
+  Widget build(BuildContext context) {
+    final currentValue = controller.text.trim();
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 46),
+      child: DropdownButtonFormField<String>(
+        initialValue: _options.contains(currentValue) ? currentValue : null,
+        isExpanded: true,
+        items: [
+          for (final option in _options)
+            DropdownMenuItem(value: option, child: Text(option)),
+        ],
+        onChanged: (value) {
+          controller.text = value ?? '';
+        },
+        validator: (value) {
+          final text = value?.trim();
+          if (text == null || text.isEmpty) return null;
+          if (!_options.contains(text)) {
+            return 'Selecione um tipo sanguíneo válido.';
+          }
+          return null;
+        },
+        style: TextStyle(
+            fontSize: 14,
+            color: adaptive(
+                context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: Color(0xFF2697AA),
+          size: 22,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Ex: O+',
+          hintStyle: TextStyle(
+            color: adaptive(
+                context, const Color(0xFF9D9D9D), AppDarkColors.textMuted),
+            fontSize: 14,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 13,
+          ),
+          errorStyle: const TextStyle(fontSize: 9, height: 0.8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: BorderSide(
+                color: adaptive(
+                    context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: BorderSide(
+                color: adaptive(
+                    context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: BorderSide(
+                color: adaptive(context, const Color(0xFF8BD2DC),
+                    AppDarkColors.borderStrong)),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _BloodTypeFieldState extends State<_BloodTypeField> {
+/*
+class _BloodTypeFieldState extends State<StatefulWidget> {
   final _focusNode = FocusNode();
 
   @override
@@ -1376,13 +1442,7 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
     return RawAutocomplete<String>(
       textEditingController: widget.controller,
       focusNode: _focusNode,
-      optionsBuilder: (value) {
-        final query = value.text.trim().toUpperCase();
-        if (query.isEmpty) return _BloodTypeField._options;
-        return _BloodTypeField._options.where((option) {
-          return option.startsWith(query);
-        });
-      },
+      optionsBuilder: (_) => _BloodTypeField._options,
       onSelected: (value) => widget.controller.text = value,
       fieldViewBuilder: (
         context,
@@ -1395,13 +1455,9 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
           child: TextFormField(
             controller: fieldController,
             focusNode: focusNode,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[ABOabo+-]')),
-              TextInputFormatter.withFunction((oldValue, newValue) {
-                return newValue.copyWith(text: newValue.text.toUpperCase());
-              }),
-            ],
+            readOnly: true,
+            showCursor: false,
+            enableInteractiveSelection: false,
             validator: (value) {
               final text = value?.trim();
               if (text == null || text.isEmpty) return null;
@@ -1486,6 +1542,7 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
   }
 }
 
+*/
 class _ConditionChip extends StatelessWidget {
   const _ConditionChip({required this.label, required this.onDeleted});
 

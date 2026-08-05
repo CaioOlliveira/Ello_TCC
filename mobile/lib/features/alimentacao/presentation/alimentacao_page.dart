@@ -692,7 +692,6 @@ class _WaterCardState extends State<_WaterCard> {
               for (var i = 0; i < cupCount; i++)
                 _WaterCup(
                   filled: i < filledCups,
-                  onTap: widget.onAddWater,
                 ),
             ],
           ),
@@ -713,32 +712,27 @@ class _WaterCardState extends State<_WaterCard> {
 }
 
 class _WaterCup extends StatelessWidget {
-  const _WaterCup({required this.filled, required this.onTap});
+  const _WaterCup({required this.filled});
 
   final bool filled;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: AnimatedScale(
-        scale: filled ? 1.0 : 0.86,
-        duration: const Duration(milliseconds: 360),
-        curve: Curves.elasticOut,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          transitionBuilder: (child, animation) => ScaleTransition(
-            scale: animation,
-            child: FadeTransition(opacity: animation, child: child),
-          ),
-          child: Icon(
-            filled ? Icons.local_drink_rounded : Icons.local_drink_outlined,
-            key: ValueKey(filled),
-            color: const Color(0xFF098CA1),
-            size: 36,
-          ),
+    return AnimatedScale(
+      scale: filled ? 1.0 : 0.86,
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.elasticOut,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        transitionBuilder: (child, animation) => ScaleTransition(
+          scale: animation,
+          child: FadeTransition(opacity: animation, child: child),
+        ),
+        child: Icon(
+          filled ? Icons.local_drink_rounded : Icons.local_drink_outlined,
+          key: ValueKey(filled),
+          color: const Color(0xFF098CA1),
+          size: 36,
         ),
       ),
     );

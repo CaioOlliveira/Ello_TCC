@@ -303,7 +303,7 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
                     setState(() => _mode = _TemperaturaMode.registrar);
                   },
                   onViewHistorico: () {
-                    setState(() => _mode = _TemperaturaMode.historico);
+                    context.push('/historico/temperatura');
                   },
                   onCalendar: () => _openCalendar(idoso.id),
                   onPeriodChanged: (period) {

@@ -46,12 +46,13 @@ class _HumorPageState extends ConsumerState<HumorPage> {
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final selected = await showDatePicker(
       context: context,
       locale: const Locale('pt', 'BR'),
-      initialDate: _parseBrazilianDate(_dataController.text) ?? now,
-      firstDate: DateTime(now.year - 2),
-      lastDate: now,
+      initialDate: today,
+      firstDate: today,
+      lastDate: today,
     );
 
     if (selected == null) return;
@@ -84,15 +85,41 @@ class _HumorPageState extends ConsumerState<HumorPage> {
       return;
     }
 
+    final selectedDate = _parseBrazilianDate(_dataController.text);
+    final selectedTime = _parseTime(_horaController.text);
     final dataHumor = _toIsoDate(_dataController.text);
     final horarioRegi = _normalizeTime(_horaController.text);
 
-    if (dataHumor == null || horarioRegi == null) {
+    if (selectedDate == null ||
+        selectedTime == null ||
+        dataHumor == null ||
+        horarioRegi == null) {
       setState(() => _errorMessage = 'Informe uma data e um horário válidos.');
       return;
     }
 
     final today = DateTime.now();
+    final selectedDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+    final currentMinute = DateTime(
+      today.year,
+      today.month,
+      today.day,
+      today.hour,
+      today.minute,
+    );
+    if (selectedDateTime.isBefore(currentMinute)) {
+      setState(() {
+        _errorMessage = 'A data e o horário não podem ser anteriores a agora.';
+      });
+      return;
+    }
+
     final todayIso = '${today.year.toString().padLeft(4, '0')}-'
         '${today.month.toString().padLeft(2, '0')}-'
         '${today.day.toString().padLeft(2, '0')}';

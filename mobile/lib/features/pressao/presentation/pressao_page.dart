@@ -311,7 +311,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
                     setState(() => _mode = _PressaoMode.registrar);
                   },
                   onViewHistorico: () {
-                    setState(() => _mode = _PressaoMode.historico);
+                    context.push('/historico/pressao');
                   },
                   onCalendar: () => _openCalendar(idoso.id),
                   onPeriodChanged: (period) {

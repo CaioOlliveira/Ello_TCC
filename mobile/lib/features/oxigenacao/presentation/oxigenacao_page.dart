@@ -305,7 +305,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
                     setState(() => _mode = _OxigenacaoMode.registrar);
                   },
                   onViewHistorico: () {
-                    setState(() => _mode = _OxigenacaoMode.historico);
+                    context.push('/historico/oxigenacao');
                   },
                   onCalendar: () => _openCalendar(idoso.id),
                   onPeriodChanged: (period) {

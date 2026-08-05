@@ -526,7 +526,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
                   onBack: () => context.go(moduleBackRoute(context)),
                   onAdd: _openCreateForm,
                   onOpen: _openDetalhe,
-                  onHistorico: () => setState(() => _mode = _Mode.historico),
+                  onHistorico: () => context.push('/historico/medicamentos'),
                 );
               },
             ),

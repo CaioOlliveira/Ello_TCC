@@ -333,7 +333,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
                 onHistory: () => context.push(
-                  routeWithCurrentOrigin(context, '/equipamentos/historico'),
+                  routeWithCurrentOrigin(context, '/historico/equipamentos'),
                 ),
               )
             : _EquipamentoDetails(
@@ -371,7 +371,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
                 onHistory: () => context.push(
-                  routeWithCurrentOrigin(context, '/equipamentos/historico'),
+                  routeWithCurrentOrigin(context, '/historico/equipamentos'),
                 ),
               );
     }

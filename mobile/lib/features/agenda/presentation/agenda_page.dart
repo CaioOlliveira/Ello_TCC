@@ -519,8 +519,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                 width: double.infinity,
                 height: 42,
                 child: OutlinedButton(
-                  onPressed: () => context.go(
-                    routeWithCurrentOrigin(context, '/agenda/historico'),
+                  onPressed: () => context.push(
+                    routeWithCurrentOrigin(context, '/historico/agenda'),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: adaptive(context, const Color(0xFF222222),
