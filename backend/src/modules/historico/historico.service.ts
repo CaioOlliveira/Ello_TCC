@@ -116,13 +116,13 @@ export const historicoService = {
           h.dados_anteriores,
           h.dados_novos
         from historico_alteracoes h
-        left join usuarios u on u.id = h.usuario_id
+        left join usuarios u on u.id::text = h.usuario_id::text
         left join insumos i
-          on i.id::text = h.entidade_id
+          on i.id::text = h.entidade_id::text
          and h.tipo_entidade = 'insumos'
         left join equipamentos e
           on e.id::text = case
-            when h.tipo_entidade = 'equipamentos' then h.entidade_id
+            when h.tipo_entidade = 'equipamentos' then h.entidade_id::text
             when h.tipo_entidade = 'manutencoes_equipamentos' then coalesce(
               h.dados_novos ->> 'equipamento_id',
               h.dados_anteriores ->> 'equipamento_id',
@@ -132,11 +132,11 @@ export const historicoService = {
           end
         left join medicamentos m
           on m.id::text = case
-            when h.tipo_entidade = 'medicamentos' then h.entidade_id
+            when h.tipo_entidade = 'medicamentos' then h.entidade_id::text
             when h.tipo_entidade = 'horarios_medicamentos' then coalesce(
               h.dados_novos ->> 'medicamentoId',
               h.dados_anteriores ->> 'medicamentoId',
-              h.entidade_id
+              h.entidade_id::text
             )
             when h.tipo_entidade = 'administracoes_medicamentos' then coalesce(
               h.dados_novos ->> 'medicamento_id',
@@ -145,7 +145,7 @@ export const historicoService = {
               h.dados_anteriores ->> 'medicamentoId'
             )
           end
-        where h.idoso_id = $1
+        where h.idoso_id::text = $1
           and h.tipo_entidade = any($2::text[])
           and h.criado_em >= $3::date
           and h.criado_em < ($4::date + interval '1 day')
