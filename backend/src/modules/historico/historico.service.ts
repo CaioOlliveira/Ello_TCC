@@ -14,7 +14,7 @@ const entidadesPorTipo = {
   temperatura: ["registros_temperatura"],
   agenda: ["tarefas"],
   glicemia: ["registros_glicemia", "registros_insulina"],
-  pressao: ["registros_pressao"],
+  pressao: ["registros_pressao", "registros_pressao_arterial"],
   oxigenacao: ["registros_oxigenacao"],
 } satisfies Record<ListarHistoricoQuery["tipo"], string[]>;
 
@@ -84,6 +84,10 @@ export const historicoService = {
                 m.nome,
                 h.dados_novos ->> 'nome',
                 h.dados_anteriores ->> 'nome',
+                h.dados_novos ->> 'medicamentoNome',
+                h.dados_anteriores ->> 'medicamentoNome',
+                h.dados_novos ->> 'medicamento_nome',
+                h.dados_anteriores ->> 'medicamento_nome',
                 'Medicamento'
               )
             when h.tipo_entidade = 'tarefas' then
@@ -101,7 +105,10 @@ export const historicoService = {
                 'Insulina'
               )
             when h.tipo_entidade = 'registros_glicemia' then 'Glicemia'
-            when h.tipo_entidade = 'registros_pressao' then 'Pressao arterial'
+            when h.tipo_entidade in (
+              'registros_pressao',
+              'registros_pressao_arterial'
+            ) then 'Pressao arterial'
             when h.tipo_entidade = 'registros_oxigenacao' then 'Oxigenacao'
             when h.tipo_entidade = 'registros_temperatura' then 'Temperatura'
             else 'Registro'
@@ -111,14 +118,16 @@ export const historicoService = {
         from historico_alteracoes h
         left join usuarios u on u.id = h.usuario_id
         left join insumos i
-          on i.id = h.entidade_id
+          on i.id::text = h.entidade_id
          and h.tipo_entidade = 'insumos'
         left join equipamentos e
           on e.id::text = case
             when h.tipo_entidade = 'equipamentos' then h.entidade_id
             when h.tipo_entidade = 'manutencoes_equipamentos' then coalesce(
               h.dados_novos ->> 'equipamento_id',
-              h.dados_anteriores ->> 'equipamento_id'
+              h.dados_anteriores ->> 'equipamento_id',
+              h.dados_novos ->> 'equipamentoId',
+              h.dados_anteriores ->> 'equipamentoId'
             )
           end
         left join medicamentos m
@@ -131,7 +140,9 @@ export const historicoService = {
             )
             when h.tipo_entidade = 'administracoes_medicamentos' then coalesce(
               h.dados_novos ->> 'medicamento_id',
-              h.dados_anteriores ->> 'medicamento_id'
+              h.dados_anteriores ->> 'medicamento_id',
+              h.dados_novos ->> 'medicamentoId',
+              h.dados_anteriores ->> 'medicamentoId'
             )
           end
         where h.idoso_id = $1

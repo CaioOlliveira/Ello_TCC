@@ -47,11 +47,12 @@ class _HumorPageState extends ConsumerState<HumorPage> {
   Future<void> _selectDate() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final current = _parseBrazilianDate(_dataController.text) ?? today;
     final selected = await showDatePicker(
       context: context,
       locale: const Locale('pt', 'BR'),
-      initialDate: today,
-      firstDate: today,
+      initialDate: current.isAfter(today) ? today : current,
+      firstDate: DateTime(now.year - 3),
       lastDate: today,
     );
 
@@ -99,27 +100,6 @@ class _HumorPageState extends ConsumerState<HumorPage> {
     }
 
     final today = DateTime.now();
-    final selectedDateTime = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day,
-      selectedTime.hour,
-      selectedTime.minute,
-    );
-    final currentMinute = DateTime(
-      today.year,
-      today.month,
-      today.day,
-      today.hour,
-      today.minute,
-    );
-    if (selectedDateTime.isBefore(currentMinute)) {
-      setState(() {
-        _errorMessage = 'A data e o horário não podem ser anteriores a agora.';
-      });
-      return;
-    }
-
     final todayIso = '${today.year.toString().padLeft(4, '0')}-'
         '${today.month.toString().padLeft(2, '0')}-'
         '${today.day.toString().padLeft(2, '0')}';
