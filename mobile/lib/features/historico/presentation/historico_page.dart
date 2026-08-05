@@ -6,6 +6,8 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/module_header.dart';
 
 enum _HistoricoPeriodo { dia, semana, mes }
 
@@ -128,41 +130,14 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        tooltip: 'Voltar',
-                        onPressed: () => context.pop(),
-                        icon: const Icon(
-                          Icons.chevron_left_rounded,
-                          color: Color(0xFF0A7D8D),
-                          size: 34,
-                        ),
+                  ModuleHeader(
+                    title: config.title,
+                    showWordmark: true,
+                    onBack: () => context.go(
+                      routeWithCurrentOrigin(
+                        context,
+                        _moduleRouteForTipo(widget.tipo),
                       ),
-                      const Spacer(),
-                      const Text(
-                        'ello',
-                        style: TextStyle(
-                          color: Color(0xFF0E6F7E),
-                          fontSize: 42,
-                          fontWeight: FontWeight.w300,
-                          letterSpacing: 0,
-                          height: 1,
-                        ),
-                      ),
-                      const Spacer(),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    config.title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: adaptive(context, const Color(0xFF073248),
-                          AppDarkColors.textPrimary),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -212,6 +187,14 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
       ),
     );
   }
+}
+
+String _moduleRouteForTipo(String tipo) {
+  return switch (tipo) {
+    'alimentacao' => '/alimentacao',
+    'humor' => '/humor',
+    _ => '/insumos',
+  };
 }
 
 class _PeriodTabs extends StatelessWidget {
@@ -294,7 +277,8 @@ class _PeriodSelector extends StatelessWidget {
             icon: const Icon(Icons.calendar_month_rounded, size: 18),
             label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
             style: OutlinedButton.styleFrom(
-              foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              foregroundColor: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               side: const BorderSide(color: Color(0xFF2BA8BA)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),

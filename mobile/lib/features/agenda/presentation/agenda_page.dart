@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/module_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import 'agenda_form_page.dart';
 import 'agenda_models.dart';
@@ -396,7 +398,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     final idoso = ref.watch(selectedIdosoProvider);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: idoso == null
           ? null
@@ -429,9 +432,12 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                 width: double.infinity,
                 height: 42,
                 child: OutlinedButton(
-                  onPressed: () => context.go('/agenda/historico'),
+                  onPressed: () => context.go(
+                    routeWithCurrentOrigin(context, '/agenda/historico'),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
+                    foregroundColor: adaptive(context, const Color(0xFF222222),
+                        AppDarkColors.textPrimary),
                     side: const BorderSide(
                       color: Color(0xFF1696AA),
                       width: 1.4,
@@ -452,7 +458,9 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
         ),
       ),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -461,7 +469,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 child: Column(
                   children: [
-                    _Header(onBack: () => context.go('/monitoramento')),
+                    _Header(onBack: () => context.go(moduleBackRoute(context))),
                     const SizedBox(height: 14),
                     _ViewSwitch(
                       value: _view,
@@ -556,23 +564,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        InkWell(
-          onTap: onBack,
-          borderRadius: BorderRadius.circular(16),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Icon(Icons.chevron_left_rounded, color: Color(0xFF1995A8)),
-                Text('Voltar', style: TextStyle(fontSize: 12)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
+    return ModuleHeader(title: 'Agenda', onBack: onBack);
   }
 }
 
@@ -891,7 +883,8 @@ class _TimelineItem extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                            color: adaptive(context, Colors.black,
+                                AppDarkColors.textPrimary),
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             height: 0.95,
@@ -939,7 +932,8 @@ class _TimelineItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF666666), AppDarkColors.textSecondary),
+                      color: adaptive(context, const Color(0xFF666666),
+                          AppDarkColors.textSecondary),
                       fontSize: 10,
                     ),
                   ),
@@ -950,7 +944,8 @@ class _TimelineItem extends StatelessWidget {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF073248),
+                            AppDarkColors.textPrimary),
                         fontSize: 13,
                       ),
                     ),
@@ -972,7 +967,8 @@ class _TimelineItem extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: adaptive(context, const Color(0xFF4F6B72), AppDarkColors.textSecondary),
+                            color: adaptive(context, const Color(0xFF4F6B72),
+                                AppDarkColors.textSecondary),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1048,7 +1044,8 @@ class _MonthView extends StatelessWidget {
             Text(
               agendaMonthName(month.month),
               style: TextStyle(
-                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                color:
+                    adaptive(context, Colors.black, AppDarkColors.textPrimary),
                 fontSize: 23,
                 fontWeight: FontWeight.w800,
               ),
@@ -1057,7 +1054,8 @@ class _MonthView extends StatelessWidget {
             Text(
               '${month.year}',
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF555555), AppDarkColors.textSecondary),
+                color: adaptive(context, const Color(0xFF555555),
+                    AppDarkColors.textSecondary),
                 fontSize: 21,
               ),
             ),
@@ -1119,7 +1117,8 @@ class _CalendarWeekday extends StatelessWidget {
         label,
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: adaptive(context, const Color(0xFF4F4F4F), AppDarkColors.textSecondary),
+          color: adaptive(
+              context, const Color(0xFF4F4F4F), AppDarkColors.textSecondary),
           fontSize: 13,
           fontWeight: FontWeight.w800,
         ),
@@ -1194,7 +1193,8 @@ class _CalendarCell extends StatelessWidget {
                 style: TextStyle(
                   color: selected
                       ? Colors.white
-                      : adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                      : adaptive(
+                          context, Colors.black, AppDarkColors.textPrimary),
                   fontSize: 15,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
                 ),
@@ -1261,7 +1261,8 @@ class _AgendaMessage extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -1271,7 +1272,8 @@ class _AgendaMessage extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF666666), AppDarkColors.textSecondary),
+              color: adaptive(context, const Color(0xFF666666),
+                  AppDarkColors.textSecondary),
               fontSize: 12,
             ),
           ),

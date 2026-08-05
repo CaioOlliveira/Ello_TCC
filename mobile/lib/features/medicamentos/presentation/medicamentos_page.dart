@@ -7,6 +7,8 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/module_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 enum _Mode { resumo, form, historico, detalhe }
@@ -501,7 +503,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
                 }
                 if (snapshot.hasError) {
                   return _ErrorState(
-                    onBack: () => context.go('/monitoramento'),
+                    onBack: () => context.go(moduleBackRoute(context)),
                     onRetry: () => _reloadResumo(idoso.id),
                   );
                 }
@@ -511,7 +513,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
 
                 return _ResumoView(
                   resumo: resumo,
-                  onBack: () => context.go('/monitoramento'),
+                  onBack: () => context.go(moduleBackRoute(context)),
                   onAdd: _openCreateForm,
                   onOpen: _openDetalhe,
                   onHistorico: () => setState(() => _mode = _Mode.historico),
@@ -630,33 +632,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: onBack,
-          icon: const Icon(
-            Icons.chevron_left_rounded,
-            color: Color(0xFF2A9CAE),
-            size: 30,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: adaptive(
-                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        SizedBox(width: 40, child: trailing),
-      ],
-    );
+    return ModuleHeader(title: title, onBack: onBack, trailing: trailing);
   }
 }
 
@@ -824,7 +800,10 @@ class _MedicamentoCard extends StatelessWidget {
                                       : Icons.access_time_rounded,
                                   color: medicamento.proximoAtrasado
                                       ? const Color(0xFFD73A3A)
-                                      : adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+                                      : adaptive(
+                                          context,
+                                          const Color(0xFF8A8A8A),
+                                          AppDarkColors.textSecondary),
                                   size: 13,
                                 ),
                                 const SizedBox(width: 4),
@@ -837,7 +816,10 @@ class _MedicamentoCard extends StatelessWidget {
                                   style: TextStyle(
                                     color: medicamento.proximoAtrasado
                                         ? const Color(0xFFD73A3A)
-                                        : adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
+                                        : adaptive(
+                                            context,
+                                            const Color(0xFF727272),
+                                            AppDarkColors.textSecondary),
                                     fontSize: 11.5,
                                     fontWeight: medicamento.proximoAtrasado
                                         ? FontWeight.w700
@@ -853,7 +835,10 @@ class _MedicamentoCard extends StatelessWidget {
                                   Icons.inventory_2_outlined,
                                   color: medicamento.estoqueBaixo
                                       ? const Color(0xFFD73A3A)
-                                      : adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+                                      : adaptive(
+                                          context,
+                                          const Color(0xFF8A8A8A),
+                                          AppDarkColors.textSecondary),
                                   size: 13,
                                 ),
                                 const SizedBox(width: 4),
@@ -864,7 +849,10 @@ class _MedicamentoCard extends StatelessWidget {
                                   style: TextStyle(
                                     color: medicamento.estoqueBaixo
                                         ? const Color(0xFFD73A3A)
-                                        : adaptive(context, const Color(0xFF727272), AppDarkColors.textSecondary),
+                                        : adaptive(
+                                            context,
+                                            const Color(0xFF727272),
+                                            AppDarkColors.textSecondary),
                                     fontSize: 11.5,
                                     fontWeight: medicamento.estoqueBaixo
                                         ? FontWeight.w700
@@ -1689,7 +1677,8 @@ class _FrequenciaOpcao extends StatelessWidget {
         icon,
         color: selecionado
             ? const Color(0xFF0E6F7E)
-            : adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+            : adaptive(
+                context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
       ),
       title: Text(
         label,

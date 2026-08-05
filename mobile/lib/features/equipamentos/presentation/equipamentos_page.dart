@@ -11,6 +11,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/module_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 part 'equipamentos_formularios.dart';
@@ -290,7 +292,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
 
   void _back() {
     if (_view == _EquipamentosView.lista) {
-      context.go('/monitoramento');
+      context.go(moduleBackRoute(context));
       return;
     }
     if (_view == _EquipamentosView.manutencao ||
@@ -330,7 +332,9 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 personOf: idoso?.elderText.of ?? 'da pessoa idosa',
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
-                onHistory: () => context.push('/equipamentos/historico'),
+                onHistory: () => context.push(
+                  routeWithCurrentOrigin(context, '/equipamentos/historico'),
+                ),
               )
             : _EquipamentoDetails(
                 equipamento: _selected!,
@@ -366,14 +370,19 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 personOf: idoso.elderText.of,
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
-                onHistory: () => context.push('/equipamentos/historico'),
+                onHistory: () => context.push(
+                  routeWithCurrentOrigin(context, '/equipamentos/historico'),
+                ),
               );
     }
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -442,7 +451,8 @@ class _EquipamentosList extends StatelessWidget {
           'Lista de equipamentos',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+            color: adaptive(
+                context, const Color(0xFF073248), AppDarkColors.textPrimary),
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
@@ -494,7 +504,8 @@ class _EquipamentosList extends StatelessWidget {
           child: OutlinedButton(
             onPressed: onHistory,
             style: OutlinedButton.styleFrom(
-              foregroundColor: adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
+              foregroundColor: adaptive(
+                  context, const Color(0xFF222222), AppDarkColors.textPrimary),
               side: const BorderSide(
                 color: Color(0xFF1696AA),
                 width: 1.4,
@@ -563,7 +574,10 @@ class _EquipamentoCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800,
-                                color: adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
+                                color: adaptive(
+                                    context,
+                                    const Color(0xFF222222),
+                                    AppDarkColors.textPrimary),
                               ),
                             ),
                             Text(
@@ -603,7 +617,8 @@ class _EquipamentoCard extends StatelessWidget {
                       ),
                       Icon(
                         Icons.chevron_right_rounded,
-                        color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary),
+                        color: adaptive(context, const Color(0xFF777777),
+                            AppDarkColors.textSecondary),
                       ),
                     ],
                   ),

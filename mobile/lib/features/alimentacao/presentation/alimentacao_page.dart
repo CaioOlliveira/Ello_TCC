@@ -9,6 +9,8 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/module_header.dart';
 
 enum _AlimentacaoView { lista, tipo, form, galeria }
 
@@ -250,13 +252,15 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                   hidratacoes: _hidratacoes,
                   loading: _loading,
                   error: _error,
-                  onBack: () => context.go('/monitoramento'),
+                  onBack: () => context.go(moduleBackRoute(context)),
                   onRetry: _load,
                   onSaveWeight: _saveWeight,
                   onAddWater: _addWater,
                   onGallery: () =>
                       setState(() => _view = _AlimentacaoView.galeria),
-                  onHistory: () => context.push('/historico/alimentacao'),
+                  onHistory: () => context.push(
+                    routeWithCurrentOrigin(context, '/historico/alimentacao'),
+                  ),
                   onAdd: () => setState(() {
                     _editing = null;
                     _draftTipo = 'Café da manhã';
@@ -357,23 +361,15 @@ class _AlimentacaoListView extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
           child: Row(
             children: [
-              TextButton.icon(
-                onPressed: onBack,
-                icon: const Icon(Icons.chevron_left_rounded, size: 30),
-                label: const Text('Voltar'),
-                style: TextButton.styleFrom(
-                  foregroundColor: adaptive(context, const Color(0xFF073248),
-                      AppDarkColors.textPrimary),
-                ),
-              ),
+              ModuleBackButton(onPressed: onBack),
               Expanded(
                 child: Text(
                   'Alimentação',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF073248),
+                    color: adaptive(context, ModuleHeader.titleColor,
                         AppDarkColors.textPrimary),
-                    fontSize: 31,
+                    fontSize: ModuleHeader.titleStyle.fontSize,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -836,14 +832,7 @@ class _RecordatorioGalleryView extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
           child: Row(
             children: [
-              TextButton.icon(
-                onPressed: onBack,
-                icon: const Icon(Icons.chevron_left_rounded, size: 32),
-                label: const Text('Voltar'),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF0A7D8D),
-                ),
-              ),
+              ModuleBackButton(onPressed: onBack),
               Expanded(
                 child: Text(
                   'Recordatório',
@@ -851,11 +840,11 @@ class _RecordatorioGalleryView extends StatelessWidget {
                   style: TextStyle(
                     color: adaptive(
                       context,
-                      const Color(0xFF073248),
+                      ModuleHeader.titleColor,
                       AppDarkColors.textPrimary,
                     ),
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
+                    fontSize: ModuleHeader.titleStyle.fontSize,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -941,11 +930,7 @@ class _MealTypePickerView extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: onBack,
-              icon: const Icon(Icons.chevron_left_rounded, size: 32),
-              label: const Text('Voltar'),
-            ),
+            child: ModuleBackButton(onPressed: onBack),
           ),
           const SizedBox(height: 46),
           Text(
@@ -1732,7 +1717,8 @@ class _FoodPhotoPicker extends StatelessWidget {
                         Text(
                           'Tirar foto da comida',
                           style: TextStyle(
-                            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                            color: adaptive(context, const Color(0xFF073248),
+                                AppDarkColors.textPrimary),
                             fontWeight: FontWeight.w800,
                           ),
                         ),
