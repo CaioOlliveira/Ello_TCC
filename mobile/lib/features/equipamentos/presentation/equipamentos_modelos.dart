@@ -142,7 +142,7 @@ class EquipamentoFormData {
         ),
       if (localGuardado.isNotEmpty) 'localGuardado': localGuardado,
       if (urlManual.isNotEmpty) 'urlManual': urlManual,
-      if (urlFoto != null && urlFoto!.isNotEmpty) 'urlFoto': urlFoto,
+      'urlFoto': urlFoto,
       if (observacoesSeguranca.isNotEmpty)
         'observacoesSeguranca': observacoesSeguranca,
       if (includeDefaultStatus) 'status': 'Em uso',

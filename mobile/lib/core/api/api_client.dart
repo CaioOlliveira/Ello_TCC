@@ -1267,11 +1267,13 @@ class MedicamentoResumo {
     this.proximoHorario,
     this.proximoAtrasado = false,
     this.totalHorarios = 0,
+    this.horarios = const [],
   });
 
   factory MedicamentoResumo.fromJson(Map<String, dynamic> json) {
     final estoque = json['quantidadeEstoque'];
     final alerta = json['alertaEstoqueBaixo'];
+    final horarios = json['horarios'];
 
     return MedicamentoResumo(
       id: json['id']?.toString() ?? '',
@@ -1286,6 +1288,12 @@ class MedicamentoResumo {
       totalHorarios: json['totalHorarios'] is num
           ? (json['totalHorarios'] as num).toInt()
           : 0,
+      horarios: horarios is List
+          ? horarios
+              .whereType<Map<String, dynamic>>()
+              .map(MedicamentoHorario.fromJson)
+              .toList()
+          : const [],
     );
   }
 
@@ -1299,6 +1307,7 @@ class MedicamentoResumo {
   final String? proximoHorario;
   final bool proximoAtrasado;
   final int totalHorarios;
+  final List<MedicamentoHorario> horarios;
 
   bool get estoqueBaixo =>
       quantidadeEstoque != null &&
@@ -1811,6 +1820,8 @@ class _ApiMemoryCache<T> {
 }
 
 class ApiClient {
+  static const Object _omit = Object();
+
   ApiClient({required String baseUrl})
       : _dio = Dio(
           BaseOptions(
@@ -1959,7 +1970,7 @@ class ApiClient {
     String? nome,
     String? email,
     String? telefone,
-    String? urlFoto,
+    Object? urlFoto = _omit,
   }) async {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
@@ -1968,7 +1979,7 @@ class ApiClient {
           if (nome != null && nome.isNotEmpty) 'nome': nome,
           if (email != null && email.isNotEmpty) 'email': email,
           if (telefone != null) 'telefone': telefone,
-          if (urlFoto != null && urlFoto.isNotEmpty) 'urlFoto': urlFoto,
+          if (urlFoto != _omit) 'urlFoto': urlFoto,
         },
       );
       return response.data ?? <String, dynamic>{};

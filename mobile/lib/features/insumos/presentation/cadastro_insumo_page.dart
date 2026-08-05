@@ -62,6 +62,10 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
     });
   }
 
+  void _removeImage() {
+    setState(() => _fotoUrl = null);
+  }
+
   Future<void> _selectDate() async {
     final now = DateTime.now();
     final selected = await showDatePicker(
@@ -291,6 +295,14 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
                   ),
                   if (_fotoUrl != null)
                     _ProductImage(value: _fotoUrl, size: 28),
+                  if (_fotoUrl != null) ...[
+                    const SizedBox(width: 6),
+                    IconButton(
+                      onPressed: _removeImage,
+                      tooltip: 'Remover imagem',
+                      icon: const Icon(Icons.delete_outline_rounded),
+                    ),
+                  ],
                 ],
               ),
             ),

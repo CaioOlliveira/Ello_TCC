@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/module_header.dart';
@@ -97,16 +98,22 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   void _ensureResumo(String idosoId) {
     if (_resumoLoadedIdosoId == idosoId && _resumoFuture != null) return;
     _resumoLoadedIdosoId = idosoId;
-    _resumoFuture =
-        ref.read(apiClientProvider).getResumoMedicamentos(idosoId: idosoId);
+    _resumoFuture = _loadResumo(idosoId);
   }
 
   void _reloadResumo(String idosoId) {
     setState(() {
       _resumoLoadedIdosoId = idosoId;
-      _resumoFuture =
-          ref.read(apiClientProvider).getResumoMedicamentos(idosoId: idosoId);
+      _resumoFuture = _loadResumo(idosoId);
     });
+  }
+
+  Future<MedicamentosResumo> _loadResumo(String idosoId) async {
+    final resumo = await ref
+        .read(apiClientProvider)
+        .getResumoMedicamentos(idosoId: idosoId);
+    await _syncMedicamentoNotifications(idosoId, resumo);
+    return resumo;
   }
 
   void _ensureHistorico(String idosoId) {
@@ -364,6 +371,9 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();
+      await LocalNotificationService.instance.cancelGroup(
+        'medicamento-${idoso.id}-${medicamento.id}',
+      );
       _reloadResumo(idoso.id);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -523,6 +533,61 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         },
       ),
     );
+  }
+
+  Future<void> _syncMedicamentoNotifications(
+    String idosoId,
+    MedicamentosResumo resumo,
+  ) async {
+    try {
+      final service = LocalNotificationService.instance;
+      for (final medicamento in resumo.medicamentos) {
+        await service.replaceGroup(
+          'medicamento-$idosoId-${medicamento.id}',
+          _medicamentoNotificationRequests(medicamento),
+        );
+      }
+    } catch (_) {
+      // Nao bloqueia medicamentos se o sistema negar permissoes.
+    }
+  }
+
+  List<LocalNotificationRequest> _medicamentoNotificationRequests(
+    MedicamentoResumo medicamento,
+  ) {
+    final now = DateTime.now();
+    final end = now.add(const Duration(days: 30));
+    final requests = <LocalNotificationRequest>[];
+
+    for (final horario in medicamento.horarios) {
+      final parts = horario.horario.split(':');
+      if (parts.length < 2) continue;
+      final hour = int.tryParse(parts[0]);
+      final minute = int.tryParse(parts[1]);
+      if (hour == null || minute == null) continue;
+
+      for (var day = DateTime(now.year, now.month, now.day);
+          !day.isAfter(end) && requests.length < 64;
+          day = day.add(const Duration(days: 1))) {
+        if (!_medicamentoOccursOnDay(horario, day, now)) continue;
+        final scheduled = DateTime(day.year, day.month, day.day, hour, minute);
+        if (!scheduled.isAfter(now)) continue;
+
+        final dayKey = _isoDate(day);
+        final key = 'medicamento:${medicamento.id}:$dayKey:${horario.horario}';
+        requests.add(
+          LocalNotificationRequest(
+            id: stableNotificationId(key),
+            scheduledAt: scheduled,
+            title: 'Hora do medicamento',
+            body: '${medicamento.nome} - ${horario.horario}',
+            payload: key,
+          ),
+        );
+      }
+    }
+
+    return requests;
   }
 }
 
@@ -2389,6 +2454,52 @@ const _kToleranciaAtrasoMinutos = 30;
 String _statusComAtraso(DateTime administradoEm, DateTime horarioPrevisto) {
   final atrasoMinutos = administradoEm.difference(horarioPrevisto).inMinutes;
   return atrasoMinutos > _kToleranciaAtrasoMinutos ? 'atrasado' : 'tomado';
+}
+
+bool _medicamentoOccursOnDay(
+  MedicamentoHorario horario,
+  DateTime day,
+  DateTime reference,
+) {
+  switch (horario.frequenciaTipo.toLowerCase().trim()) {
+    case 'semanal':
+      if (horario.diasSemana.isEmpty) return true;
+      return horario.diasSemana
+          .map(_weekdayFromMedicationLabel)
+          .whereType<int>()
+          .contains(day.weekday);
+    case 'alternado':
+      final referenceDay = DateTime(
+        reference.year,
+        reference.month,
+        reference.day,
+      );
+      final targetDay = DateTime(day.year, day.month, day.day);
+      return targetDay.difference(referenceDay).inDays.isEven;
+    default:
+      return true;
+  }
+}
+
+int? _weekdayFromMedicationLabel(String value) {
+  final exactIndex = _kDiasSemana.indexOf(value);
+  if (exactIndex >= 0) return exactIndex == 0 ? DateTime.sunday : exactIndex;
+
+  final normalized = value.toLowerCase().trim();
+  if (normalized.startsWith('dom')) return DateTime.sunday;
+  if (normalized.startsWith('seg')) return DateTime.monday;
+  if (normalized.startsWith('ter')) return DateTime.tuesday;
+  if (normalized.startsWith('qua')) return DateTime.wednesday;
+  if (normalized.startsWith('qui')) return DateTime.thursday;
+  if (normalized.startsWith('sex')) return DateTime.friday;
+  if (normalized.startsWith('sab') || normalized.startsWith('sÃ¡b')) {
+    return DateTime.saturday;
+  }
+  return null;
+}
+
+String _isoDate(DateTime date) {
+  return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
 
 DateTime _horarioPrevistoParaAgora(String? proximoHorario, DateTime agora) {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/module_header.dart';
@@ -64,14 +65,21 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
           }
         }
       });
+      await _syncAgendaNotifications(items: items, idosoId: idoso.id);
       ref
           .read(apiClientProvider)
           .listarHistoricoAgenda(idosoId: idoso.id)
           .catchError((_) => const <Map<String, dynamic>>[]);
-    } on ApiException {
+    } on ApiException catch (error) {
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (_) {
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao foi possivel carregar a agenda.')),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -152,12 +160,19 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       if (serverItem != null) {
         setState(() => _upsertItem(serverItem, replaceId: localId));
       }
-    } on ApiException {
+      await _load();
+    } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _items = previousItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _items = previousItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao foi possivel salvar o compromisso.')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -194,12 +209,20 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     try {
       await ref.read(apiClientProvider).removerCompromisso(id: item.id);
       if (!mounted) return;
-    } on ApiException {
+      await _syncAgendaNotifications();
+    } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _items = previousItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _items = previousItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Nao foi possivel excluir o compromisso.')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -207,6 +230,13 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
 
   Future<void> _toggleStatus(AgendaCompromisso item) async {
     final nextStatus = item.status == 'concluido' ? 'agendado' : 'concluido';
+    await _updateOccurrenceStatus(item, nextStatus);
+  }
+
+  Future<void> _updateOccurrenceStatus(
+    AgendaCompromisso item,
+    String nextStatus,
+  ) async {
     final occurrenceDate = item.dataOcorrencia ?? _selectedDay;
     final occurrenceKey = formatAgendaIsoDate(occurrenceDate);
     final sourceItem = _items.firstWhere(
@@ -243,24 +273,38 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       if (serverItem != null) {
         setState(() => _upsertItem(serverItem));
       }
-    } on ApiException {
+      await _syncAgendaNotifications();
+    } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _items = previousItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _items = previousItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel atualizar o compromisso.'),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _cancel(AgendaCompromisso item) async {
+    if (item.status == 'cancelado') {
+      await _updateOccurrenceStatus(item, 'agendado');
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancelar compromisso'),
         content: Text(
-          'Deseja cancelar "${item.titulo}"? Se for recorrente, ele deixara de aparecer nos proximos dias.',
+          'Deseja cancelar "${item.titulo}" apenas neste dia? Ele continuara aparecendo como cancelado e podera ser reaberto.',
         ),
         actions: [
           TextButton(
@@ -276,37 +320,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     );
 
     if (confirmed == true) {
-      await _updateStatus(item, 'cancelado');
-    }
-  }
-
-  Future<void> _updateStatus(AgendaCompromisso item, String nextStatus) async {
-    final previousItems = List<AgendaCompromisso>.from(_items);
-    setState(() {
-      _saving = true;
-      _upsertItem(item.copyWith(status: nextStatus));
-    });
-    try {
-      final response = await ref.read(apiClientProvider).atualizarCompromisso(
-        id: item.id,
-        data: {'status': nextStatus},
-      );
-      if (!mounted) return;
-      final serverItem = _itemFromResponse(
-        response,
-        fallback: item.copyWith(status: nextStatus),
-      );
-      if (serverItem != null) {
-        setState(() => _upsertItem(serverItem));
-      }
-    } on ApiException {
-      if (!mounted) return;
-      setState(() => _items = previousItems);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _items = previousItems);
-    } finally {
-      if (mounted) setState(() => _saving = false);
+      await _updateOccurrenceStatus(item, 'cancelado');
     }
   }
 
@@ -366,6 +380,79 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
 
   int _compareAgendaItems(AgendaCompromisso a, AgendaCompromisso b) {
     return a.dataHora.compareTo(b.dataHora);
+  }
+
+  Future<void> _syncAgendaNotifications({
+    List<AgendaCompromisso>? items,
+    String? idosoId,
+  }) async {
+    final selectedIdoso = ref.read(selectedIdosoProvider);
+    final targetIdosoId = idosoId ?? selectedIdoso?.id;
+    if (targetIdosoId == null || targetIdosoId.isEmpty) return;
+
+    final requests = _agendaNotificationRequests(items ?? _items);
+    try {
+      await LocalNotificationService.instance.replaceGroup(
+        'agenda-$targetIdosoId',
+        requests,
+      );
+    } catch (_) {
+      // Nao bloqueia a agenda se o sistema negar permissoes de notificacao.
+    }
+  }
+
+  List<LocalNotificationRequest> _agendaNotificationRequests(
+    List<AgendaCompromisso> items,
+  ) {
+    final now = DateTime.now();
+    final end = now.add(const Duration(days: 60));
+    final requests = <LocalNotificationRequest>[];
+
+    for (final item in items) {
+      if (!item.ativarLembrete) continue;
+
+      for (var day = DateTime(now.year, now.month, now.day);
+          !day.isAfter(end) && requests.length < 64;
+          day = day.add(const Duration(days: 1))) {
+        if (!agendaItemOccursOnDay(
+          start: item.dataHora,
+          frequencia: item.frequencia,
+          status: item.status,
+          day: day,
+        )) {
+          continue;
+        }
+        final statusNoDia = item.statusNoDia(day);
+        if (statusNoDia != 'agendado') continue;
+
+        final occurrence = DateTime(
+          day.year,
+          day.month,
+          day.day,
+          item.dataHora.hour,
+          item.dataHora.minute,
+        );
+        final reminder = occurrence.subtract(
+          Duration(minutes: item.antecedenciaLembreteMinutos),
+        );
+        if (!reminder.isAfter(now)) continue;
+
+        final key = 'agenda:${item.id}:${formatAgendaIsoDate(day)}';
+        requests.add(
+          LocalNotificationRequest(
+            id: stableNotificationId(key),
+            scheduledAt: reminder,
+            title: 'Compromisso: ${item.titulo}',
+            body: item.local.isEmpty
+                ? 'Horario: ${formatAgendaTime(occurrence)}'
+                : '${formatAgendaTime(occurrence)} - ${item.local}',
+            payload: key,
+          ),
+        );
+      }
+    }
+
+    return requests;
   }
 
   List<AgendaCompromisso> get _itemsForSelectedDay {
@@ -821,6 +908,7 @@ class _TimelineItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final done = item.status == 'concluido';
+    final canceled = item.status == 'cancelado';
 
     return IntrinsicHeight(
       child: Row(
@@ -870,7 +958,7 @@ class _TimelineItem extends StatelessWidget {
                         height: 34,
                         child: Checkbox(
                           value: done,
-                          onChanged: (_) => onStatusChanged(),
+                          onChanged: canceled ? null : (_) => onStatusChanged(),
                           activeColor: const Color(0xFF34A4B7),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(5),
@@ -883,13 +971,17 @@ class _TimelineItem extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: adaptive(context, Colors.black,
-                                AppDarkColors.textPrimary),
+                            color: canceled
+                                ? adaptive(context, const Color(0xFF777777),
+                                    AppDarkColors.textSecondary)
+                                : adaptive(context, Colors.black,
+                                    AppDarkColors.textPrimary),
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             height: 0.95,
-                            decoration:
-                                done ? TextDecoration.lineThrough : null,
+                            decoration: done || canceled
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
                         ),
                       ),
@@ -914,9 +1006,9 @@ class _TimelineItem extends StatelessWidget {
                               done ? 'Reabrir' : 'Concluir',
                             ),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'cancelar',
-                            child: Text('Cancelar'),
+                            child: Text(canceled ? 'Reabrir' : 'Cancelar'),
                           ),
                           const PopupMenuItem(
                             value: 'excluir',
@@ -927,6 +1019,13 @@ class _TimelineItem extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 3),
+                  if (canceled) ...[
+                    const _StatusLabel(
+                      icon: Icons.event_busy_rounded,
+                      label: 'Cancelado neste dia',
+                    ),
+                    const SizedBox(height: 6),
+                  ],
                   Text(
                     item.local.isEmpty ? 'Local nao informado' : item.local,
                     maxLines: 1,
@@ -982,6 +1081,31 @@ class _TimelineItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StatusLabel extends StatelessWidget {
+  const _StatusLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFFD73A3A), size: 14),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFD73A3A),
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }

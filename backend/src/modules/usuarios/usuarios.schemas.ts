@@ -7,7 +7,8 @@ const fotoUsuarioSchema = z
       z.string().url().safeParse(value).success ||
       /^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/]+={0,2}$/i.test(value),
     "URL da foto invalida.",
-  );
+  )
+  .nullable();
 
 export const criarUsuarioSchema = z.object({
   nome: z.string().min(1, "Nome e obrigatorio."),

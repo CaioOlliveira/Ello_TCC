@@ -187,6 +187,10 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
     });
   }
 
+  void _removerFoto() {
+    setState(() => _urlFoto = null);
+  }
+
   Future<void> _salvar() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final usuario = ref.read(authSessionProvider);
@@ -251,14 +255,38 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
                 ),
                 const SizedBox(height: 18),
                 Center(
-                  child: InkWell(
-                    onTap: _loading ? null : _selecionarFoto,
-                    borderRadius: BorderRadius.circular(99),
-                    child: _Avatar(
-                      value: _urlFoto,
-                      radius: 45,
-                      placeholder: 'adicionar\nfoto',
-                    ),
+                  child: Column(
+                    children: [
+                      InkWell(
+                        onTap: _loading ? null : _selecionarFoto,
+                        borderRadius: BorderRadius.circular(99),
+                        child: _Avatar(
+                          value: _urlFoto,
+                          radius: 45,
+                          placeholder: 'adicionar\nfoto',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        children: [
+                          TextButton.icon(
+                            onPressed: _loading ? null : _selecionarFoto,
+                            icon: const Icon(Icons.photo_camera_rounded),
+                            label: Text(_urlFoto == null
+                                ? 'Adicionar foto'
+                                : 'Trocar foto'),
+                          ),
+                          if (_urlFoto != null && _urlFoto!.isNotEmpty)
+                            TextButton.icon(
+                              onPressed: _loading ? null : _removerFoto,
+                              icon: const Icon(Icons.delete_outline_rounded),
+                              label: const Text('Remover foto'),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 20),

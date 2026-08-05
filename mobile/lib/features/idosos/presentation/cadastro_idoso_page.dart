@@ -113,6 +113,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     return null;
   }
 
+  bool get _hasProfileImage => _profileImageProvider != null;
+
   @override
   void dispose() {
     _nomeController.dispose();
@@ -133,6 +135,13 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     if (bytes == null) return;
     if (!mounted) return;
     setState(() => _fotoBytes = bytes);
+  }
+
+  void _removerFoto() {
+    setState(() {
+      _fotoBytes = null;
+      _fotoUrl = null;
+    });
   }
 
   Future<void> _selecionarData() async {
@@ -262,7 +271,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                 if (usuarioId != null && usuarioId.isNotEmpty)
                   'criadoPorId': usuarioId,
                 if (dataNascimento != null) 'dataNascimento': dataNascimento,
-                if (fotoUrl != null && fotoUrl.isNotEmpty) 'urlFoto': fotoUrl,
+                'urlFoto': fotoUrl,
                 if (normalizeSexo(_sexo) != null) 'sexo': normalizeSexo(_sexo),
                 if (_tipoSanguineoController.text.trim().isNotEmpty)
                   'tipoSanguineo': _tipoSanguineoController.text.trim(),
@@ -584,34 +593,43 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       children: [
         Row(
           children: [
-            InkWell(
-              onTap: _selecionarFoto,
-              borderRadius: BorderRadius.circular(50),
-              child: Container(
-                width: 66,
-                height: 66,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD3F0F3),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF2799AD),
-                    style: BorderStyle.solid,
+            Column(
+              children: [
+                InkWell(
+                  onTap: _selecionarFoto,
+                  borderRadius: BorderRadius.circular(50),
+                  child: Container(
+                    width: 66,
+                    height: 66,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD3F0F3),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF2799AD),
+                        style: BorderStyle.solid,
+                      ),
+                      image: _profileImageProvider == null
+                          ? null
+                          : DecorationImage(
+                              image: _profileImageProvider!,
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                    child: _profileImageProvider == null
+                        ? const Icon(
+                            Icons.add_rounded,
+                            color: Color(0xFF2697AA),
+                            size: 38,
+                          )
+                        : null,
                   ),
-                  image: _profileImageProvider == null
-                      ? null
-                      : DecorationImage(
-                          image: _profileImageProvider!,
-                          fit: BoxFit.cover,
-                        ),
                 ),
-                child: _profileImageProvider == null
-                    ? const Icon(
-                        Icons.add_rounded,
-                        color: Color(0xFF2697AA),
-                        size: 38,
-                      )
-                    : null,
-              ),
+                if (_hasProfileImage)
+                  TextButton(
+                    onPressed: _removerFoto,
+                    child: const Text('Remover'),
+                  ),
+              ],
             ),
             const SizedBox(width: 16),
             Column(
