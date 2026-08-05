@@ -365,7 +365,7 @@ export const idososService = {
       dadosNovos: idoso,
     });
 
-    return idoso;
+    return this.buscarPorId(String(idoso.id));
   },
 
   async atualizar(idosoId: string, input: AtualizarIdosoInput) {
@@ -403,7 +403,7 @@ export const idososService = {
       dadosNovos: atualizado,
     });
 
-    return atualizado;
+    return this.buscarPorId(idosoId);
   },
 
   async remover(idosoId: string, usuarioId?: string) {

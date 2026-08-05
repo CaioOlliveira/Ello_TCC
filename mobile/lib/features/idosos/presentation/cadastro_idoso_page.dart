@@ -303,42 +303,43 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
 
       if (!mounted) return;
       ref.invalidate(idososDoUsuarioProvider);
+      ref.invalidate(fichasAdministradasProvider);
       final dados = response['dados'];
-      final idosoId = dados is Map<String, dynamic>
-          ? dados['id']?.toString() ?? selectedIdoso?.id ?? ''
-          : selectedIdoso?.id ?? '';
-      ref.read(selectedIdosoProvider.notifier).state = IdosoResumo(
-        id: idosoId,
-        nome: _nomeController.text.trim(),
-        idade: int.tryParse(_idadeController.text.trim()) ?? 0,
-        urlFoto: fotoUrl,
-        dataNascimento: dataNascimento,
-        sexo: normalizeSexo(_sexo),
-        tipoSanguineo: _tipoSanguineoController.text.trim().isEmpty
-            ? null
-            : _tipoSanguineoController.text.trim(),
-        limitacoes: _limitacoesController.text.trim().isEmpty
-            ? null
-            : _limitacoesController.text.trim(),
-        alergiasRestricoes: _alergiasController.text.trim().isEmpty
-            ? null
-            : _alergiasController.text.trim(),
-        observacoesGerais: _observacoesController.text.trim().isEmpty
-            ? null
-            : _observacoesController.text.trim(),
-        contatoEmergenciaNome: _contatoNomeController.text.trim().isEmpty
-            ? null
-            : _contatoNomeController.text.trim(),
-        contatoEmergenciaTelefone: _telefoneController.text.trim().isEmpty
-            ? null
-            : _telefoneController.text.trim(),
-        contatoEmergenciaParentesco:
-            _contatoParentescoController.text.trim().isEmpty
-                ? null
-                : _contatoParentescoController.text.trim(),
-        condicoes: _condicoes,
-        monitoramentos: _monitoramentosSelecionados.toList(),
-      );
+      ref.read(selectedIdosoProvider.notifier).state = dados
+              is Map<String, dynamic>
+          ? IdosoResumo.fromJson(dados)
+          : IdosoResumo(
+              id: selectedIdoso?.id ?? '',
+              nome: _nomeController.text.trim(),
+              idade: int.tryParse(_idadeController.text.trim()) ?? 0,
+              urlFoto: fotoUrl,
+              dataNascimento: dataNascimento,
+              sexo: normalizeSexo(_sexo),
+              tipoSanguineo: _tipoSanguineoController.text.trim().isEmpty
+                  ? null
+                  : _tipoSanguineoController.text.trim(),
+              limitacoes: _limitacoesController.text.trim().isEmpty
+                  ? null
+                  : _limitacoesController.text.trim(),
+              alergiasRestricoes: _alergiasController.text.trim().isEmpty
+                  ? null
+                  : _alergiasController.text.trim(),
+              observacoesGerais: _observacoesController.text.trim().isEmpty
+                  ? null
+                  : _observacoesController.text.trim(),
+              contatoEmergenciaNome: _contatoNomeController.text.trim().isEmpty
+                  ? null
+                  : _contatoNomeController.text.trim(),
+              contatoEmergenciaTelefone: _telefoneController.text.trim().isEmpty
+                  ? null
+                  : _telefoneController.text.trim(),
+              contatoEmergenciaParentesco:
+                  _contatoParentescoController.text.trim().isEmpty
+                      ? null
+                      : _contatoParentescoController.text.trim(),
+              condicoes: _condicoes,
+              monitoramentos: _monitoramentosSelecionados.toList(),
+            );
       context.go(_isEditing ? _backRoute : '/dashboard');
     } on ApiException catch (error) {
       if (!mounted) return;

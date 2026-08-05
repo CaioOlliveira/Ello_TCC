@@ -25,22 +25,31 @@ class IdosoResumo {
   });
 
   factory IdosoResumo.fromJson(Map<String, dynamic> json) {
-    final condicoes = json['condicoes'];
+    final condicoes = json['condicoes'] ??
+        json['condicoesSaude'] ??
+        json['observacoes_saude'];
     final monitoramentos = json['monitoramentos'];
+    final dataNascimento = json['dataNascimento']?.toString() ??
+        json['data_nascimento']?.toString();
 
     return IdosoResumo(
       id: json['id']?.toString() ?? '',
-      nome: json['nome']?.toString() ?? 'Sem nome',
-      idade: json['idade'] is num ? (json['idade'] as num).toInt() : 0,
+      nome: json['nome']?.toString() ??
+          json['nomeCompleto']?.toString() ??
+          json['nome_completo']?.toString() ??
+          'Sem nome',
+      idade: json['idade'] is num
+          ? (json['idade'] as num).toInt()
+          : _idadeFromDate(dataNascimento),
       urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
       pesoKg: _numOrNull(json['pesoKg'] ?? json['peso_kg']),
       tipoSanguineo: json['tipoSanguineo']?.toString() ??
           json['tipo_sanguineo']?.toString(),
-      dataNascimento: json['dataNascimento']?.toString() ??
-          json['data_nascimento']?.toString(),
+      dataNascimento: dataNascimento,
       sexo: normalizeSexo(json['sexo']?.toString()) ?? json['sexo']?.toString(),
       limitacoes: json['limitacoes']?.toString(),
       observacoesGerais: json['observacoesGerais']?.toString() ??
+          json['observacoes_gerais']?.toString() ??
           json['observacoes_saude']?.toString(),
       alergiasRestricoes: json['alergiasRestricoes']?.toString() ??
           json['alergias_restricoes']?.toString(),
@@ -52,9 +61,7 @@ class IdosoResumo {
       contatoEmergenciaParentesco:
           json['contatoEmergenciaParentesco']?.toString() ??
               json['contato_emergencia_parentesco']?.toString(),
-      condicoes: condicoes is List
-          ? condicoes.map((item) => item.toString()).toList()
-          : const [],
+      condicoes: _stringList(condicoes),
       monitoramentos: monitoramentos is List
           ? monitoramentos.map((item) => item.toString()).toList()
           : const [],
@@ -119,6 +126,38 @@ class IdosoResumo {
       monitoramentos: monitoramentos ?? this.monitoramentos,
     );
   }
+}
+
+int _idadeFromDate(String? value) {
+  if (value == null || value.length < 10) return 0;
+  final date = DateTime.tryParse(value.substring(0, 10));
+  if (date == null) return 0;
+  final now = DateTime.now();
+  var age = now.year - date.year;
+  if (now.month < date.month ||
+      (now.month == date.month && now.day < date.day)) {
+    age--;
+  }
+  return age < 0 ? 0 : age;
+}
+
+List<String> _stringList(dynamic value) {
+  if (value is List) {
+    return value
+        .map((item) => item.toString())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  if (value is String && value.trim().isNotEmpty) {
+    return value
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  return const [];
 }
 
 class AiConversa {
