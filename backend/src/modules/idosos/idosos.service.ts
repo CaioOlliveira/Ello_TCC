@@ -14,6 +14,7 @@ export type Idoso = {
   id: string;
   nome: string;
   idade: number;
+  criadoPorId?: string | null;
   urlFoto?: string | null;
   pesoKg?: number | null;
   tipoSanguineo?: string | null;
@@ -52,6 +53,7 @@ type IdosoRow = {
   id: string;
   nome: string;
   idade: number | null;
+  criado_por_id: string | null;
   url_foto: string | null;
   peso_kg: string | number | null;
   tipo_sanguineo: string | null;
@@ -86,6 +88,7 @@ const mapearIdoso = (row: IdosoRow): Idoso => ({
   id: row.id,
   nome: row.nome,
   idade: Number(row.idade ?? 0),
+  criadoPorId: row.criado_por_id,
   urlFoto: row.url_foto,
   pesoKg: row.peso_kg == null ? null : Number(row.peso_kg),
   tipoSanguineo: row.tipo_sanguineo,
@@ -111,6 +114,48 @@ const isUuid = (value: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
+
+const quoteIdentifier = (value: string): string =>
+  `"${value.replace(/"/g, '""')}"`;
+
+const limparDadosDaFicha = async (idosoId: string) => {
+  const pool = getPool();
+
+  await pool.query("delete from historico_alteracoes where idoso_id = $1", [
+    idosoId,
+  ]);
+  await pool.query("update conversas_ia set idoso_id = null where idoso_id = $1", [
+    idosoId,
+  ]);
+
+  const tabelas = await pool.query<{ table_schema: string; table_name: string }>(
+    `
+      select c.table_schema, c.table_name
+      from information_schema.columns c
+      join information_schema.tables t
+        on t.table_schema = c.table_schema
+       and t.table_name = c.table_name
+      where c.column_name = 'idoso_id'
+        and c.table_schema = 'public'
+        and t.table_type = 'BASE TABLE'
+        and c.table_name not in (
+          'fichas_idosos',
+          'historico_alteracoes',
+          'conversas_ia'
+        )
+      order by c.table_name
+    `,
+  );
+
+  for (const tabela of tabelas.rows) {
+    await pool.query(
+      `delete from ${quoteIdentifier(tabela.table_schema)}.${quoteIdentifier(
+        tabela.table_name,
+      )} where idoso_id = $1`,
+      [idosoId],
+    );
+  }
+};
 
 const prepararInput = <T extends AtualizarIdosoInput | CriarIdosoInput>(
   input: T,
@@ -168,6 +213,7 @@ export const idososService = {
         `
         select
           id,
+          criado_por_id,
           nome_completo as nome,
           url_foto,
           peso_kg,
@@ -223,6 +269,7 @@ export const idososService = {
       `
         select
           id,
+          criado_por_id,
           nome_completo as nome,
           url_foto,
           peso_kg,
@@ -282,6 +329,7 @@ export const idososService = {
         `
           select
             id,
+            criado_por_id,
             nome_completo as nome,
             url_foto,
             peso_kg,
@@ -407,52 +455,82 @@ export const idososService = {
   },
 
   async remover(idosoId: string, usuarioId?: string) {
-    const anterior = await getRowById<Record<string, unknown>>(
-      "fichas_idosos",
-      idosoId,
-      "IDOSO_NAO_ENCONTRADO",
-      "Idoso não encontrado.",
-    );
-
-    const atualizado = await updateRow<
-      { ativo: boolean },
-      Record<string, unknown>
+    const anterior = await getRowById<
+      Record<string, unknown> & { criado_por_id?: string }
     >(
       "fichas_idosos",
       idosoId,
-      { ativo: false },
-      { ativo: "ativo" },
       "IDOSO_NAO_ENCONTRADO",
-      "Idoso não encontrado.",
+      "Idoso nao encontrado.",
     );
 
-    await registrarHistorico({
-      usuarioId,
-      idosoId,
-      acao: "desativar",
-      tipoEntidade: "fichas_idosos",
-      entidadeId: idosoId,
-      dadosAnteriores: anterior,
-      dadosNovos: atualizado,
-    });
+    if (isDatabaseEnabled && usuarioId && anterior.criado_por_id !== usuarioId) {
+      const result = await getPool().query<Record<string, unknown>>(
+        `
+          update membros_ficha
+          set status = 'revogado'
+          where idoso_id = $1
+            and usuario_id = $2
+            and status = 'ativo'
+          returning *
+        `,
+        [idosoId, usuarioId],
+      );
+
+      if ((result.rowCount ?? 0) === 0) {
+        throw new AppError(
+          "ACESSO_FICHA_NAO_ENCONTRADO",
+          "Acesso a ficha nao encontrado.",
+          404,
+        );
+      }
+
+      await registrarHistorico({
+        usuarioId,
+        idosoId,
+        acao: "sair",
+        tipoEntidade: "membros_ficha",
+        entidadeId: String(result.rows[0]?.id ?? idosoId),
+        dadosAnteriores: { idoso_id: idosoId, usuario_id: usuarioId },
+        dadosNovos: result.rows[0],
+      });
+      return;
+    }
+
+    await this.excluirPermanentemente(idosoId, usuarioId);
   },
 
   async excluirPermanentemente(idosoId: string, usuarioId?: string) {
-    const anterior = await getRowById<Record<string, unknown>>(
+    const anterior = await getRowById<
+      Record<string, unknown> & { criado_por_id?: string }
+    >(
       "fichas_idosos",
       idosoId,
       "IDOSO_NAO_ENCONTRADO",
-      "Idoso não encontrado.",
+      "Idoso nao encontrado.",
     );
+
+    if (usuarioId && anterior.criado_por_id !== usuarioId) {
+      throw new AppError(
+        "APENAS_DONO_EXCLUI_FICHA",
+        "Apenas o dono da ficha pode exclui-la permanentemente.",
+        403,
+      );
+    }
+
+    if (isDatabaseEnabled) {
+      await limparDadosDaFicha(idosoId);
+    }
+
     await deleteRow(
       "fichas_idosos",
       idosoId,
       "IDOSO_NAO_ENCONTRADO",
-      "Idoso não encontrado.",
+      "Idoso nao encontrado.",
     );
     await registrarHistorico({
       usuarioId,
-      idosoId,
+      idosoId: null,
       acao: "excluir",
       tipoEntidade: "fichas_idosos",
       entidadeId: idosoId,

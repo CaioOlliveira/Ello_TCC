@@ -10,6 +10,7 @@ class IdosoResumo {
     required this.nome,
     required this.idade,
     required this.condicoes,
+    this.criadoPorId,
     this.urlFoto,
     this.pesoKg,
     this.tipoSanguineo,
@@ -41,6 +42,8 @@ class IdosoResumo {
       idade: json['idade'] is num
           ? (json['idade'] as num).toInt()
           : _idadeFromDate(dataNascimento),
+      criadoPorId:
+          json['criadoPorId']?.toString() ?? json['criado_por_id']?.toString(),
       urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
       pesoKg: _numOrNull(json['pesoKg'] ?? json['peso_kg']),
       tipoSanguineo: json['tipoSanguineo']?.toString() ??
@@ -71,6 +74,7 @@ class IdosoResumo {
   final String id;
   final String nome;
   final int idade;
+  final String? criadoPorId;
   final String? urlFoto;
   final double? pesoKg;
   final String? tipoSanguineo;
@@ -90,6 +94,7 @@ class IdosoResumo {
   IdosoResumo copyWith({
     String? nome,
     int? idade,
+    String? criadoPorId,
     String? urlFoto,
     double? pesoKg,
     String? tipoSanguineo,
@@ -108,6 +113,7 @@ class IdosoResumo {
       id: id,
       nome: nome ?? this.nome,
       idade: idade ?? this.idade,
+      criadoPorId: criadoPorId ?? this.criadoPorId,
       urlFoto: urlFoto ?? this.urlFoto,
       pesoKg: pesoKg ?? this.pesoKg,
       tipoSanguineo: tipoSanguineo ?? this.tipoSanguineo,
@@ -2360,6 +2366,22 @@ class ApiClient {
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao atualizar ficha.');
+    }
+  }
+
+  Future<void> removerIdoso({
+    required String id,
+    required String usuarioId,
+  }) async {
+    try {
+      await _dio.delete<void>(
+        ApiEndpoints.idoso(id),
+        data: {
+          if (usuarioId.isNotEmpty) 'usuarioId': usuarioId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao remover ficha.');
     }
   }
 
