@@ -10,6 +10,8 @@ class IdosoResumo {
     required this.nome,
     required this.idade,
     required this.condicoes,
+    this.criadoPorId,
+    this.ehDono,
     this.urlFoto,
     this.pesoKg,
     this.tipoSanguineo,
@@ -25,22 +27,34 @@ class IdosoResumo {
   });
 
   factory IdosoResumo.fromJson(Map<String, dynamic> json) {
-    final condicoes = json['condicoes'];
+    final condicoes = json['condicoes'] ??
+        json['condicoesSaude'] ??
+        json['observacoes_saude'];
     final monitoramentos = json['monitoramentos'];
+    final dataNascimento = json['dataNascimento']?.toString() ??
+        json['data_nascimento']?.toString();
 
     return IdosoResumo(
       id: json['id']?.toString() ?? '',
-      nome: json['nome']?.toString() ?? 'Sem nome',
-      idade: json['idade'] is num ? (json['idade'] as num).toInt() : 0,
+      nome: json['nome']?.toString() ??
+          json['nomeCompleto']?.toString() ??
+          json['nome_completo']?.toString() ??
+          'Sem nome',
+      idade: json['idade'] is num
+          ? (json['idade'] as num).toInt()
+          : _idadeFromDate(dataNascimento),
+      criadoPorId:
+          json['criadoPorId']?.toString() ?? json['criado_por_id']?.toString(),
+      ehDono: _boolOrNull(json['ehDono'] ?? json['eh_dono']),
       urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
       pesoKg: _numOrNull(json['pesoKg'] ?? json['peso_kg']),
       tipoSanguineo: json['tipoSanguineo']?.toString() ??
           json['tipo_sanguineo']?.toString(),
-      dataNascimento: json['dataNascimento']?.toString() ??
-          json['data_nascimento']?.toString(),
+      dataNascimento: dataNascimento,
       sexo: normalizeSexo(json['sexo']?.toString()) ?? json['sexo']?.toString(),
       limitacoes: json['limitacoes']?.toString(),
       observacoesGerais: json['observacoesGerais']?.toString() ??
+          json['observacoes_gerais']?.toString() ??
           json['observacoes_saude']?.toString(),
       alergiasRestricoes: json['alergiasRestricoes']?.toString() ??
           json['alergias_restricoes']?.toString(),
@@ -52,9 +66,7 @@ class IdosoResumo {
       contatoEmergenciaParentesco:
           json['contatoEmergenciaParentesco']?.toString() ??
               json['contato_emergencia_parentesco']?.toString(),
-      condicoes: condicoes is List
-          ? condicoes.map((item) => item.toString()).toList()
-          : const [],
+      condicoes: _stringList(condicoes),
       monitoramentos: monitoramentos is List
           ? monitoramentos.map((item) => item.toString()).toList()
           : const [],
@@ -64,6 +76,8 @@ class IdosoResumo {
   final String id;
   final String nome;
   final int idade;
+  final String? criadoPorId;
+  final bool? ehDono;
   final String? urlFoto;
   final double? pesoKg;
   final String? tipoSanguineo;
@@ -83,6 +97,8 @@ class IdosoResumo {
   IdosoResumo copyWith({
     String? nome,
     int? idade,
+    String? criadoPorId,
+    bool? ehDono,
     String? urlFoto,
     double? pesoKg,
     String? tipoSanguineo,
@@ -101,6 +117,8 @@ class IdosoResumo {
       id: id,
       nome: nome ?? this.nome,
       idade: idade ?? this.idade,
+      criadoPorId: criadoPorId ?? this.criadoPorId,
+      ehDono: ehDono ?? this.ehDono,
       urlFoto: urlFoto ?? this.urlFoto,
       pesoKg: pesoKg ?? this.pesoKg,
       tipoSanguineo: tipoSanguineo ?? this.tipoSanguineo,
@@ -119,6 +137,46 @@ class IdosoResumo {
       monitoramentos: monitoramentos ?? this.monitoramentos,
     );
   }
+}
+
+int _idadeFromDate(String? value) {
+  if (value == null || value.length < 10) return 0;
+  final date = DateTime.tryParse(value.substring(0, 10));
+  if (date == null) return 0;
+  final now = DateTime.now();
+  var age = now.year - date.year;
+  if (now.month < date.month ||
+      (now.month == date.month && now.day < date.day)) {
+    age--;
+  }
+  return age < 0 ? 0 : age;
+}
+
+List<String> _stringList(dynamic value) {
+  if (value is List) {
+    return value
+        .map((item) => item.toString())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  if (value is String && value.trim().isNotEmpty) {
+    return value
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  return const [];
+}
+
+bool? _boolOrNull(Object? value) {
+  if (value is bool) return value;
+  final text = value?.toString().toLowerCase();
+  if (text == 'true') return true;
+  if (text == 'false') return false;
+  return null;
 }
 
 class AiConversa {
@@ -1228,11 +1286,13 @@ class MedicamentoResumo {
     this.proximoHorario,
     this.proximoAtrasado = false,
     this.totalHorarios = 0,
+    this.horarios = const [],
   });
 
   factory MedicamentoResumo.fromJson(Map<String, dynamic> json) {
     final estoque = json['quantidadeEstoque'];
     final alerta = json['alertaEstoqueBaixo'];
+    final horarios = json['horarios'];
 
     return MedicamentoResumo(
       id: json['id']?.toString() ?? '',
@@ -1247,6 +1307,12 @@ class MedicamentoResumo {
       totalHorarios: json['totalHorarios'] is num
           ? (json['totalHorarios'] as num).toInt()
           : 0,
+      horarios: horarios is List
+          ? horarios
+              .whereType<Map<String, dynamic>>()
+              .map(MedicamentoHorario.fromJson)
+              .toList()
+          : const [],
     );
   }
 
@@ -1260,6 +1326,7 @@ class MedicamentoResumo {
   final String? proximoHorario;
   final bool proximoAtrasado;
   final int totalHorarios;
+  final List<MedicamentoHorario> horarios;
 
   bool get estoqueBaixo =>
       quantidadeEstoque != null &&
@@ -1772,6 +1839,8 @@ class _ApiMemoryCache<T> {
 }
 
 class ApiClient {
+  static const Object _omit = Object();
+
   ApiClient({required String baseUrl})
       : _dio = Dio(
           BaseOptions(
@@ -1920,7 +1989,7 @@ class ApiClient {
     String? nome,
     String? email,
     String? telefone,
-    String? urlFoto,
+    Object? urlFoto = _omit,
   }) async {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
@@ -1929,7 +1998,7 @@ class ApiClient {
           if (nome != null && nome.isNotEmpty) 'nome': nome,
           if (email != null && email.isNotEmpty) 'email': email,
           if (telefone != null) 'telefone': telefone,
-          if (urlFoto != null && urlFoto.isNotEmpty) 'urlFoto': urlFoto,
+          if (urlFoto != _omit) 'urlFoto': urlFoto,
         },
       );
       return response.data ?? <String, dynamic>{};
@@ -2310,6 +2379,22 @@ class ApiClient {
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao atualizar ficha.');
+    }
+  }
+
+  Future<void> removerIdoso({
+    required String id,
+    required String usuarioId,
+  }) async {
+    try {
+      await _dio.delete<void>(
+        ApiEndpoints.idoso(id),
+        data: {
+          if (usuarioId.isNotEmpty) 'usuarioId': usuarioId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao remover ficha.');
     }
   }
 

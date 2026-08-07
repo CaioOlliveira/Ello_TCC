@@ -475,6 +475,7 @@ export const medicamentosService = {
         proximoHorario,
         proximoAtrasado: atrasado,
         totalHorarios: horariosResult.rows.length,
+        horarios: horariosResult.rows,
       };
 
       medicamentos.push(item);

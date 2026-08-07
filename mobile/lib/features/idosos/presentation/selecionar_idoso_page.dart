@@ -333,22 +333,88 @@ List<Color> _gradientFor(String seed) {
   return _posterGradients[hash % _posterGradients.length];
 }
 
-class _IdosoPoster extends StatefulWidget {
+class _IdosoPoster extends ConsumerStatefulWidget {
   const _IdosoPoster({required this.idoso, required this.onTap});
 
   final IdosoResumo idoso;
   final VoidCallback onTap;
 
   @override
-  State<_IdosoPoster> createState() => _IdosoPosterState();
+  ConsumerState<_IdosoPoster> createState() => _IdosoPosterState();
 }
 
-class _IdosoPosterState extends State<_IdosoPoster> {
+class _IdosoPosterState extends ConsumerState<_IdosoPoster> {
   bool _pressed = false;
+
+  Future<void> _confirmarRemocao() async {
+    final idoso = widget.idoso;
+    final usuarioId = ref.read(authSessionProvider)?.id ?? '';
+    final ehDono = _ehDonoDaFicha(idoso, usuarioId);
+
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(ehDono ? 'Excluir ficha?' : 'Remover da sua tela?'),
+        content: Text(
+          ehDono
+              ? 'Isso vai apagar a ficha de ${_primeiroNome(idoso.nome)} e os dados vinculados a ela no banco.'
+              : 'A ficha de ${_primeiroNome(idoso.nome)} sera removida apenas da sua tela. Ela continua existindo para o dono.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC0392B),
+              foregroundColor: Colors.white,
+            ),
+            child: Text(ehDono ? 'Excluir' : 'Remover'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmou != true || !mounted) return;
+
+    try {
+      await ref.read(apiClientProvider).removerIdoso(
+            id: idoso.id,
+            usuarioId: usuarioId,
+          );
+      ref.invalidate(idososDoUsuarioProvider);
+      if (ref.read(selectedIdosoProvider)?.id == idoso.id) {
+        ref.read(selectedIdosoProvider.notifier).state = null;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ehDono
+              ? 'Ficha excluida.'
+              : 'Ficha removida da sua lista.'),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao foi possivel remover a ficha.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final idoso = widget.idoso;
+    final usuarioId = ref.watch(authSessionProvider)?.id ?? '';
+    final ehDono = _ehDonoDaFicha(idoso, usuarioId);
     final image = _avatarImage(idoso.urlFoto);
     final gradient = _gradientFor(idoso.id.isEmpty ? idoso.nome : idoso.id);
 
@@ -410,6 +476,38 @@ class _IdosoPosterState extends State<_IdosoPoster> {
                       ],
                       stops: const [0.55, 1],
                     ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black.withValues(alpha: 0.32),
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: PopupMenuButton<String>(
+                    tooltip: 'Opcoes da ficha',
+                    icon: const Icon(
+                      Icons.more_vert_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    onSelected: (value) {
+                      if (value == 'remover') _confirmarRemocao();
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'remover',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete_outline_rounded, size: 19),
+                            const SizedBox(width: 10),
+                            Text(ehDono ? 'Excluir ficha' : 'Remover da tela'),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -815,4 +913,9 @@ String _iniciais(String nome) {
   final primeira = partes.first[0];
   final ultima = partes.length > 1 ? partes.last[0] : '';
   return '$primeira$ultima'.toUpperCase();
+}
+
+bool _ehDonoDaFicha(IdosoResumo idoso, String usuarioId) {
+  if (idoso.ehDono != null) return idoso.ehDono!;
+  return usuarioId.isNotEmpty && idoso.criadoPorId == usuarioId;
 }

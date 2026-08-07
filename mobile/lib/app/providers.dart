@@ -19,7 +19,7 @@ class UsuarioSessao {
       nome: json['nome']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       telefone: json['telefone']?.toString(),
-      urlFoto: json['urlFoto']?.toString(),
+      urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
     );
   }
 

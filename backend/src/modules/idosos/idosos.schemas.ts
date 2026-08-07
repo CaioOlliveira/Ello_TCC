@@ -53,7 +53,7 @@ export const contatoEmergenciaSchema = z.object({
 export const criarIdosoSchema = z.object({
   nomeCompleto: z.string().min(1, "Nome completo e obrigatorio."),
   dataNascimento: z.string().date("Data de nascimento invalida.").optional(),
-  urlFoto: z.string().optional(),
+  urlFoto: z.string().nullable().optional(),
   pesoKg: z.number().positive().optional(),
   sexo: sexoSchema.optional(),
   tipoSanguineo: z

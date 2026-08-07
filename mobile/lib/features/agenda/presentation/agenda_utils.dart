@@ -16,8 +16,6 @@ bool agendaItemOccursOnDay({
   required String status,
   required DateTime day,
 }) {
-  if (status.toLowerCase() == 'cancelado') return false;
-
   final startDay = DateTime(start.year, start.month, start.day);
   final targetDay = DateTime(day.year, day.month, day.day);
   if (targetDay.isBefore(startDay)) return false;

@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/agenda/presentation/agenda_page.dart';
-import '../features/agenda/presentation/agenda_history_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
 import '../features/coraia/presentation/coraia_page.dart';
-import '../features/equipamentos/presentation/equipamentos_history_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
 import '../features/historico/presentation/historico_page.dart';
@@ -39,7 +37,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/agenda', builder: (context, state) => const AgendaPage()),
       GoRoute(
         path: '/agenda/historico',
-        builder: (context, state) => const AgendaHistoryPage(),
+        builder: (context, state) => const HistoricoPage(tipo: 'agenda'),
       ),
       GoRoute(
         path: '/equipamentos',
@@ -47,7 +45,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'historico',
-            builder: (context, state) => const EquipamentosHistoryPage(),
+            builder: (context, state) =>
+                const HistoricoPage(tipo: 'equipamentos'),
           ),
         ],
       ),

@@ -5,6 +5,17 @@ const entidadesPorTipo = {
   insumos: ["insumos"],
   alimentacao: ["registros_alimentacao"],
   humor: ["registros_humor"],
+  equipamentos: ["equipamentos", "manutencoes_equipamentos"],
+  medicamentos: [
+    "medicamentos",
+    "administracoes_medicamentos",
+    "horarios_medicamentos",
+  ],
+  temperatura: ["registros_temperatura"],
+  agenda: ["tarefas"],
+  glicemia: ["registros_glicemia", "registros_insulina"],
+  pressao: ["registros_pressao", "registros_pressao_arterial"],
+  oxigenacao: ["registros_oxigenacao"],
 } satisfies Record<ListarHistoricoQuery["tipo"], string[]>;
 
 type HistoricoRow = {
@@ -57,16 +68,84 @@ export const historicoService = {
                 h.dados_anteriores ->> 'humor',
                 'Humor'
               )
+            when h.tipo_entidade in ('equipamentos', 'manutencoes_equipamentos') then
+              coalesce(
+                e.nome,
+                h.dados_novos ->> 'nome',
+                h.dados_anteriores ->> 'nome',
+                'Equipamento'
+              )
+            when h.tipo_entidade in (
+              'medicamentos',
+              'administracoes_medicamentos',
+              'horarios_medicamentos'
+            ) then
+              coalesce(
+                m.nome,
+                h.dados_novos ->> 'nome',
+                h.dados_anteriores ->> 'nome',
+                h.dados_novos ->> 'medicamentoNome',
+                h.dados_anteriores ->> 'medicamentoNome',
+                h.dados_novos ->> 'medicamento_nome',
+                h.dados_anteriores ->> 'medicamento_nome',
+                'Medicamento'
+              )
+            when h.tipo_entidade = 'tarefas' then
+              coalesce(
+                h.dados_novos ->> 'titulo',
+                h.dados_anteriores ->> 'titulo',
+                'Compromisso'
+              )
+            when h.tipo_entidade = 'registros_insulina' then
+              coalesce(
+                h.dados_novos ->> 'nomeInsulina',
+                h.dados_anteriores ->> 'nomeInsulina',
+                h.dados_novos ->> 'nome_insulina',
+                h.dados_anteriores ->> 'nome_insulina',
+                'Insulina'
+              )
+            when h.tipo_entidade = 'registros_glicemia' then 'Glicemia'
+            when h.tipo_entidade in (
+              'registros_pressao',
+              'registros_pressao_arterial'
+            ) then 'Pressao arterial'
+            when h.tipo_entidade = 'registros_oxigenacao' then 'Oxigenacao'
+            when h.tipo_entidade = 'registros_temperatura' then 'Temperatura'
             else 'Registro'
           end as item_nome,
           h.dados_anteriores,
           h.dados_novos
         from historico_alteracoes h
-        left join usuarios u on u.id = h.usuario_id
+        left join usuarios u on u.id::text = h.usuario_id::text
         left join insumos i
-          on i.id = h.entidade_id
+          on i.id::text = h.entidade_id::text
          and h.tipo_entidade = 'insumos'
-        where h.idoso_id = $1
+        left join equipamentos e
+          on e.id::text = case
+            when h.tipo_entidade = 'equipamentos' then h.entidade_id::text
+            when h.tipo_entidade = 'manutencoes_equipamentos' then coalesce(
+              h.dados_novos ->> 'equipamento_id',
+              h.dados_anteriores ->> 'equipamento_id',
+              h.dados_novos ->> 'equipamentoId',
+              h.dados_anteriores ->> 'equipamentoId'
+            )
+          end
+        left join medicamentos m
+          on m.id::text = case
+            when h.tipo_entidade = 'medicamentos' then h.entidade_id::text
+            when h.tipo_entidade = 'horarios_medicamentos' then coalesce(
+              h.dados_novos ->> 'medicamentoId',
+              h.dados_anteriores ->> 'medicamentoId',
+              h.entidade_id::text
+            )
+            when h.tipo_entidade = 'administracoes_medicamentos' then coalesce(
+              h.dados_novos ->> 'medicamento_id',
+              h.dados_anteriores ->> 'medicamento_id',
+              h.dados_novos ->> 'medicamentoId',
+              h.dados_anteriores ->> 'medicamentoId'
+            )
+          end
+        where h.idoso_id::text = $1
           and h.tipo_entidade = any($2::text[])
           and h.criado_em >= $3::date
           and h.criado_em < ($4::date + interval '1 day')

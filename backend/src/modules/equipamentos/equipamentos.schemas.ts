@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const textoOpcional = z.string().optional();
+const textoOpcionalNulo = z.string().nullable().optional();
 
 const toNumber = (value: unknown) => {
   if (value === undefined || value === null || value === "") return undefined;
@@ -23,7 +24,7 @@ const normalizarEquipamento = (value: unknown) => {
     responsavelId: input.responsavelId ?? input.responsavel_id,
     criadoPorId: input.criadoPorId ?? input.criado_por_id,
     urlManual: input.urlManual ?? input.url_manual,
-    urlFoto: input.urlFoto ?? input.url_foto,
+    urlFoto: Object.hasOwn(input, "urlFoto") ? input.urlFoto : input.url_foto,
     frequenciaManutencaoDias: toNumber(
       input.frequenciaManutencaoDias ?? input.frequencia_manutencao_dias,
     ),
@@ -69,7 +70,7 @@ const equipamentoSchema = z.object({
   responsavelId: z.string().uuid().optional(),
   criadoPorId: z.string().uuid().optional(),
   urlManual: textoOpcional,
-  urlFoto: textoOpcional,
+  urlFoto: textoOpcionalNulo,
   frequenciaManutencaoDias: z.number().int().positive().optional(),
   proximaManutencaoEm: z.string().date().optional(),
   status: z.string().min(1).default("Em uso"),

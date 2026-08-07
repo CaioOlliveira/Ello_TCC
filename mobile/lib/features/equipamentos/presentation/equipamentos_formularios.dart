@@ -111,6 +111,10 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     });
   }
 
+  void _removeImage() {
+    setState(() => _urlFoto = null);
+  }
+
   Future<void> _attachManual() async {
     FilePickerResult? result;
     try {
@@ -165,7 +169,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
   Future<void> _pickFrequency() async {
     final selected = await showModalBottomSheet<int>(
       context: context,
-      backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
+      backgroundColor:
+          adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -180,7 +185,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: adaptive(context, const Color(0xFFD0D0D0), AppDarkColors.border),
+                    color: adaptive(
+                        context, const Color(0xFFD0D0D0), AppDarkColors.border),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -188,7 +194,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                 Text(
                   'Frequencia de manutencao',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF073248),
+                        AppDarkColors.textPrimary),
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -254,7 +261,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           widget.initial == null ? 'Novo equipamento' : 'Editar equipamento',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+            color: adaptive(
+                context, const Color(0xFF073248), AppDarkColors.textPrimary),
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
@@ -309,7 +317,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           'Foto do equipamento (opcional)',
           style: TextStyle(
             fontSize: 13,
-            color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+            color: adaptive(
+                context, const Color(0xFF333333), AppDarkColors.textPrimary),
           ),
         ),
         const SizedBox(height: 4),
@@ -336,13 +345,22 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                   child: Text(
                     _urlFoto == null ? 'Anexar imagem' : 'Imagem anexada',
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                      color: adaptive(context, const Color(0xFF073248),
+                          AppDarkColors.textPrimary),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
                 if (_urlFoto != null)
                   _EquipmentImagePreview(value: _urlFoto!, size: 42),
+                if (_urlFoto != null) ...[
+                  const SizedBox(width: 6),
+                  IconButton(
+                    onPressed: _removeImage,
+                    tooltip: 'Remover imagem',
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
+                ],
               ],
             ),
           ),
@@ -380,7 +398,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF073248),
+                        AppDarkColors.textPrimary),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -417,7 +436,8 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           child: OutlinedButton(
             onPressed: widget.saving ? null : widget.onCancel,
             style: OutlinedButton.styleFrom(
-              foregroundColor: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
+              foregroundColor: adaptive(
+                  context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
               side: const BorderSide(color: Color(0xFF38AFC0)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -462,7 +482,8 @@ class _EquipamentoDetails extends StatelessWidget {
               child: Text(
                 'Detalhes do equipamento',
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                  color: adaptive(context, const Color(0xFF073248),
+                      AppDarkColors.textPrimary),
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                   height: 1,
@@ -474,7 +495,8 @@ class _EquipamentoDetails extends StatelessWidget {
               padding: EdgeInsets.zero,
               icon: Icon(
                 Icons.more_vert_rounded,
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 size: 28,
               ),
               onSelected: (value) {
@@ -571,7 +593,8 @@ class _EquipamentoDetails extends StatelessWidget {
         Text(
           'Historico de manutencoes',
           style: TextStyle(
-            color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+            color: adaptive(
+                context, const Color(0xFF073248), AppDarkColors.textPrimary),
             fontSize: 18,
             fontWeight: FontWeight.w800,
           ),
@@ -691,7 +714,8 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
           'Registrar manutencao',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
+            color: adaptive(
+                context, const Color(0xFF111111), AppDarkColors.textPrimary),
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
@@ -771,7 +795,8 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
           child: OutlinedButton(
             onPressed: widget.saving ? null : widget.onCancel,
             style: OutlinedButton.styleFrom(
-              foregroundColor: adaptive(context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
+              foregroundColor: adaptive(
+                  context, const Color(0xFF003B4F), AppDarkColors.textPrimary),
               side: const BorderSide(color: Color(0xFF38AFC0)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),

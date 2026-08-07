@@ -12,6 +12,8 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/module_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 part 'cadastro_insumo_page.dart';
@@ -286,9 +288,11 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
                         loading: _loading,
                         error: _error,
                         onRetry: _load,
-                        onBack: () => context.go('/monitoramento'),
+                        onBack: () => context.go(moduleBackRoute(context)),
                         onAdd: _showCadastro,
-                        onHistory: () => context.push('/historico/insumos'),
+                        onHistory: () => context.push(
+                          routeWithCurrentOrigin(context, '/historico/insumos'),
+                        ),
                         onGeneratePdf: _generateExpiredPdf,
                         onOpen: _showDetalhe,
                         selectedFilter: _selectedFilter,
@@ -357,32 +361,7 @@ class _InsumosListView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: onBack,
-                tooltip: 'Voltar',
-                icon: const Icon(
-                  Icons.chevron_left_rounded,
-                  color: Color(0xFF2CA0B4),
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 2),
-              Expanded(
-                child: Text(
-                  'Insumos',
-                  style: TextStyle(
-                    color: adaptive(
-                        context, Colors.black, AppDarkColors.textPrimary),
-                    fontSize: 23,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          ModuleHeader(title: 'Insumos', onBack: onBack),
           Padding(
             padding: const EdgeInsets.only(left: 50),
             child: Text(

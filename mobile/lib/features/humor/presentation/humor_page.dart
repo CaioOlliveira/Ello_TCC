@@ -7,7 +7,9 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/action_icon_button.dart';
+import '../../../shared/widgets/module_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class HumorPage extends ConsumerStatefulWidget {
@@ -44,12 +46,14 @@ class _HumorPageState extends ConsumerState<HumorPage> {
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final current = _parseBrazilianDate(_dataController.text) ?? today;
     final selected = await showDatePicker(
       context: context,
       locale: const Locale('pt', 'BR'),
-      initialDate: _parseBrazilianDate(_dataController.text) ?? now,
-      firstDate: DateTime(now.year - 2),
-      lastDate: now,
+      initialDate: current.isAfter(today) ? today : current,
+      firstDate: DateTime(now.year - 3),
+      lastDate: today,
     );
 
     if (selected == null) return;
@@ -82,10 +86,15 @@ class _HumorPageState extends ConsumerState<HumorPage> {
       return;
     }
 
+    final selectedDate = _parseBrazilianDate(_dataController.text);
+    final selectedTime = _parseTime(_horaController.text);
     final dataHumor = _toIsoDate(_dataController.text);
     final horarioRegi = _normalizeTime(_horaController.text);
 
-    if (dataHumor == null || horarioRegi == null) {
+    if (selectedDate == null ||
+        selectedTime == null ||
+        dataHumor == null ||
+        horarioRegi == null) {
       setState(() => _errorMessage = 'Informe uma data e um horário válidos.');
       return;
     }
@@ -116,7 +125,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
           );
 
       if (!mounted) return;
-      context.go('/monitoramento');
+      context.go(moduleBackRoute(context));
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _errorMessage = error.message);
@@ -189,8 +198,10 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _Header(
-                      onBack: () => context.go('/monitoramento'),
-                      onProfile: () => context.go('/perfil?from=humor'),
+                      onBack: () => context.go(moduleBackRoute(context)),
+                      onProfile: () => context.go(
+                        profileRouteFromModule(context, 'humor'),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     StaggeredEntry(
@@ -315,7 +326,12 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                           width: 286,
                           height: 44,
                           child: OutlinedButton(
-                            onPressed: () => context.push('/historico/humor'),
+                            onPressed: () => context.push(
+                              routeWithCurrentOrigin(
+                                context,
+                                '/historico/humor',
+                              ),
+                            ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: adaptive(
                                   context,
@@ -358,41 +374,14 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        TextButton.icon(
-          onPressed: onBack,
-          icon: const Icon(
-            Icons.chevron_left_rounded,
-            color: Color(0xFF238FA1),
-            size: 28,
-          ),
-          label: const Text(
-            'Voltar',
-            style: TextStyle(
-              color: Color(0xFF238FA1),
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        const Expanded(
-          child: Text(
-            'Registro de humor',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF238FA1),
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        ActionIconButton(
-          tooltip: 'Perfil do cuidador',
-          icon: Icons.person_rounded,
-          onTap: onProfile,
-        ),
-      ],
+    return ModuleHeader(
+      title: 'Registro de humor',
+      onBack: onBack,
+      trailing: ActionIconButton(
+        tooltip: 'Perfil do cuidador',
+        icon: Icons.person_rounded,
+        onTap: onProfile,
+      ),
     );
   }
 }

@@ -93,6 +93,10 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
     });
   }
 
+  void _removeImage() {
+    setState(() => _fotoUrl = null);
+  }
+
   Future<void> _selectDate() async {
     final now = DateTime.now();
     final firstDate = DateTime(now.year, now.month, now.day);
@@ -275,6 +279,12 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (_fotoUrl != null && _fotoUrl!.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: _removeImage,
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      label: const Text('Remover imagem'),
+                    ),
                 ],
               ),
             ),

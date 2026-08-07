@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import '../../../core/api/api_client.dart';
@@ -172,7 +173,9 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                       title: 'Medicamentos:',
                       value: _resumo.medicamentosLabel,
                       valueColor: const Color(0xFFFF8A00),
-                      onTap: () => context.go('/medicamentos'),
+                      onTap: () => context.go(
+                        routeWithOrigin('/medicamentos', 'dashboard'),
+                      ),
                     ),
                   ),
                   StaggeredEntry(
@@ -182,7 +185,9 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                       title: 'Humor:',
                       value: _resumo.humorLabel,
                       valueColor: const Color(0xFF168FA1),
-                      onTap: () => context.go('/humor'),
+                      onTap: () => context.go(
+                        routeWithOrigin('/humor', 'dashboard'),
+                      ),
                     ),
                   ),
                   StaggeredEntry(
@@ -192,7 +197,9 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                       title: 'Última refeição:',
                       value: _resumo.ultimaRefeicaoLabel,
                       valueColor: const Color(0xFF168FA1),
-                      onTap: () => context.go('/alimentacao'),
+                      onTap: () => context.go(
+                        routeWithOrigin('/alimentacao', 'dashboard'),
+                      ),
                     ),
                   ),
                   StaggeredEntry(
@@ -202,7 +209,9 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                       title: 'Insulina:',
                       value: _resumo.insulinaLabel,
                       valueColor: const Color(0xFF168FA1),
-                      onTap: () => context.go('/glicemia'),
+                      onTap: () => context.go(
+                        routeWithOrigin('/glicemia', 'dashboard'),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -221,7 +230,9 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     child: _NextAppointmentCard(
                       title: _resumo.proximoCompromissoTitulo,
                       details: _resumo.proximoCompromissoDetalhes,
-                      onTap: () => context.go('/agenda'),
+                      onTap: () => context.go(
+                        routeWithOrigin('/agenda', 'dashboard'),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),

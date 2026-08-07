@@ -7,6 +7,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import 'monitoramento_catalog.dart';
 
@@ -31,7 +32,8 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
     final selectedIds = await showModalBottomSheet<List<String>>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
+      backgroundColor:
+          adaptive(context, Colors.white, AppDarkColors.surfaceElevated),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -86,9 +88,12 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
         : monitoramentoOptionsByIds(idoso.monitoramentos);
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -114,7 +119,8 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                       'Monitoramento',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF073248),
+                            AppDarkColors.textPrimary),
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         height: 1,
@@ -155,7 +161,10 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                             : const Icon(Icons.add_rounded, size: 27),
                         label: const Text('Adicionar registro'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                          foregroundColor: adaptive(
+                              context,
+                              const Color(0xFF073248),
+                              AppDarkColors.textPrimary),
                           side: const BorderSide(
                             color: Color(0xFF1696AA),
                             width: 1.4,
@@ -207,7 +216,9 @@ class _MonitoramentoGrid extends StatelessWidget {
               index: index,
               child: _MonitoramentoTile(
                 option: option,
-                onTap: () => context.go(option.route),
+                onTap: () => context.go(
+                  routeWithOrigin(option.route, 'monitoramento'),
+                ),
               ),
             );
           },
@@ -278,7 +289,8 @@ class _MonitoramentoTileContent extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: adaptive(context, const Color(0xFFCFEFF4), AppDarkColors.surfaceAlt),
+                  color: adaptive(context, const Color(0xFFCFEFF4),
+                      AppDarkColors.surfaceAlt),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -298,7 +310,8 @@ class _MonitoramentoTileContent extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                        color: adaptive(
+                            context, Colors.black, AppDarkColors.textPrimary),
                         fontSize: 15.5,
                         fontWeight: FontWeight.w800,
                         height: 1.05,
@@ -310,7 +323,8 @@ class _MonitoramentoTileContent extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF8C8C8C), AppDarkColors.textSecondary),
+                        color: adaptive(context, const Color(0xFF8C8C8C),
+                            AppDarkColors.textSecondary),
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         height: 1.18,
@@ -321,7 +335,8 @@ class _MonitoramentoTileContent extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: adaptive(context, const Color(0xFF8C8C8C), AppDarkColors.textSecondary),
+                color: adaptive(context, const Color(0xFF8C8C8C),
+                    AppDarkColors.textSecondary),
                 size: 23,
               ),
             ],
@@ -355,7 +370,8 @@ class _MessageState extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
@@ -365,7 +381,8 @@ class _MessageState extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF737373), AppDarkColors.textSecondary),
+              color: adaptive(context, const Color(0xFF737373),
+                  AppDarkColors.textSecondary),
               fontSize: 15,
               height: 1.3,
             ),
@@ -439,7 +456,8 @@ class _MonitoramentoPickerState extends State<_MonitoramentoPicker> {
                       child: Text(
                         'O que deseja monitorar',
                         style: TextStyle(
-                          color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                          color: adaptive(context, const Color(0xFF073248),
+                              AppDarkColors.textPrimary),
                           fontSize: 23,
                           fontWeight: FontWeight.w800,
                         ),
@@ -538,7 +556,8 @@ class _PickerOptionTile extends StatelessWidget {
             border: Border.all(
               color: selected
                   ? const Color(0xFF38AFC0)
-                  : adaptive(context, const Color(0xFFE3ECEE), AppDarkColors.border),
+                  : adaptive(
+                      context, const Color(0xFFE3ECEE), AppDarkColors.border),
               width: selected ? 1.6 : 1,
             ),
           ),
@@ -551,7 +570,8 @@ class _PickerOptionTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: selected
                       ? adaptive(context, Colors.white, AppDarkColors.surface)
-                      : adaptive(context, const Color(0xFFE9F5F7), AppDarkColors.surfaceAlt),
+                      : adaptive(context, const Color(0xFFE9F5F7),
+                          AppDarkColors.surfaceAlt),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -567,7 +587,8 @@ class _PickerOptionTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF394B52), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF394B52),
+                        AppDarkColors.textPrimary),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     height: 1.12,

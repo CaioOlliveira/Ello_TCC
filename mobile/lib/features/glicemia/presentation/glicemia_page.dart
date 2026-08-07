@@ -9,6 +9,8 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/module_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 enum _GlicemiaMode { resumo, registrarGlicemia, registrarInsulina, historico }
@@ -391,7 +393,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
 
                 if (snapshot.hasError) {
                   return _ErrorState(
-                    onBack: () => context.go('/monitoramento'),
+                    onBack: () => context.go(moduleBackRoute(context)),
                     onRetry: () => _reloadResumo(idoso.id),
                   );
                 }
@@ -404,7 +406,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
                   resumo: resumo,
                   period: _period,
                   referenceDate: _referenceDate,
-                  onBack: () => context.go('/monitoramento'),
+                  onBack: () => context.go(moduleBackRoute(context)),
                   onRegisterGlicemia: () {
                     setState(() => _mode = _GlicemiaMode.registrarGlicemia);
                   },
@@ -412,7 +414,7 @@ class _GlicemiaPageState extends ConsumerState<GlicemiaPage> {
                     setState(() => _mode = _GlicemiaMode.registrarInsulina);
                   },
                   onViewHistorico: () {
-                    setState(() => _mode = _GlicemiaMode.historico);
+                    context.push('/historico/glicemia');
                   },
                   onCalendar: () => _openCalendar(idoso.id),
                   onPeriodChanged: (period) {
@@ -603,68 +605,11 @@ class _GlicemiaHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: onBack,
-                borderRadius: BorderRadius.circular(12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.chevron_left_rounded,
-                      color: Color(0xFF2A9CAE),
-                      size: 30,
-                    ),
-                    const SizedBox(width: 1),
-                    Text(
-                      'Voltar',
-                      style: TextStyle(
-                        color: adaptive(
-                            context, Colors.black, AppDarkColors.textPrimary),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (trailing != null) trailing!,
-          ],
-        ),
-        if (showWordmark) ...[
-          const SizedBox(height: 2),
-          const Center(
-            child: Text(
-              'ello',
-              style: TextStyle(
-                color: Color(0xFF0E6F7E),
-                fontSize: 28,
-                fontWeight: FontWeight.w300,
-                letterSpacing: 0,
-                height: 1,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-        ],
-        const SizedBox(height: 2),
-        Text(
-          title,
-          textAlign: showWordmark ? TextAlign.center : TextAlign.start,
-          style: TextStyle(
-            color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-            fontSize: 23,
-            fontWeight: FontWeight.w800,
-            height: 1,
-          ),
-        ),
-      ],
+    return ModuleHeader(
+      title: title,
+      onBack: onBack,
+      trailing: trailing,
+      showWordmark: showWordmark,
     );
   }
 }

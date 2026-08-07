@@ -113,6 +113,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     return null;
   }
 
+  bool get _hasProfileImage => _profileImageProvider != null;
+
   @override
   void dispose() {
     _nomeController.dispose();
@@ -133,6 +135,13 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     if (bytes == null) return;
     if (!mounted) return;
     setState(() => _fotoBytes = bytes);
+  }
+
+  void _removerFoto() {
+    setState(() {
+      _fotoBytes = null;
+      _fotoUrl = null;
+    });
   }
 
   Future<void> _selecionarData() async {
@@ -259,10 +268,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
               id: selectedIdoso.id,
               data: {
                 'nomeCompleto': _nomeController.text.trim(),
-                if (usuarioId != null && usuarioId.isNotEmpty)
-                  'criadoPorId': usuarioId,
                 if (dataNascimento != null) 'dataNascimento': dataNascimento,
-                if (fotoUrl != null && fotoUrl.isNotEmpty) 'urlFoto': fotoUrl,
+                'urlFoto': fotoUrl,
                 if (normalizeSexo(_sexo) != null) 'sexo': normalizeSexo(_sexo),
                 if (_tipoSanguineoController.text.trim().isNotEmpty)
                   'tipoSanguineo': _tipoSanguineoController.text.trim(),
@@ -303,42 +310,43 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
 
       if (!mounted) return;
       ref.invalidate(idososDoUsuarioProvider);
+      ref.invalidate(fichasAdministradasProvider);
       final dados = response['dados'];
-      final idosoId = dados is Map<String, dynamic>
-          ? dados['id']?.toString() ?? selectedIdoso?.id ?? ''
-          : selectedIdoso?.id ?? '';
-      ref.read(selectedIdosoProvider.notifier).state = IdosoResumo(
-        id: idosoId,
-        nome: _nomeController.text.trim(),
-        idade: int.tryParse(_idadeController.text.trim()) ?? 0,
-        urlFoto: fotoUrl,
-        dataNascimento: dataNascimento,
-        sexo: normalizeSexo(_sexo),
-        tipoSanguineo: _tipoSanguineoController.text.trim().isEmpty
-            ? null
-            : _tipoSanguineoController.text.trim(),
-        limitacoes: _limitacoesController.text.trim().isEmpty
-            ? null
-            : _limitacoesController.text.trim(),
-        alergiasRestricoes: _alergiasController.text.trim().isEmpty
-            ? null
-            : _alergiasController.text.trim(),
-        observacoesGerais: _observacoesController.text.trim().isEmpty
-            ? null
-            : _observacoesController.text.trim(),
-        contatoEmergenciaNome: _contatoNomeController.text.trim().isEmpty
-            ? null
-            : _contatoNomeController.text.trim(),
-        contatoEmergenciaTelefone: _telefoneController.text.trim().isEmpty
-            ? null
-            : _telefoneController.text.trim(),
-        contatoEmergenciaParentesco:
-            _contatoParentescoController.text.trim().isEmpty
-                ? null
-                : _contatoParentescoController.text.trim(),
-        condicoes: _condicoes,
-        monitoramentos: _monitoramentosSelecionados.toList(),
-      );
+      ref.read(selectedIdosoProvider.notifier).state = dados
+              is Map<String, dynamic>
+          ? IdosoResumo.fromJson(dados)
+          : IdosoResumo(
+              id: selectedIdoso?.id ?? '',
+              nome: _nomeController.text.trim(),
+              idade: int.tryParse(_idadeController.text.trim()) ?? 0,
+              urlFoto: fotoUrl,
+              dataNascimento: dataNascimento,
+              sexo: normalizeSexo(_sexo),
+              tipoSanguineo: _tipoSanguineoController.text.trim().isEmpty
+                  ? null
+                  : _tipoSanguineoController.text.trim(),
+              limitacoes: _limitacoesController.text.trim().isEmpty
+                  ? null
+                  : _limitacoesController.text.trim(),
+              alergiasRestricoes: _alergiasController.text.trim().isEmpty
+                  ? null
+                  : _alergiasController.text.trim(),
+              observacoesGerais: _observacoesController.text.trim().isEmpty
+                  ? null
+                  : _observacoesController.text.trim(),
+              contatoEmergenciaNome: _contatoNomeController.text.trim().isEmpty
+                  ? null
+                  : _contatoNomeController.text.trim(),
+              contatoEmergenciaTelefone: _telefoneController.text.trim().isEmpty
+                  ? null
+                  : _telefoneController.text.trim(),
+              contatoEmergenciaParentesco:
+                  _contatoParentescoController.text.trim().isEmpty
+                      ? null
+                      : _contatoParentescoController.text.trim(),
+              condicoes: _condicoes,
+              monitoramentos: _monitoramentosSelecionados.toList(),
+            );
       context.go(_isEditing ? _backRoute : '/dashboard');
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -583,34 +591,43 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       children: [
         Row(
           children: [
-            InkWell(
-              onTap: _selecionarFoto,
-              borderRadius: BorderRadius.circular(50),
-              child: Container(
-                width: 66,
-                height: 66,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD3F0F3),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF2799AD),
-                    style: BorderStyle.solid,
+            Column(
+              children: [
+                InkWell(
+                  onTap: _selecionarFoto,
+                  borderRadius: BorderRadius.circular(50),
+                  child: Container(
+                    width: 66,
+                    height: 66,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD3F0F3),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF2799AD),
+                        style: BorderStyle.solid,
+                      ),
+                      image: _profileImageProvider == null
+                          ? null
+                          : DecorationImage(
+                              image: _profileImageProvider!,
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                    child: _profileImageProvider == null
+                        ? const Icon(
+                            Icons.add_rounded,
+                            color: Color(0xFF2697AA),
+                            size: 38,
+                          )
+                        : null,
                   ),
-                  image: _profileImageProvider == null
-                      ? null
-                      : DecorationImage(
-                          image: _profileImageProvider!,
-                          fit: BoxFit.cover,
-                        ),
                 ),
-                child: _profileImageProvider == null
-                    ? const Icon(
-                        Icons.add_rounded,
-                        color: Color(0xFF2697AA),
-                        size: 38,
-                      )
-                    : null,
-              ),
+                if (_hasProfileImage)
+                  TextButton(
+                    onPressed: _removerFoto,
+                    child: const Text('Remover'),
+                  ),
+              ],
             ),
             const SizedBox(width: 16),
             Column(
@@ -1332,7 +1349,7 @@ class _SelectBox extends StatelessWidget {
   }
 }
 
-class _BloodTypeField extends StatefulWidget {
+class _BloodTypeField extends StatelessWidget {
   const _BloodTypeField({required this.controller});
 
   static const _options = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -1340,10 +1357,76 @@ class _BloodTypeField extends StatefulWidget {
   final TextEditingController controller;
 
   @override
-  State<_BloodTypeField> createState() => _BloodTypeFieldState();
+  Widget build(BuildContext context) {
+    final currentValue = controller.text.trim();
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 46),
+      child: DropdownButtonFormField<String>(
+        initialValue: _options.contains(currentValue) ? currentValue : null,
+        isExpanded: true,
+        items: [
+          for (final option in _options)
+            DropdownMenuItem(value: option, child: Text(option)),
+        ],
+        onChanged: (value) {
+          controller.text = value ?? '';
+        },
+        validator: (value) {
+          final text = value?.trim();
+          if (text == null || text.isEmpty) return null;
+          if (!_options.contains(text)) {
+            return 'Selecione um tipo sanguíneo válido.';
+          }
+          return null;
+        },
+        style: TextStyle(
+            fontSize: 14,
+            color: adaptive(
+                context, const Color(0xFF17324D), AppDarkColors.textPrimary)),
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: Color(0xFF2697AA),
+          size: 22,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Ex: O+',
+          hintStyle: TextStyle(
+            color: adaptive(
+                context, const Color(0xFF9D9D9D), AppDarkColors.textMuted),
+            fontSize: 14,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 13,
+          ),
+          errorStyle: const TextStyle(fontSize: 9, height: 0.8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: BorderSide(
+                color: adaptive(
+                    context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: BorderSide(
+                color: adaptive(
+                    context, const Color(0xFFD0D0D0), AppDarkColors.border)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: BorderSide(
+                color: adaptive(context, const Color(0xFF8BD2DC),
+                    AppDarkColors.borderStrong)),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _BloodTypeFieldState extends State<_BloodTypeField> {
+/*
+class _BloodTypeFieldState extends State<StatefulWidget> {
   final _focusNode = FocusNode();
 
   @override
@@ -1357,13 +1440,7 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
     return RawAutocomplete<String>(
       textEditingController: widget.controller,
       focusNode: _focusNode,
-      optionsBuilder: (value) {
-        final query = value.text.trim().toUpperCase();
-        if (query.isEmpty) return _BloodTypeField._options;
-        return _BloodTypeField._options.where((option) {
-          return option.startsWith(query);
-        });
-      },
+      optionsBuilder: (_) => _BloodTypeField._options,
       onSelected: (value) => widget.controller.text = value,
       fieldViewBuilder: (
         context,
@@ -1376,13 +1453,9 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
           child: TextFormField(
             controller: fieldController,
             focusNode: focusNode,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[ABOabo+-]')),
-              TextInputFormatter.withFunction((oldValue, newValue) {
-                return newValue.copyWith(text: newValue.text.toUpperCase());
-              }),
-            ],
+            readOnly: true,
+            showCursor: false,
+            enableInteractiveSelection: false,
             validator: (value) {
               final text = value?.trim();
               if (text == null || text.isEmpty) return null;
@@ -1467,6 +1540,7 @@ class _BloodTypeFieldState extends State<_BloodTypeField> {
   }
 }
 
+*/
 class _ConditionChip extends StatelessWidget {
   const _ConditionChip({required this.label, required this.onDeleted});
 

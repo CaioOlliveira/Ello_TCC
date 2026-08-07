@@ -7,24 +7,7 @@ class _BackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.chevron_left_rounded,
-                  color: Color(0xFF1696AA), size: 28),
-              Text('Voltar', style: TextStyle(fontSize: 14)),
-            ],
-          ),
-        ),
-      ),
-    );
+    return ModuleHeader(title: 'Equipamentos', onBack: onTap);
   }
 }
 
