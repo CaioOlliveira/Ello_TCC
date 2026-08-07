@@ -239,6 +239,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         _doseController.text.trim().replaceAll(',', '.'),
       );
 
+      final registradoPorId = ref.read(authSessionProvider)?.id;
       final String medicamentoId;
       if (_editando && _selecionado != null) {
         await client.atualizarMedicamento(
@@ -250,6 +251,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
           dataInicio: _dataInicio == null ? null : _toIsoDate(_dataInicio!),
           dataFim: _dataFim == null ? null : _toIsoDate(_dataFim!),
           quantidadeEstoque: estoque,
+          registradoPorId: registradoPorId,
         );
         medicamentoId = _selecionado!.id;
       } else {
@@ -262,6 +264,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
           dataInicio: _dataInicio == null ? null : _toIsoDate(_dataInicio!),
           dataFim: _dataFim == null ? null : _toIsoDate(_dataFim!),
           quantidadeEstoque: estoque,
+          registradoPorId: registradoPorId,
         );
         medicamentoId = criado.id;
       }
@@ -303,14 +306,53 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     final medicamento = _selecionado;
     if (idoso == null || medicamento == null) return;
 
+    final agora = DateTime.now();
+    final horarioPrevisto =
+        _horarioPrevistoParaAgora(medicamento.proximoHorario, agora);
+    final jaAdministrado = _administracoes.any((dado) {
+      if ((dado['status'] ?? '').toString() != 'tomado') return false;
+      final previsto = DateTime.tryParse(
+        (dado['horario_previsto'] ?? '').toString(),
+      )?.toLocal();
+      if (previsto == null) return false;
+      return previsto.year == horarioPrevisto.year &&
+          previsto.month == horarioPrevisto.month &&
+          previsto.day == horarioPrevisto.day &&
+          previsto.hour == horarioPrevisto.hour &&
+          previsto.minute == horarioPrevisto.minute;
+    });
+
+    if (jaAdministrado) {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Dose já registrada'),
+          content: Text(
+            'Este horário (${_formatTime(horarioPrevisto)}) já foi marcado '
+            'como tomado. Deseja registrar novamente mesmo assim?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Registrar mesmo assim'),
+            ),
+          ],
+        ),
+      );
+      if (confirmar != true) return;
+    }
+
+    if (!mounted) return;
     setState(() => _saving = true);
     try {
-      final agora = DateTime.now();
       await ref.read(apiClientProvider).registrarAdministracaoMedicamento(
             medicamentoId: medicamento.id,
             idosoId: idoso.id,
-            horarioPrevisto:
-                _horarioPrevistoParaAgora(medicamento.proximoHorario, agora),
+            horarioPrevisto: horarioPrevisto,
             administradoEm: agora,
             status: 'tomado',
             registradoPorId: ref.read(authSessionProvider)?.id,
@@ -319,6 +361,19 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       await _openDetalhe(medicamento);
       _invalidateHistorico();
       _reloadResumo(idoso.id);
+      try {
+        final resumoAtualizado =
+            await ref.read(apiClientProvider).getResumoMedicamentos(idosoId: idoso.id);
+        if (!mounted) return;
+        final atualizado = resumoAtualizado.medicamentos
+            .where((item) => item.id == medicamento.id)
+            .firstOrNull;
+        if (atualizado != null) {
+          setState(() => _selecionado = atualizado);
+        }
+      } catch (_) {
+        // A atualizacao do resumo em segundo plano nao deve travar o fluxo.
+      }
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -358,7 +413,10 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     if (idoso == null) return;
 
     try {
-      await ref.read(apiClientProvider).removerMedicamento(medicamento.id);
+      await ref.read(apiClientProvider).removerMedicamento(
+            medicamento.id,
+            usuarioId: ref.read(authSessionProvider)?.id,
+          );
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();

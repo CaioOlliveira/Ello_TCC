@@ -76,7 +76,9 @@ export const atualizarMedicamento: RequestHandler = asyncHandler(
 export const removerMedicamento: RequestHandler = asyncHandler(
   async (req, res) => {
     const { id } = idParamSchema.parse(req.params);
-    await medicamentosService.remover(id);
+    const usuarioId =
+      typeof req.query.usuarioId === "string" ? req.query.usuarioId : undefined;
+    await medicamentosService.remover(id, usuarioId);
     res.status(204).send();
   },
 );

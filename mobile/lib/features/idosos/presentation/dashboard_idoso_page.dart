@@ -706,11 +706,6 @@ class _TipCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: adaptive(
-                context, const Color(0xFF073248), AppDarkColors.textPrimary),
-          ),
         ],
       ),
     );

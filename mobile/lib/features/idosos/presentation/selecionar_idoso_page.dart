@@ -232,9 +232,22 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = context.canPop();
     return Stack(
       alignment: Alignment.center,
       children: [
+        if (canPop)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: const Icon(
+                Icons.chevron_left_rounded,
+                color: Color(0xFF238FA1),
+                size: 32,
+              ),
+            ),
+          ),
         const Text(
           'ello',
           style: TextStyle(

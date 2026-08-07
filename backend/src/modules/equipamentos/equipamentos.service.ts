@@ -134,6 +134,7 @@ export const equipamentosService = {
       Record<string, unknown>
     >(table, id, input, fields, ...notFound);
     await registrarHistorico({
+      usuarioId: input.criadoPorId,
       idosoId: String(atualizado.idoso_id ?? ""),
       acao: "atualizar",
       tipoEntidade: table,
@@ -144,7 +145,7 @@ export const equipamentosService = {
     return atualizado;
   },
 
-  async remover(id: string) {
+  async remover(id: string, usuarioId?: string) {
     const anterior = await this.buscarPorId(id);
     await getPool().query(
       `delete from manutencoes_equipamentos where equipamento_id = $1`,
@@ -152,6 +153,7 @@ export const equipamentosService = {
     );
     await deleteRow(table, id, ...notFound);
     await registrarHistorico({
+      usuarioId,
       idosoId: String(anterior.idoso_id ?? ""),
       acao: "remover",
       tipoEntidade: table,

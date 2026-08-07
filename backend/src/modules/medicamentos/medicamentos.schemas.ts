@@ -12,6 +12,7 @@ export const criarMedicamentoSchema = z.object({
   unidadeEstoque: z.string().optional(),
   alertaEstoqueBaixo: z.number().nonnegative().optional(),
   ativo: z.boolean().optional(),
+  registradoPorId: z.string().uuid().optional(),
 });
 
 export const atualizarMedicamentoSchema = criarMedicamentoSchema.partial();

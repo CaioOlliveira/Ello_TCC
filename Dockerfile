@@ -14,6 +14,7 @@ WORKDIR /app/backend
 
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV TZ=America/Sao_Paulo
 
 COPY backend/package*.json ./
 RUN npm ci --omit=dev

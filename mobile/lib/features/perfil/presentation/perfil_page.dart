@@ -84,7 +84,7 @@ class PerfilPage extends ConsumerWidget {
                     child: SizedBox(
                       height: 50,
                       child: OutlinedButton.icon(
-                        onPressed: () => context.go('/idosos'),
+                        onPressed: () => context.push('/idosos'),
                         icon: const Icon(
                           Icons.switch_account_rounded,
                           size: 21,
@@ -481,6 +481,42 @@ class _SegurancaPerfilPageState extends ConsumerState<SegurancaPerfilPage> {
                             ),
                           )
                         : const Text('Alterar senha'),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _Panel(
+                  padding: EdgeInsets.zero,
+                  child: InkWell(
+                    onTap: () => context.go('/permissoes'),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 14),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.admin_panel_settings_outlined,
+                            color: Color(0xFF238FA1),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Gerenciar acessos das fichas',
+                              style: TextStyle(
+                                color: adaptive(context, Colors.black,
+                                    AppDarkColors.textPrimary),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: adaptive(context, const Color(0xFF6E7C83),
+                                AppDarkColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],

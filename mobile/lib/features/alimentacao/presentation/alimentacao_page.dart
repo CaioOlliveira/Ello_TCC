@@ -740,7 +740,9 @@ class _WaterCup extends StatelessWidget {
           child: Icon(
             filled ? Icons.local_drink_rounded : Icons.local_drink_outlined,
             key: ValueKey(filled),
-            color: const Color(0xFF098CA1),
+            color: filled
+                ? const Color(0xFF098CA1)
+                : adaptive(context, const Color(0xFFC7D6D9), AppDarkColors.border),
             size: 36,
           ),
         ),

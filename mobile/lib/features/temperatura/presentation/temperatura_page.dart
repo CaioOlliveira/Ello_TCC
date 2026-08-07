@@ -1044,12 +1044,10 @@ class _AnalysisCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       resumo.analise.texto,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: adaptive(context, const Color(0xFF2F4853), AppDarkColors.textPrimary),
                         fontSize: 10,
-                        height: 1.08,
+                        height: 1.15,
                       ),
                     ),
                   ],

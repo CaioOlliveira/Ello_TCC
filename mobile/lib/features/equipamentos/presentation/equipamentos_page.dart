@@ -132,12 +132,14 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   Future<void> _updateEquipamento(EquipamentoFormData data) async {
     final selected = _selected;
     final idoso = ref.read(selectedIdosoProvider);
+    final usuario = ref.read(authSessionProvider);
     if (selected == null || idoso == null) return;
 
     setState(() => _saving = true);
     try {
       final payload = data.toPayload(
         idosoId: idoso.id,
+        criadoPorId: usuario?.id,
         includeDefaultStatus: false,
       );
       final response = await ref.read(apiClientProvider).atualizarEquipamento(
@@ -201,7 +203,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     try {
       final response = await ref.read(apiClientProvider).atualizarEquipamento(
         id: selected.id,
-        data: {'status': status},
+        data: {
+          'status': status,
+          'criadoPorId': ref.read(authSessionProvider)?.id,
+        },
       );
       final updated = Equipamento.fromJson(response['dados'] ?? response);
       if (!mounted) return;
@@ -260,7 +265,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   Future<void> _deleteEquipamento(Equipamento selected) async {
     setState(() => _saving = true);
     try {
-      await ref.read(apiClientProvider).removerEquipamento(id: selected.id);
+      await ref.read(apiClientProvider).removerEquipamento(
+            id: selected.id,
+            usuarioId: ref.read(authSessionProvider)?.id,
+          );
       if (!mounted) return;
       setState(() {
         _equipamentos = [

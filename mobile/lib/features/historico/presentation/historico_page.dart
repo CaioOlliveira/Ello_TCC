@@ -563,7 +563,7 @@ final _humor = _HistoricoConfig(
   title: 'Histórico de humor',
   emptyMessage: 'Nenhum humor registrado neste período.',
   icon: (registro) => switch (registro.itemNome.toLowerCase()) {
-    'calma' || 'calmo' => Icons.sentiment_neutral_rounded,
+    'calma' || 'calmo' => Icons.spa_rounded,
     'triste' => Icons.sentiment_dissatisfied_rounded,
     'chorona' || 'chorão' => Icons.sentiment_very_dissatisfied_rounded,
     'irritada' || 'irritado' => Icons.mood_bad_rounded,

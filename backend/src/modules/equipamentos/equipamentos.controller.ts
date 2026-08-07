@@ -65,7 +65,9 @@ export const atualizarEquipamento: RequestHandler = asyncHandler(
 export const removerEquipamento: RequestHandler = asyncHandler(
   async (req, res) => {
     const { id } = idParamSchema.parse(req.params);
-    await equipamentosService.remover(id);
+    const usuarioId =
+      typeof req.query.usuarioId === "string" ? req.query.usuarioId : undefined;
+    await equipamentosService.remover(id, usuarioId);
     res.status(204).send();
   },
 );

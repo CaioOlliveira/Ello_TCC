@@ -311,20 +311,16 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
           Row(
             children: [
               Expanded(
-                child: _LabeledField(
+                child: _StepperField(
                   label: 'Adicionar ao estoque',
                   controller: _adicaoController,
-                  keyboardType: TextInputType.number,
-                  suffixText: 'unidades',
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _LabeledField(
+                child: _StepperField(
                   label: 'Subtrair do estoque',
                   controller: _subtracaoController,
-                  keyboardType: TextInputType.number,
-                  suffixText: 'unidades',
                 ),
               ),
             ],
@@ -423,6 +419,94 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StepperField extends StatefulWidget {
+  const _StepperField({required this.label, required this.controller});
+
+  final String label;
+  final TextEditingController controller;
+
+  @override
+  State<_StepperField> createState() => _StepperFieldState();
+}
+
+class _StepperFieldState extends State<_StepperField> {
+  double get _value => _toDouble(widget.controller.text) ?? 0;
+
+  void _setValue(double value) {
+    final clamped = value < 0 ? 0.0 : value;
+    setState(() {
+      widget.controller.text = _editableNumber(clamped);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FormLabel(widget.label),
+        Container(
+          height: 46,
+          decoration: BoxDecoration(
+            color: adaptive(context, Colors.white, AppDarkColors.surface),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF3BA7B8)),
+          ),
+          child: Row(
+            children: [
+              _StepperButton(
+                icon: Icons.remove_rounded,
+                onTap: () => _setValue(_value - 1),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: widget.controller,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  onChanged: (_) => setState(() {}),
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF17324D),
+                        AppDarkColors.textPrimary),
+                    fontSize: 14,
+                  ),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    hintText: '0',
+                  ),
+                ),
+              ),
+              _StepperButton(
+                icon: Icons.add_rounded,
+                onTap: () => _setValue(_value + 1),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        width: 38,
+        height: 46,
+        child: Icon(icon, color: const Color(0xFF2CA0B4), size: 20),
       ),
     );
   }

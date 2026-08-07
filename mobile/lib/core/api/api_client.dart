@@ -3021,9 +3021,12 @@ class ApiClient {
     }
   }
 
-  Future<void> removerEquipamento({required String id}) async {
+  Future<void> removerEquipamento({required String id, String? usuarioId}) async {
     try {
-      await _dio.delete<void>(ApiEndpoints.equipamento(id));
+      await _dio.delete<void>(
+        ApiEndpoints.equipamento(id),
+        queryParameters: usuarioId == null ? null : {'usuarioId': usuarioId},
+      );
       _clearEquipmentCaches();
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao excluir equipamento.');
@@ -3637,6 +3640,7 @@ class ApiClient {
     double? quantidadeEstoque,
     String? unidadeEstoque,
     double? alertaEstoqueBaixo,
+    String? registradoPorId,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -3656,6 +3660,8 @@ class ApiClient {
             'unidadeEstoque': unidadeEstoque,
           if (alertaEstoqueBaixo != null)
             'alertaEstoqueBaixo': alertaEstoqueBaixo,
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
         },
       );
       final dados = response.data?['dados'];
@@ -3681,6 +3687,7 @@ class ApiClient {
     double? quantidadeEstoque,
     String? unidadeEstoque,
     double? alertaEstoqueBaixo,
+    String? registradoPorId,
   }) async {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
@@ -3699,6 +3706,8 @@ class ApiClient {
             'unidadeEstoque': unidadeEstoque,
           if (alertaEstoqueBaixo != null)
             'alertaEstoqueBaixo': alertaEstoqueBaixo,
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
         },
       );
       final dados = response.data?['dados'];
@@ -3713,9 +3722,12 @@ class ApiClient {
     }
   }
 
-  Future<void> removerMedicamento(String id) async {
+  Future<void> removerMedicamento(String id, {String? usuarioId}) async {
     try {
-      await _dio.delete<void>(ApiEndpoints.medicamento(id));
+      await _dio.delete<void>(
+        ApiEndpoints.medicamento(id),
+        queryParameters: usuarioId == null ? null : {'usuarioId': usuarioId},
+      );
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao remover medicamento.');
     }

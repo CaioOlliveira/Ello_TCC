@@ -683,7 +683,7 @@ class _Mood {
 
 const _moods = [
   _Mood('feliz', 'Feliz', 'Feliz', Icons.sentiment_satisfied_alt_rounded),
-  _Mood('calma', 'Calma', 'Calmo', Icons.sentiment_neutral_rounded),
+  _Mood('calma', 'Calma', 'Calmo', Icons.spa_rounded),
   _Mood('triste', 'Triste', 'Triste', Icons.sentiment_dissatisfied_rounded),
   _Mood(
     'chorona',

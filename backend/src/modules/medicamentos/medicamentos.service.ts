@@ -235,6 +235,7 @@ export const medicamentosService = {
       Record<string, unknown>
     >(table, { ...input, ativo: input.ativo ?? true }, fields);
     await registrarHistorico({
+      usuarioId: input.registradoPorId,
       idosoId: input.idosoId,
       acao: "criar",
       tipoEntidade: table,
@@ -251,6 +252,7 @@ export const medicamentosService = {
       Record<string, unknown>
     >(table, id, input, fields, ...notFound);
     await registrarHistorico({
+      usuarioId: input.registradoPorId,
       idosoId: String(atualizado.idoso_id ?? ""),
       acao: "atualizar",
       tipoEntidade: table,
@@ -261,10 +263,11 @@ export const medicamentosService = {
     return atualizado;
   },
 
-  async remover(id: string) {
+  async remover(id: string, usuarioId?: string) {
     const anterior = await this.buscarPorId(id);
     await deleteRow(table, id, ...notFound);
     await registrarHistorico({
+      usuarioId,
       idosoId: String(anterior.idoso_id ?? ""),
       acao: "remover",
       tipoEntidade: table,
