@@ -30,8 +30,10 @@ type UsuarioAuthRow = {
 
 const senhaPrefixo = "scrypt";
 const googleClient = new OAuth2Client();
-const defaultGoogleWebClientId =
-  "318821887059-iukcc2mai6klc7ml1a1h121ev37rvsvm.apps.googleusercontent.com";
+const defaultGoogleClientIds = [
+  "318821887059-iukcc2mai6klc7ml1a1h121ev37rvsvm.apps.googleusercontent.com",
+  "318821887059-5s73kv24r25eg92265lc7anm68t7s21r.apps.googleusercontent.com",
+];
 
 const toUsuarioPublico = (usuario: UsuarioAuthRow) => ({
   id: usuario.id,
@@ -104,7 +106,7 @@ const googleAudiences = () => {
     process.env.GOOGLE_CLIENT_IDS ??
     process.env.GOOGLE_CLIENT_ID ??
     process.env.GOOGLE_WEB_CLIENT_ID ??
-    defaultGoogleWebClientId;
+    defaultGoogleClientIds.join(",");
 
   return raw
     .split(",")
