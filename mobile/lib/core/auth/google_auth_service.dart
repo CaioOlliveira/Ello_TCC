@@ -34,10 +34,15 @@ class GoogleAuthService {
 
     final GoogleSignInAccount account;
     try {
-      account = await GoogleSignIn.instance.authenticate();
+      final lightweightSignIn =
+          GoogleSignIn.instance.attemptLightweightAuthentication();
+      account = lightweightSignIn == null
+          ? await GoogleSignIn.instance.authenticate()
+          : await lightweightSignIn ??
+              await GoogleSignIn.instance.authenticate();
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled) {
-        throw const GoogleAuthException('Login com Google cancelado.');
+        return null;
       }
 
       throw GoogleAuthException(
