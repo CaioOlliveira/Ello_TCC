@@ -268,8 +268,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
               id: selectedIdoso.id,
               data: {
                 'nomeCompleto': _nomeController.text.trim(),
-                if (usuarioId != null && usuarioId.isNotEmpty)
-                  'criadoPorId': usuarioId,
                 if (dataNascimento != null) 'dataNascimento': dataNascimento,
                 'urlFoto': fotoUrl,
                 if (normalizeSexo(_sexo) != null) 'sexo': normalizeSexo(_sexo),

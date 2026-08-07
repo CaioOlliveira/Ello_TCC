@@ -11,6 +11,7 @@ class IdosoResumo {
     required this.idade,
     required this.condicoes,
     this.criadoPorId,
+    this.ehDono,
     this.urlFoto,
     this.pesoKg,
     this.tipoSanguineo,
@@ -44,6 +45,7 @@ class IdosoResumo {
           : _idadeFromDate(dataNascimento),
       criadoPorId:
           json['criadoPorId']?.toString() ?? json['criado_por_id']?.toString(),
+      ehDono: _boolOrNull(json['ehDono'] ?? json['eh_dono']),
       urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
       pesoKg: _numOrNull(json['pesoKg'] ?? json['peso_kg']),
       tipoSanguineo: json['tipoSanguineo']?.toString() ??
@@ -75,6 +77,7 @@ class IdosoResumo {
   final String nome;
   final int idade;
   final String? criadoPorId;
+  final bool? ehDono;
   final String? urlFoto;
   final double? pesoKg;
   final String? tipoSanguineo;
@@ -95,6 +98,7 @@ class IdosoResumo {
     String? nome,
     int? idade,
     String? criadoPorId,
+    bool? ehDono,
     String? urlFoto,
     double? pesoKg,
     String? tipoSanguineo,
@@ -114,6 +118,7 @@ class IdosoResumo {
       nome: nome ?? this.nome,
       idade: idade ?? this.idade,
       criadoPorId: criadoPorId ?? this.criadoPorId,
+      ehDono: ehDono ?? this.ehDono,
       urlFoto: urlFoto ?? this.urlFoto,
       pesoKg: pesoKg ?? this.pesoKg,
       tipoSanguineo: tipoSanguineo ?? this.tipoSanguineo,
@@ -164,6 +169,14 @@ List<String> _stringList(dynamic value) {
   }
 
   return const [];
+}
+
+bool? _boolOrNull(Object? value) {
+  if (value is bool) return value;
+  final text = value?.toString().toLowerCase();
+  if (text == 'true') return true;
+  if (text == 'false') return false;
+  return null;
 }
 
 class AiConversa {

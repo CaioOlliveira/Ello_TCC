@@ -336,9 +336,7 @@ class _IdosoPosterState extends ConsumerState<_IdosoPoster> {
   Future<void> _confirmarRemocao() async {
     final idoso = widget.idoso;
     final usuarioId = ref.read(authSessionProvider)?.id ?? '';
-    final ehDono = idoso.criadoPorId == null ||
-        idoso.criadoPorId!.isEmpty ||
-        idoso.criadoPorId == usuarioId;
+    final ehDono = _ehDonoDaFicha(idoso, usuarioId);
 
     final confirmou = await showDialog<bool>(
       context: context,
@@ -402,6 +400,8 @@ class _IdosoPosterState extends ConsumerState<_IdosoPoster> {
   @override
   Widget build(BuildContext context) {
     final idoso = widget.idoso;
+    final usuarioId = ref.watch(authSessionProvider)?.id ?? '';
+    final ehDono = _ehDonoDaFicha(idoso, usuarioId);
     final image = _avatarImage(idoso.urlFoto);
     final gradient = _gradientFor(idoso.id.isEmpty ? idoso.nome : idoso.id);
 
@@ -483,14 +483,14 @@ class _IdosoPosterState extends ConsumerState<_IdosoPoster> {
                     onSelected: (value) {
                       if (value == 'remover') _confirmarRemocao();
                     },
-                    itemBuilder: (context) => const [
+                    itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'remover',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline_rounded, size: 19),
-                            SizedBox(width: 10),
-                            Text('Remover ficha'),
+                            const Icon(Icons.delete_outline_rounded, size: 19),
+                            const SizedBox(width: 10),
+                            Text(ehDono ? 'Excluir ficha' : 'Remover da tela'),
                           ],
                         ),
                       ),
@@ -900,4 +900,9 @@ String _iniciais(String nome) {
   final primeira = partes.first[0];
   final ultima = partes.length > 1 ? partes.last[0] : '';
   return '$primeira$ultima'.toUpperCase();
+}
+
+bool _ehDonoDaFicha(IdosoResumo idoso, String usuarioId) {
+  if (idoso.ehDono != null) return idoso.ehDono!;
+  return usuarioId.isNotEmpty && idoso.criadoPorId == usuarioId;
 }

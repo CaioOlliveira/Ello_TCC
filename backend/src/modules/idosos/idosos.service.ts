@@ -15,6 +15,7 @@ export type Idoso = {
   nome: string;
   idade: number;
   criadoPorId?: string | null;
+  ehDono?: boolean;
   urlFoto?: string | null;
   pesoKg?: number | null;
   tipoSanguineo?: string | null;
@@ -54,6 +55,7 @@ type IdosoRow = {
   nome: string;
   idade: number | null;
   criado_por_id: string | null;
+  eh_dono?: boolean | null;
   url_foto: string | null;
   peso_kg: string | number | null;
   tipo_sanguineo: string | null;
@@ -89,6 +91,7 @@ const mapearIdoso = (row: IdosoRow): Idoso => ({
   nome: row.nome,
   idade: Number(row.idade ?? 0),
   criadoPorId: row.criado_por_id,
+  ehDono: Boolean(row.eh_dono),
   urlFoto: row.url_foto,
   pesoKg: row.peso_kg == null ? null : Number(row.peso_kg),
   tipoSanguineo: row.tipo_sanguineo,
@@ -157,6 +160,37 @@ const limparDadosDaFicha = async (idosoId: string) => {
   }
 };
 
+const buscarDonoEfetivo = async (
+  idosoId: string,
+  fallback?: string | null,
+): Promise<string | null> => {
+  if (!isDatabaseEnabled) return fallback ?? null;
+
+  const result = await getPool().query<{ dono_id: string | null }>(
+    `
+      select coalesce(
+        (
+          select h.usuario_id
+          from historico_alteracoes h
+          where h.tipo_entidade = 'fichas_idosos'
+            and h.acao = 'criar'
+            and h.entidade_id = $1::uuid::text
+            and h.usuario_id is not null
+          order by h.criado_em asc
+          limit 1
+        ),
+        f.criado_por_id
+      ) as dono_id
+      from fichas_idosos f
+      where f.id = $1::uuid
+      limit 1
+    `,
+    [idosoId],
+  );
+
+  return result.rows[0]?.dono_id ?? fallback ?? null;
+};
+
 const prepararInput = <T extends AtualizarIdosoInput | CriarIdosoInput>(
   input: T,
 ): Record<string, unknown> => ({
@@ -212,8 +246,12 @@ export const idososService = {
       const result = await getPool().query<IdosoRow>(
         `
         select
-          id,
-          criado_por_id,
+          fichas_idosos.id,
+          dono.dono_id as criado_por_id,
+          case
+            when $1::uuid is null then false
+            else dono.dono_id = $1::uuid
+          end as eh_dono,
           nome_completo as nome,
           url_foto,
           peso_kg,
@@ -239,10 +277,25 @@ export const idososService = {
           contato_emergencia_parentesco,
           monitoramentos
         from fichas_idosos
+        left join lateral (
+          select coalesce(
+            (
+              select h.usuario_id
+              from historico_alteracoes h
+              where h.tipo_entidade = 'fichas_idosos'
+                and h.acao = 'criar'
+                and h.entidade_id = fichas_idosos.id::text
+                and h.usuario_id is not null
+              order by h.criado_em asc
+              limit 1
+            ),
+            fichas_idosos.criado_por_id
+          ) as dono_id
+        ) dono on true
         where ativo = true
           and (
             $1::uuid is null
-            or criado_por_id = $1::uuid
+            or dono.dono_id = $1::uuid
             or exists (
               select 1
               from membros_ficha mf
@@ -268,8 +321,9 @@ export const idososService = {
     const result = await getPool().query<IdosoRow>(
       `
         select
-          id,
-          criado_por_id,
+          fichas_idosos.id,
+          dono.dono_id as criado_por_id,
+          dono.dono_id = $1::uuid as eh_dono,
           nome_completo as nome,
           url_foto,
           peso_kg,
@@ -295,9 +349,24 @@ export const idososService = {
           contato_emergencia_parentesco,
           monitoramentos
         from fichas_idosos
+        left join lateral (
+          select coalesce(
+            (
+              select h.usuario_id
+              from historico_alteracoes h
+              where h.tipo_entidade = 'fichas_idosos'
+                and h.acao = 'criar'
+                and h.entidade_id = fichas_idosos.id::text
+                and h.usuario_id is not null
+              order by h.criado_em asc
+              limit 1
+            ),
+            fichas_idosos.criado_por_id
+          ) as dono_id
+        ) dono on true
         where ativo = true
           and (
-            criado_por_id = $1::uuid
+            dono.dono_id = $1::uuid
             or exists (
               select 1
               from membros_ficha mf
@@ -328,8 +397,8 @@ export const idososService = {
       const result = await getPool().query<IdosoRow>(
         `
           select
-            id,
-            criado_por_id,
+            fichas_idosos.id,
+            dono.dono_id as criado_por_id,
             nome_completo as nome,
             url_foto,
             peso_kg,
@@ -355,6 +424,21 @@ export const idososService = {
             contato_emergencia_parentesco,
             monitoramentos
           from fichas_idosos
+          left join lateral (
+            select coalesce(
+              (
+                select h.usuario_id
+                from historico_alteracoes h
+                where h.tipo_entidade = 'fichas_idosos'
+                  and h.acao = 'criar'
+                  and h.entidade_id = fichas_idosos.id::text
+                  and h.usuario_id is not null
+                order by h.criado_em asc
+                limit 1
+              ),
+              fichas_idosos.criado_por_id
+            ) as dono_id
+          ) dono on true
           where id = $1 and ativo = true
           limit 1
         `,
@@ -417,6 +501,8 @@ export const idososService = {
   },
 
   async atualizar(idosoId: string, input: AtualizarIdosoInput) {
+    const { criadoPorId: _ignorarCriador, ...inputSemCriador } =
+      prepararInput(input);
     const anterior = await getRowById<Record<string, unknown>>(
       "fichas_idosos",
       idosoId,
@@ -429,7 +515,7 @@ export const idososService = {
     >(
       "fichas_idosos",
       idosoId,
-      prepararInput(input),
+      inputSemCriador,
       fields,
       "IDOSO_NAO_ENCONTRADO",
       "Idoso não encontrado.",
@@ -463,8 +549,9 @@ export const idososService = {
       "IDOSO_NAO_ENCONTRADO",
       "Idoso nao encontrado.",
     );
+    const donoId = await buscarDonoEfetivo(idosoId, anterior.criado_por_id);
 
-    if (isDatabaseEnabled && usuarioId && anterior.criado_por_id !== usuarioId) {
+    if (isDatabaseEnabled && usuarioId && donoId !== usuarioId) {
       const result = await getPool().query<Record<string, unknown>>(
         `
           update membros_ficha
@@ -509,8 +596,9 @@ export const idososService = {
       "IDOSO_NAO_ENCONTRADO",
       "Idoso nao encontrado.",
     );
+    const donoId = await buscarDonoEfetivo(idosoId, anterior.criado_por_id);
 
-    if (usuarioId && anterior.criado_por_id !== usuarioId) {
+    if (usuarioId && donoId !== usuarioId) {
       throw new AppError(
         "APENAS_DONO_EXCLUI_FICHA",
         "Apenas o dono da ficha pode exclui-la permanentemente.",
