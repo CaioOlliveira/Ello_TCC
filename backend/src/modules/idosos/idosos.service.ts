@@ -174,7 +174,7 @@ const buscarDonoEfetivo = async (
           from historico_alteracoes h
           where h.tipo_entidade = 'fichas_idosos'
             and h.acao = 'criar'
-            and h.entidade_id = $1::uuid::text
+            and h.entidade_id::text = $1::uuid::text
             and h.usuario_id is not null
           order by h.criado_em asc
           limit 1
@@ -284,7 +284,7 @@ export const idososService = {
               from historico_alteracoes h
               where h.tipo_entidade = 'fichas_idosos'
                 and h.acao = 'criar'
-                and h.entidade_id = fichas_idosos.id::text
+                and h.entidade_id::text = fichas_idosos.id::text
                 and h.usuario_id is not null
               order by h.criado_em asc
               limit 1
@@ -356,7 +356,7 @@ export const idososService = {
               from historico_alteracoes h
               where h.tipo_entidade = 'fichas_idosos'
                 and h.acao = 'criar'
-                and h.entidade_id = fichas_idosos.id::text
+                and h.entidade_id::text = fichas_idosos.id::text
                 and h.usuario_id is not null
               order by h.criado_em asc
               limit 1
@@ -431,7 +431,7 @@ export const idososService = {
                 from historico_alteracoes h
                 where h.tipo_entidade = 'fichas_idosos'
                   and h.acao = 'criar'
-                  and h.entidade_id = fichas_idosos.id::text
+                  and h.entidade_id::text = fichas_idosos.id::text
                   and h.usuario_id is not null
                 order by h.criado_em asc
                 limit 1

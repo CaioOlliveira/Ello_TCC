@@ -10,8 +10,8 @@ with criacoes as (
   where tipo_entidade = 'fichas_idosos'
     and acao = 'criar'
     and usuario_id is not null
-    and entidade_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
-  order by entidade_id, criado_em asc
+    and entidade_id::text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+  order by entidade_id::text, criado_em asc
 )
 update public.fichas_idosos f
 set criado_por_id = c.usuario_id
