@@ -446,8 +446,6 @@ class _MoodButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF2FAD9F) : const Color(0xFF2A9CAF);
-
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -477,7 +475,10 @@ class _MoodButton extends StatelessWidget {
                   child: child,
                 );
               },
-              child: Icon(mood.icon, color: color, size: 44),
+              child: Text(
+                mood.emoji,
+                style: const TextStyle(fontSize: 38, height: 1),
+              ),
             ),
             const SizedBox(height: 5),
             Text(
@@ -659,29 +660,29 @@ class _SmallField extends StatelessWidget {
 }
 
 class _Mood {
-  const _Mood(this.id, this.feminineLabel, this.masculineLabel, this.icon);
+  const _Mood(this.id, this.feminineLabel, this.masculineLabel, this.emoji);
 
   final String id;
   final String feminineLabel;
   final String masculineLabel;
-  final IconData icon;
+  final String emoji;
 
   String labelFor(IdosoResumo? idoso) =>
       _isMale(idoso) ? masculineLabel : feminineLabel;
 }
 
 const _moods = [
-  _Mood('feliz', 'Feliz', 'Feliz', Icons.sentiment_satisfied_alt_rounded),
-  _Mood('calma', 'Calma', 'Calmo', Icons.spa_rounded),
-  _Mood('triste', 'Triste', 'Triste', Icons.sentiment_dissatisfied_rounded),
+  _Mood('feliz', 'Feliz', 'Feliz', '\u{1F60A}'),
+  _Mood('calma', 'Calma', 'Calmo', '\u{1F60C}'),
+  _Mood('triste', 'Triste', 'Triste', '\u{1F614}'),
   _Mood(
     'chorona',
     'Chorona',
-    'Chorão',
-    Icons.sentiment_very_dissatisfied_rounded,
+    'Chor\u00e3o',
+    '\u{1F62D}',
   ),
-  _Mood('irritada', 'Irritada', 'Irritado', Icons.mood_bad_rounded),
-  _Mood('sonolenta', 'Sonolenta', 'Sonolento', Icons.nights_stay_rounded),
+  _Mood('irritada', 'Irritada', 'Irritado', '\u{1F620}'),
+  _Mood('sonolenta', 'Sonolenta', 'Sonolento', '\u{1F634}'),
 ];
 
 String _moodLabel(String id, IdosoResumo? idoso) {

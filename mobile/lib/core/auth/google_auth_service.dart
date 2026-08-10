@@ -34,20 +34,21 @@ class GoogleAuthService {
 
     final GoogleSignInAccount account;
     try {
-      final lightweightSignIn =
-          GoogleSignIn.instance.attemptLightweightAuthentication();
-      account = lightweightSignIn == null
-          ? await GoogleSignIn.instance.authenticate()
-          : await lightweightSignIn ??
-              await GoogleSignIn.instance.authenticate();
+      final lightweightAccount =
+          await GoogleSignIn.instance.attemptLightweightAuthentication();
+      account = lightweightAccount ?? await GoogleSignIn.instance.authenticate();
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled) {
         return null;
       }
 
       throw GoogleAuthException(
-        'Google falhou: ${error.code.name}'
+        'Nao foi possivel entrar com Google: ${error.code.name}'
         '${error.description == null ? '' : ' - ${error.description}'}',
+      );
+    } catch (error) {
+      throw GoogleAuthException(
+        'Nao foi possivel abrir o login com Google: $error',
       );
     }
 

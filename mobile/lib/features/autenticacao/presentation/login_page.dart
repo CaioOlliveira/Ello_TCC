@@ -263,14 +263,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
   }
 
-  void _showPendingProviderMessage(String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Login com $provider sera liberado em breve.'),
-      ),
-    );
-  }
-
   String? _confirmarSenhaValidator(String? value) {
     final passwordError = Validators.password(value);
     if (passwordError != null) return passwordError;
@@ -301,7 +293,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: switch (_view) {
                 AuthView.landing => _LandingView(
                     key: const ValueKey('landing-view'),
-                    onApplePressed: () => _showPendingProviderMessage('Apple'),
                     onGooglePressed: _loading ? null : _submitGoogleLogin,
                     onEmailPressed: () => _goTo(AuthView.login),
                     onCadastroPressed: () => _goTo(AuthView.cadastro),
@@ -369,7 +360,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
 class _LandingView extends StatelessWidget {
   const _LandingView({
-    required this.onApplePressed,
     required this.onGooglePressed,
     required this.onEmailPressed,
     required this.onCadastroPressed,
@@ -378,7 +368,6 @@ class _LandingView extends StatelessWidget {
     super.key,
   });
 
-  final VoidCallback onApplePressed;
   final VoidCallback? onGooglePressed;
   final VoidCallback onEmailPressed;
   final VoidCallback onCadastroPressed;
@@ -429,7 +418,6 @@ class _LandingView extends StatelessWidget {
           ),
         ),
         _BottomChoicesPanel(
-          onApplePressed: onApplePressed,
           onGooglePressed: onGooglePressed,
           onEmailPressed: onEmailPressed,
           onCadastroPressed: onCadastroPressed,
@@ -1090,14 +1078,12 @@ class _PhoneInputFormatter extends TextInputFormatter {
 
 class _BottomChoicesPanel extends StatelessWidget {
   const _BottomChoicesPanel({
-    required this.onApplePressed,
     required this.onGooglePressed,
     required this.onEmailPressed,
     required this.onCadastroPressed,
     this.loadingGoogle = false,
   });
 
-  final VoidCallback onApplePressed;
   final VoidCallback? onGooglePressed;
   final VoidCallback onEmailPressed;
   final VoidCallback onCadastroPressed;
@@ -1123,13 +1109,7 @@ class _BottomChoicesPanel extends StatelessWidget {
       child: Column(
         children: [
           _ProviderButton(
-            label: 'Entre com Apple',
-            icon: const _AppleBadge(),
-            onPressed: onApplePressed,
-          ),
-          const SizedBox(height: AppSizes.md),
-          _ProviderButton(
-            label: loadingGoogle ? 'Entrando...' : 'Fazer login com google',
+            label: loadingGoogle ? 'Entrando...' : 'Fazer login com Google',
             icon: const _GoogleBadge(),
             onPressed: onGooglePressed,
           ),
@@ -1358,31 +1338,6 @@ class _GoogleBadge extends StatelessWidget {
         fontSize: 28,
         fontWeight: FontWeight.w700,
         height: 1,
-      ),
-    );
-  }
-}
-
-class _AppleBadge extends StatelessWidget {
-  const _AppleBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: const BoxDecoration(
-        color: Colors.black,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: const Text(
-        'A',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }
