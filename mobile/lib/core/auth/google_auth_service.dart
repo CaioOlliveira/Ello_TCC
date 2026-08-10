@@ -34,12 +34,14 @@ class GoogleAuthService {
 
     final GoogleSignInAccount account;
     try {
-      final lightweightAccount =
-          await GoogleSignIn.instance.attemptLightweightAuthentication();
-      account = lightweightAccount ?? await GoogleSignIn.instance.authenticate();
+      await GoogleSignIn.instance.signOut();
+      account = await GoogleSignIn.instance.authenticate();
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled) {
-        return null;
+        throw const GoogleAuthException(
+          'Nao foi possivel concluir o login com Google. '
+          'Tente selecionar a conta novamente.',
+        );
       }
 
       throw GoogleAuthException(
