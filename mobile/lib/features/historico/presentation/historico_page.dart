@@ -6,8 +6,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
-import '../../../shared/widgets/module_header.dart';
+import '../../../shared/widgets/app_page_header.dart';
 
 enum _HistoricoPeriodo { dia, semana, mes }
 
@@ -130,15 +129,9 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ModuleHeader(
+                  AppPageHeader(
                     title: config.title,
-                    showWordmark: true,
-                    onBack: () => context.go(
-                      routeWithCurrentOrigin(
-                        context,
-                        _moduleRouteForTipo(widget.tipo),
-                      ),
-                    ),
+                    onBack: () => context.pop(),
                   ),
                   const SizedBox(height: 12),
                   _PeriodTabs(
@@ -187,21 +180,6 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
       ),
     );
   }
-}
-
-String _moduleRouteForTipo(String tipo) {
-  return switch (tipo) {
-    'alimentacao' => '/alimentacao',
-    'humor' => '/humor',
-    'equipamentos' => '/equipamentos',
-    'medicamentos' => '/medicamentos',
-    'temperatura' => '/temperatura',
-    'agenda' => '/agenda',
-    'glicemia' => '/glicemia',
-    'pressao' => '/pressao',
-    'oxigenacao' => '/oxigenacao',
-    _ => '/insumos',
-  };
 }
 
 class _PeriodTabs extends StatelessWidget {
@@ -313,10 +291,10 @@ class _HistoricoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = config.actionLabel(registro);
     final tag = config.tag(registro);
-    final details = _historyDetails(registro, config);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
       decoration: BoxDecoration(
         color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(12),
@@ -328,21 +306,14 @@ class _HistoricoCard extends StatelessWidget {
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.fromLTRB(13, 8, 8, 8),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-          leading: Container(
+      child: Row(
+        children: [
+          Container(
             width: 54,
             height: 54,
             decoration: BoxDecoration(
               color: adaptive(
-                context,
-                const Color(0xFFD5EEF3),
-                AppDarkColors.tintedInfo,
-              ),
+                  context, const Color(0xFFD5EEF3), AppDarkColors.tintedInfo),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -351,368 +322,81 @@ class _HistoricoCard extends StatelessWidget {
               size: 31,
             ),
           ),
-          title: Text(
-            '${_firstName(registro.usuarioNome)} $label',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-              fontSize: 12.5,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Text(
-              config.detail(registro),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: adaptive(
-                  context,
-                  const Color(0xFF868686),
-                  AppDarkColors.textSecondary,
-                ),
-                fontSize: 11,
-              ),
-            ),
-          ),
-          trailing: SizedBox(
-            width: 78,
+          const SizedBox(width: 12),
+          Container(
+              width: 1,
+              height: 56,
+              color: adaptive(
+                  context, const Color(0xFFD0D0D0), AppDarkColors.divider)),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_firstName(registro.usuarioNome)} $label',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: adaptive(
+                        context, Colors.black, AppDarkColors.textPrimary),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  config.detail(registro),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF868686),
+                        AppDarkColors.textSecondary),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+              width: 1,
+              height: 56,
+              color: adaptive(
+                  context, const Color(0xFFD0D0D0), AppDarkColors.divider)),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 66,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _formatDate(registro.criadoEm.toLocal()),
                   style: TextStyle(
-                    color: adaptive(
-                      context,
-                      const Color(0xFF8A8A8A),
-                      AppDarkColors.textMuted,
-                    ),
-                    fontSize: 10.5,
+                    color: adaptive(context, const Color(0xFF8A8A8A),
+                        AppDarkColors.textMuted),
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
                   _formatTime(registro.criadoEm.toLocal()),
                   style: TextStyle(
-                    color: adaptive(
-                      context,
-                      const Color(0xFF073248),
-                      AppDarkColors.textPrimary,
-                    ),
+                    color: adaptive(context, const Color(0xFF073248),
+                        AppDarkColors.textPrimary),
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: _Tag(label: tag.$1, color: tag.$2),
-                ),
+                _Tag(label: tag.$1, color: tag.$2),
               ],
             ),
           ),
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: adaptive(
-                  context,
-                  const Color(0xFFF2FBFC),
-                  AppDarkColors.surfaceAlt,
-                ),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: adaptive(
-                    context,
-                    const Color(0xFFD4EEF2),
-                    AppDarkColors.border,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _HistoryDetailLine(
-                      label: 'Pessoa', value: registro.usuarioNome),
-                  _HistoryDetailLine(label: 'Operação', value: label),
-                  _HistoryDetailLine(label: 'Item', value: registro.itemNome),
-                  _HistoryDetailLine(
-                    label: 'Quando',
-                    value:
-                        '${_formatDate(registro.criadoEm.toLocal())} às ${_formatTime(registro.criadoEm.toLocal())}',
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Detalhes',
-                    style: TextStyle(
-                      color: adaptive(
-                        context,
-                        const Color(0xFF073248),
-                        AppDarkColors.textPrimary,
-                      ),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  if (details.isEmpty)
-                    Text(
-                      'Sem detalhes adicionais.',
-                      style: TextStyle(
-                        color: adaptive(
-                          context,
-                          const Color(0xFF65737A),
-                          AppDarkColors.textSecondary,
-                        ),
-                        fontSize: 12,
-                      ),
-                    )
-                  else
-                    for (final detail in details)
-                      _HistoryDetailLine(
-                        label: detail.$1,
-                        value: detail.$2,
-                      ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
-}
-
-class _HistoryDetailLine extends StatelessWidget {
-  const _HistoryDetailLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    if (value.trim().isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: RichText(
-        text: TextSpan(
-          style: TextStyle(
-            color: adaptive(
-              context,
-              const Color(0xFF3C4A50),
-              AppDarkColors.textSecondary,
-            ),
-            fontSize: 12,
-            height: 1.25,
-          ),
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: TextStyle(
-                color: adaptive(
-                  context,
-                  const Color(0xFF073248),
-                  AppDarkColors.textPrimary,
-                ),
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-List<(String, String)> _historyDetails(
-  HistoricoRegistro registro,
-  _HistoricoConfig config,
-) {
-  final pairs = <(String, String)>[];
-  final summary = config.detail(registro).replaceAll('\n', ' - ');
-  if (summary.isNotEmpty && summary != registro.itemNome) {
-    pairs.add(('Resumo', summary));
-  }
-
-  final current = _readableHistoryMap(registro.dadosNovos);
-  final previous = _readableHistoryMap(registro.dadosAnteriores);
-
-  if (registro.acao == 'atualizar' && previous.isNotEmpty) {
-    for (final entry in current.entries) {
-      final oldValue = previous[entry.key];
-      if (oldValue != null && oldValue != entry.value) {
-        pairs.add((entry.key, '$oldValue → ${entry.value}'));
-      }
-    }
-  }
-
-  if (pairs.length <= 1) {
-    for (final entry in current.entries) {
-      pairs.add((entry.key, entry.value));
-    }
-  }
-
-  if (registro.acao == 'remover' && previous.isNotEmpty) {
-    for (final entry in previous.entries) {
-      pairs.add((entry.key, entry.value));
-    }
-  }
-
-  final seen = <String>{};
-  return pairs
-      .where((item) {
-        final key = '${item.$1}:${item.$2}';
-        if (seen.contains(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .take(10)
-      .toList();
-}
-
-Map<String, String> _readableHistoryMap(Map<String, dynamic> data) {
-  final result = <String, String>{};
-
-  for (final entry in data.entries) {
-    final label = _historyKeyLabel(entry.key);
-    final value = _formatHistoryValue(entry.value);
-    if (label == null || value == null || value.trim().isEmpty) continue;
-    result[label] = value;
-  }
-
-  return result;
-}
-
-String? _historyKeyLabel(String key) {
-  final normalized = key.trim();
-  final lower = normalized.toLowerCase();
-
-  if (lower == 'id' ||
-      lower.endsWith('_id') ||
-      lower.endsWith('id') ||
-      lower.contains('foto') ||
-      lower.contains('url') ||
-      lower.contains('recordatorio') ||
-      lower.contains('base64')) {
-    return null;
-  }
-
-  const labels = {
-    'acao': 'Ação',
-    'aceitacao': 'Aceitação',
-    'alimentos': 'Alimentos',
-    'alimentos_consumidos': 'Alimentos',
-    'batimentos': 'Batimentos',
-    'contexto': 'Contexto',
-    'dataConsumo': 'Data de consumo',
-    'data_consumo': 'Data de consumo',
-    'dataHumor': 'Data do humor',
-    'data_humor': 'Data do humor',
-    'diastolica': 'Diastólica',
-    'doseUnidades': 'Dose',
-    'dose_unidades': 'Dose',
-    'frequenciaCardiaca': 'Frequência cardíaca',
-    'frequencia_cardiaca': 'Frequência cardíaca',
-    'horaConsumo': 'Hora de consumo',
-    'hora_consumo': 'Hora de consumo',
-    'horario': 'Horário',
-    'horarioRegi': 'Horário',
-    'horario_regi': 'Horário',
-    'humor': 'Humor',
-    'medidoEm': 'Medição',
-    'medido_em': 'Medição',
-    'nome': 'Nome',
-    'nomeInsulina': 'Insulina',
-    'nome_insulina': 'Insulina',
-    'observacoes': 'Observações',
-    'pulso': 'Pulso',
-    'quantidade': 'Quantidade',
-    'quantidadeAtual': 'Estoque atual',
-    'quantidade_anterior': 'Quantidade anterior',
-    'quantidade_unidades': 'Estoque',
-    'saturacao': 'Saturação',
-    'sintomas': 'Sintomas',
-    'sistolica': 'Sistólica',
-    'spo2': 'Saturação',
-    'status': 'Status',
-    'temperatura': 'Temperatura',
-    'temperatura_celsius': 'Temperatura',
-    'tipo': 'Tipo',
-    'tipoRefeicao': 'Refeição',
-    'tipo_refeicao': 'Refeição',
-    'titulo': 'Título',
-    'valor': 'Valor',
-    'valorMgDl': 'Valor',
-    'valor_mg_dl': 'Valor',
-  };
-
-  return labels[normalized] ?? _titleFromKey(normalized);
-}
-
-String? _formatHistoryValue(Object? value) {
-  if (value == null) return null;
-
-  if (value is List) {
-    final values = value
-        .map(_formatHistoryValue)
-        .whereType<String>()
-        .where((item) => item.trim().isNotEmpty)
-        .toList();
-    return values.join(', ');
-  }
-
-  if (value is Map) {
-    final nome = value['nome']?.toString();
-    if (nome != null && nome.trim().isNotEmpty) {
-      final peso = value['pesoGramas'] ?? value['peso_gramas'];
-      if (peso != null) return '$nome (${peso}g)';
-      return nome;
-    }
-    return value.entries
-        .map((entry) {
-          final label = _historyKeyLabel(entry.key.toString());
-          final formatted = _formatHistoryValue(entry.value);
-          if (label == null || formatted == null || formatted.isEmpty) {
-            return null;
-          }
-          return '$label: $formatted';
-        })
-        .whereType<String>()
-        .join('; ');
-  }
-
-  final text = value.toString().trim();
-  if (text.isEmpty || text.length > 180) return null;
-
-  final parsedDate = DateTime.tryParse(text);
-  if (parsedDate != null && text.contains('-')) {
-    final local = parsedDate.toLocal();
-    return '${_formatDate(local)} às ${_formatTime(local)}';
-  }
-
-  return text;
-}
-
-String _titleFromKey(String key) {
-  final words = key
-      .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (match) {
-        return '${match.group(1)} ${match.group(2)}';
-      })
-      .replaceAll('_', ' ')
-      .split(' ')
-      .where((word) => word.isNotEmpty)
-      .toList();
-
-  if (words.isEmpty) return key;
-  final text = words.join(' ').toLowerCase();
-  return '${text[0].toUpperCase()}${text.substring(1)}';
 }
 
 class _Tag extends StatelessWidget {
@@ -764,13 +448,6 @@ class _HistoricoConfig {
     return switch (tipo) {
       'alimentacao' => _alimentacao,
       'humor' => _humor,
-      'equipamentos' => _equipamentos,
-      'medicamentos' => _medicamentos,
-      'temperatura' => _temperatura,
-      'agenda' => _agenda,
-      'glicemia' => _glicemia,
-      'pressao' => _pressao,
-      'oxigenacao' => _oxigenacao,
       _ => _insumos,
     };
   }
@@ -832,10 +509,7 @@ final _alimentacao = _HistoricoConfig(
     return 'registrou refeição';
   },
   detail: (registro) {
-    final alimentos = registro.dadosNovos['alimentos'] ??
-        registro.dadosNovos['alimentos_consumidos'] ??
-        registro.dadosAnteriores['alimentos'] ??
-        registro.dadosAnteriores['alimentos_consumidos'];
+    final alimentos = registro.dadosNovos['alimentos'];
     if (alimentos is List && alimentos.isNotEmpty) {
       final nomes = alimentos
           .whereType<Map>()
@@ -858,7 +532,7 @@ final _humor = _HistoricoConfig(
   title: 'Histórico de humor',
   emptyMessage: 'Nenhum humor registrado neste período.',
   icon: (registro) => switch (registro.itemNome.toLowerCase()) {
-    'calma' || 'calmo' => Icons.spa_rounded,
+    'calma' || 'calmo' => Icons.sentiment_neutral_rounded,
     'triste' => Icons.sentiment_dissatisfied_rounded,
     'chorona' || 'chorão' => Icons.sentiment_very_dissatisfied_rounded,
     'irritada' || 'irritado' => Icons.mood_bad_rounded,
@@ -877,241 +551,6 @@ final _humor = _HistoricoConfig(
     return ('Registrado', const Color(0xFF4E88C7));
   },
 );
-
-final _equipamentos = _HistoricoConfig(
-  title: 'Histórico dos equipamentos',
-  emptyMessage: 'Nenhuma alteração de equipamento neste período.',
-  icon: (registro) => registro.acao == 'registrar_manutencao'
-      ? Icons.build_circle_outlined
-      : registro.acao == 'atualizar'
-          ? Icons.edit_outlined
-          : Icons.medical_services_outlined,
-  actionLabel: (registro) => switch (registro.acao) {
-    'criar' => 'cadastrou equipamento',
-    'remover' => 'removeu equipamento',
-    'registrar_manutencao' => 'registrou manutenção',
-    _ => 'atualizou equipamento',
-  },
-  detail: (registro) {
-    final manutencao = _historyValue(registro, const [
-      'tipoManutencao',
-      'tipo_manutencao',
-      'descricaoServico',
-      'descricao_servico',
-    ]);
-    return manutencao == null
-        ? registro.itemNome
-        : '${registro.itemNome} - $manutencao';
-  },
-  tag: _defaultHistoryTag,
-);
-
-final _medicamentos = _HistoricoConfig(
-  title: 'Histórico de remédios',
-  emptyMessage: 'Nenhuma alteração de remédio neste período.',
-  icon: (registro) {
-    if (registro.tipoEntidade == 'administracoes_medicamentos') {
-      return Icons.medication_liquid_outlined;
-    }
-    if (registro.tipoEntidade == 'horarios_medicamentos') {
-      return Icons.schedule_rounded;
-    }
-    return registro.acao == 'atualizar'
-        ? Icons.edit_outlined
-        : Icons.medication_outlined;
-  },
-  actionLabel: (registro) {
-    if (registro.tipoEntidade == 'administracoes_medicamentos') {
-      return 'registrou administração';
-    }
-    if (registro.tipoEntidade == 'horarios_medicamentos') {
-      return 'atualizou horários';
-    }
-    return switch (registro.acao) {
-      'criar' => 'cadastrou remédio',
-      'remover' => 'removeu remédio',
-      _ => 'atualizou remédio',
-    };
-  },
-  detail: (registro) {
-    if (registro.tipoEntidade == 'administracoes_medicamentos') {
-      final status = _historyValue(registro, const ['status']);
-      final dose = _historyValue(
-        registro,
-        const ['quantidadeDose', 'quantidade_dose'],
-      );
-      final parts = [
-        registro.itemNome,
-        if (status != null) _capitalize(status),
-        if (dose != null) '$dose dose(s)',
-      ];
-      return parts.join(' - ');
-    }
-
-    final dose = _historyValue(registro, const [
-      'quantidadeDose',
-      'quantidade_dose',
-      'dosagem',
-    ]);
-    final unidade = _historyValue(
-      registro,
-      const ['unidadeDose', 'unidade_dose'],
-    );
-    if (dose == null) return registro.itemNome;
-    return '${registro.itemNome} - $dose${unidade == null ? '' : ' $unidade'}';
-  },
-  tag: (registro) {
-    if (registro.tipoEntidade == 'administracoes_medicamentos') {
-      return ('Administrado', const Color(0xFF27B35F));
-    }
-    return _defaultHistoryTag(registro);
-  },
-);
-
-final _temperatura = _HistoricoConfig(
-  title: 'Histórico da temperatura',
-  emptyMessage: 'Nenhuma temperatura registrada neste período.',
-  icon: (registro) => Icons.thermostat_rounded,
-  actionLabel: (registro) => _measurementAction(registro, 'temperatura'),
-  detail: (registro) {
-    final valor = _historyValue(
-      registro,
-      const ['temperatura', 'temperatura_celsius'],
-    );
-    return valor == null ? 'Temperatura' : 'Temperatura: $valor °C';
-  },
-  tag: _defaultHistoryTag,
-);
-
-final _agenda = _HistoricoConfig(
-  title: 'Histórico da agenda',
-  emptyMessage: 'Nenhum compromisso alterado neste período.',
-  icon: (registro) => registro.acao == 'atualizar_ocorrencia'
-      ? Icons.event_available_outlined
-      : Icons.calendar_month_outlined,
-  actionLabel: (registro) => switch (registro.acao) {
-    'criar' => 'adicionou compromisso',
-    'remover' => 'removeu compromisso',
-    'atualizar_ocorrencia' => 'alterou situação',
-    _ => 'atualizou compromisso',
-  },
-  detail: (registro) {
-    final status = _historyValue(registro, const ['status']);
-    return status == null
-        ? registro.itemNome
-        : '${registro.itemNome} - ${_capitalize(status)}';
-  },
-  tag: (registro) {
-    final status = _historyValue(registro, const ['status'])?.toLowerCase();
-    if (status == 'concluido' || status == 'concluida') {
-      return ('Concluído', const Color(0xFF27B35F));
-    }
-    if (status == 'cancelado' || status == 'cancelada') {
-      return ('Cancelado', const Color(0xFFE85D75));
-    }
-    return _defaultHistoryTag(registro);
-  },
-);
-
-final _glicemia = _HistoricoConfig(
-  title: 'Histórico da glicemia',
-  emptyMessage: 'Nenhuma glicemia registrada neste período.',
-  icon: (registro) => registro.tipoEntidade == 'registros_insulina'
-      ? Icons.vaccines_outlined
-      : Icons.water_drop_outlined,
-  actionLabel: (registro) {
-    if (registro.tipoEntidade == 'registros_insulina') {
-      return 'registrou aplicação de insulina';
-    }
-    return _measurementAction(registro, 'glicemia');
-  },
-  detail: (registro) {
-    if (registro.tipoEntidade == 'registros_insulina') {
-      final dose = _historyValue(
-        registro,
-        const ['doseUnidades', 'dose_unidades'],
-      );
-      return dose == null
-          ? registro.itemNome
-          : '${registro.itemNome} - $dose unidade(s)';
-    }
-    final valor = _historyValue(
-      registro,
-      const ['valor', 'valorMgDl', 'valor_mg_dl'],
-    );
-    return valor == null ? 'Glicemia' : 'Glicemia: $valor mg/dL';
-  },
-  tag: _defaultHistoryTag,
-);
-
-final _pressao = _HistoricoConfig(
-  title: 'Histórico da pressão',
-  emptyMessage: 'Nenhuma pressão registrada neste período.',
-  icon: (registro) => Icons.favorite_outline_rounded,
-  actionLabel: (registro) => _measurementAction(registro, 'pressão'),
-  detail: (registro) {
-    final sistolica = _historyValue(registro, const ['sistolica']);
-    final diastolica = _historyValue(registro, const ['diastolica']);
-    if (sistolica == null || diastolica == null) return 'Pressão arterial';
-    return 'Pressão: $sistolica/$diastolica mmHg';
-  },
-  tag: _defaultHistoryTag,
-);
-
-final _oxigenacao = _HistoricoConfig(
-  title: 'Histórico da oxigenação',
-  emptyMessage: 'Nenhuma oxigenação registrada neste período.',
-  icon: (registro) => Icons.air_rounded,
-  actionLabel: (registro) => _measurementAction(registro, 'oxigenação'),
-  detail: (registro) {
-    final saturacao = _historyValue(
-      registro,
-      const ['saturacao', 'spo2'],
-    );
-    return saturacao == null ? 'Oxigenação' : 'Saturação: $saturacao%';
-  },
-  tag: _defaultHistoryTag,
-);
-
-String _measurementAction(HistoricoRegistro registro, String subject) {
-  return switch (registro.acao) {
-    'remover' => 'removeu registro de $subject',
-    'atualizar' => 'atualizou $subject',
-    _ => 'registrou $subject',
-  };
-}
-
-(String, Color) _defaultHistoryTag(HistoricoRegistro registro) {
-  return switch (registro.acao) {
-    'remover' => ('Removido', const Color(0xFFE85D75)),
-    'atualizar' || 'atualizar_ocorrencia' => (
-        'Atualizado',
-        const Color(0xFF8C52D6)
-      ),
-    'registrar_manutencao' => ('Manutenção', const Color(0xFFF09A37)),
-    _ => ('Registrado', const Color(0xFF4E88C7)),
-  };
-}
-
-String? _historyValue(
-  HistoricoRegistro registro,
-  List<String> keys,
-) {
-  for (final source in [registro.dadosNovos, registro.dadosAnteriores]) {
-    for (final key in keys) {
-      final value = source[key];
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString();
-      }
-    }
-  }
-  return null;
-}
-
-String _capitalize(String value) {
-  if (value.isEmpty) return value;
-  return '${value[0].toUpperCase()}${value.substring(1)}';
-}
 
 class _HistoricoEmpty extends StatelessWidget {
   const _HistoricoEmpty({required this.config});

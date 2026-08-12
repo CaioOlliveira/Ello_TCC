@@ -9,6 +9,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class AcessosFichaPage extends ConsumerStatefulWidget {
@@ -228,27 +229,10 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 6, 14, 0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => context.go(backRoute),
-                          icon: const Icon(
-                            Icons.chevron_left_rounded,
-                            color: Color(0xFF238FA1),
-                            size: 32,
-                          ),
-                        ),
-                        Text(
-                          title,
-                          style: TextStyle(
-                            color: adaptive(context, Colors.black,
-                                AppDarkColors.textPrimary),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+                    padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+                    child: AppPageHeader(
+                      title: title,
+                      onBack: () => context.go(backRoute),
                     ),
                   ),
                   Expanded(child: _buildBody()),
@@ -477,7 +461,8 @@ class _FichaResumoCard extends StatelessWidget {
                   Text(
                     '${idoso.idade} anos',
                     style: TextStyle(
-                      color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+                      color: adaptive(context, const Color(0xFF8A8A8A),
+                          AppDarkColors.textSecondary),
                       fontSize: 12.5,
                     ),
                   ),
@@ -497,7 +482,8 @@ class _FichaResumoCard extends StatelessWidget {
                 '$totalParticipantes ${totalParticipantes == 1 ? 'participante' : 'participantes'}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
+                  color: adaptive(context, const Color(0xFF5E6B73),
+                      AppDarkColors.textSecondary),
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -542,7 +528,10 @@ class _CompartilharCard extends StatelessWidget {
           Text(
             'Qualquer pessoa com este código poderá solicitar acesso à ficha.',
             style: TextStyle(
-                color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary), fontSize: 12.5, height: 1.35),
+                color: adaptive(context, const Color(0xFF5E6B73),
+                    AppDarkColors.textSecondary),
+                fontSize: 12.5,
+                height: 1.35),
           ),
           const SizedBox(height: 14),
           if (convite == null || convite.codigo.isEmpty)
@@ -567,7 +556,8 @@ class _CompartilharCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
+                  color: adaptive(context, const Color(0xFFE7F4F6),
+                      AppDarkColors.tintedInfo),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -596,7 +586,10 @@ class _CompartilharCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'O codigo expira em ${_formatarData(convite.expiraEm!)}.',
-                style: TextStyle(color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted), fontSize: 11),
+                style: TextStyle(
+                    color: adaptive(context, const Color(0xFF9B9B9B),
+                        AppDarkColors.textMuted),
+                    fontSize: 11),
               ),
             ],
             const SizedBox(height: 14),
@@ -686,7 +679,8 @@ class _PendenteCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF17324D),
+                        AppDarkColors.textPrimary),
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
                   ),
@@ -694,7 +688,8 @@ class _PendenteCard extends StatelessWidget {
                 Text(
                   'Solicitou acesso como ${_cargoLabel(solicitacao.funcao)}',
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
+                    color: adaptive(context, const Color(0xFF5E6B73),
+                        AppDarkColors.textSecondary),
                     fontSize: 11.5,
                   ),
                 ),
@@ -704,7 +699,8 @@ class _PendenteCard extends StatelessWidget {
                     Icon(
                       Icons.schedule_rounded,
                       size: 12,
-                      color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
+                      color: adaptive(context, const Color(0xFF9B9B9B),
+                          AppDarkColors.textMuted),
                     ),
                     const SizedBox(width: 3),
                     Text(
@@ -712,7 +708,8 @@ class _PendenteCard extends StatelessWidget {
                           ? 'Solicitado hoje'
                           : 'Aguardando ha $dias ${dias == 1 ? 'dia' : 'dias'}',
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
+                        color: adaptive(context, const Color(0xFF9B9B9B),
+                            AppDarkColors.textMuted),
                         fontSize: 10.5,
                       ),
                     ),
@@ -858,7 +855,8 @@ class _ParticipanteCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                              color: adaptive(context, const Color(0xFF17324D),
+                                  AppDarkColors.textPrimary),
                               fontSize: 14.5,
                               fontWeight: FontWeight.w700,
                             ),
@@ -883,7 +881,8 @@ class _ParticipanteCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
+                        color: adaptive(context, const Color(0xFF5E6B73),
+                            AppDarkColors.textSecondary),
                         fontSize: 11.5,
                       ),
                     ),
@@ -905,7 +904,8 @@ class _ParticipanteCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
+                    color: adaptive(context, const Color(0xFFE7F4F6),
+                        AppDarkColors.tintedInfo),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: const Text(
@@ -959,7 +959,8 @@ class _CargoMenu extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
+          color: adaptive(
+              context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
@@ -1054,7 +1055,8 @@ class _CargoSheet extends StatelessWidget {
                 width: 42,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: adaptive(context, const Color(0xFFE0E0E0), AppDarkColors.border),
+                  color: adaptive(
+                      context, const Color(0xFFE0E0E0), AppDarkColors.border),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -1066,7 +1068,8 @@ class _CargoSheet extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
@@ -1107,7 +1110,8 @@ class _CargoSheet extends StatelessWidget {
                       child: Text(
                         'Administrador',
                         style: TextStyle(
-                          color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                          color: adaptive(context, const Color(0xFF17324D),
+                              AppDarkColors.textPrimary),
                           fontSize: 14.5,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1181,7 +1185,8 @@ class _CargoOption extends StatelessWidget {
             border: Border.all(
               color: selected
                   ? const Color(0xFF2BA8BA)
-                  : adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
+                  : adaptive(
+                      context, const Color(0xFFE4EFF1), AppDarkColors.border),
               width: selected ? 1.4 : 1,
             ),
           ),
@@ -1193,7 +1198,8 @@ class _CargoOption extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: selected
                       ? const Color(0xFF2BA8BA)
-                      : adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
+                      : adaptive(context, const Color(0xFFE7F4F6),
+                          AppDarkColors.tintedInfo),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -1210,7 +1216,8 @@ class _CargoOption extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                        color: adaptive(context, const Color(0xFF17324D),
+                            AppDarkColors.textPrimary),
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1218,7 +1225,8 @@ class _CargoOption extends StatelessWidget {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+                        color: adaptive(context, const Color(0xFF8A8A8A),
+                            AppDarkColors.textSecondary),
                         fontSize: 11.5,
                       ),
                     ),

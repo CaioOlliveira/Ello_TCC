@@ -17,8 +17,10 @@ dependencies:
   go_router: ^14.6.2
   google_sign_in: 7.2.0
   image_picker: ^1.1.2
+  mobile_scanner: ^7.4.0
   pdf: ^3.11.3
   printing: ^5.14.2
+  qr_flutter: ^4.1.0
   speech_to_text: ^7.0.0
   shared_preferences: ^2.5.5
   flutter_local_notifications: 22.2.0

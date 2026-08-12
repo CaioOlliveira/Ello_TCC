@@ -163,15 +163,9 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 18),
-          Text(
-            'Cadastro de insumos',
-            style: TextStyle(
-              color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              height: 1,
-            ),
+          AppPageHeader(
+            title: 'Cadastro de insumos',
+            onBack: widget.onCancel,
           ),
           const SizedBox(height: 2),
           Text(

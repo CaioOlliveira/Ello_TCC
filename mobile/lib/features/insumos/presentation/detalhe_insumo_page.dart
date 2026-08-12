@@ -27,27 +27,7 @@ class _InsumoDetailView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: onBack,
-              icon: const Icon(
-                Icons.chevron_left_rounded,
-                color: Color(0xFF2CA0B4),
-                size: 30,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Detalhes insumo',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF2CA0B4),
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          AppPageHeader(title: 'Detalhes do insumo', onBack: onBack),
           const SizedBox(height: 26),
           StaggeredEntry(
             index: 0,

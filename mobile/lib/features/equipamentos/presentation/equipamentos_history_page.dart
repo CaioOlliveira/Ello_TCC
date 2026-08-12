@@ -8,8 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
-import '../../../shared/widgets/module_header.dart';
+import '../../../shared/widgets/app_page_header.dart';
 
 enum _EquipamentosHistoryPeriod { dia, semanal, mes }
 
@@ -104,12 +103,9 @@ class _EquipamentosHistoryPageState
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
                 child: Column(
                   children: [
-                    ModuleHeader(
-                      title: 'Historico dos equipamentos',
-                      showWordmark: true,
-                      onBack: () => context.go(
-                        routeWithCurrentOrigin(context, '/equipamentos'),
-                      ),
+                    AppPageHeader(
+                      title: 'Histórico dos equipamentos',
+                      onBack: () => context.go('/equipamentos'),
                     ),
                     const SizedBox(height: 12),
                     _HistorySwitch(

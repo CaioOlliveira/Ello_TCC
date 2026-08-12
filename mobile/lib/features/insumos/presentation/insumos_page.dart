@@ -12,8 +12,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
-import '../../../shared/widgets/module_header.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 part 'cadastro_insumo_page.dart';
@@ -288,11 +287,9 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
                         loading: _loading,
                         error: _error,
                         onRetry: _load,
-                        onBack: () => context.go(moduleBackRoute(context)),
+                        onBack: () => context.go('/monitoramento'),
                         onAdd: _showCadastro,
-                        onHistory: () => context.push(
-                          routeWithCurrentOrigin(context, '/historico/insumos'),
-                        ),
+                        onHistory: () => context.push('/historico/insumos'),
                         onGeneratePdf: _generateExpiredPdf,
                         onOpen: _showDetalhe,
                         selectedFilter: _selectedFilter,
@@ -361,11 +358,12 @@ class _InsumosListView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ModuleHeader(title: 'Insumos', onBack: onBack),
+          AppPageHeader(title: 'Insumos', onBack: onBack),
           Padding(
-            padding: const EdgeInsets.only(left: 50),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               'Controle de estoque dos produtos usados no cuidado',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: adaptive(context, const Color(0xFF8A8A8A),
                     AppDarkColors.textSecondary),
@@ -815,7 +813,10 @@ class _ErrorState extends StatelessWidget {
                       AppDarkColors.textSecondary)),
             ),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: onRetry, child: const Text('Voltar')),
+            OutlinedButton(
+              onPressed: onRetry,
+              child: const Icon(Icons.chevron_left_rounded),
+            ),
           ],
         ),
       ),

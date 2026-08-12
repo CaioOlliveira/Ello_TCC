@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/action_icon_button.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class PerfilIdosoPage extends ConsumerWidget {
@@ -41,6 +43,7 @@ class PerfilIdosoPage extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
               children: [
+                const AppPageHeader(title: 'Perfil da pessoa idosa'),
                 StaggeredEntry(
                   index: 0,
                   child: Row(
@@ -263,7 +266,7 @@ class _CompartilharFichaSheetState
             const SizedBox(height: 8),
             Text(
               'Peça para a outra pessoa abrir o Ello, tocar em\n'
-              '"Entrar com convite" e colar o código abaixo.',
+              '"Adicionar ficha" e escolher "Sou o cuidador". Ela pode ler o QR Code ou digitar o código.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: adaptive(context, const Color(0xFF5E6B73),
@@ -310,6 +313,35 @@ class _CompartilharFichaSheetState
                       : Column(
                           key: const ValueKey('codigo'),
                           children: [
+                            Semantics(
+                              label: 'QR Code do convite da ficha',
+                              child: Container(
+                                width: 190,
+                                height: 190,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: const Color(0xFF8BD2DC),
+                                  ),
+                                ),
+                                child: QrImageView(
+                                  data: _codigo ?? '',
+                                  version: QrVersions.auto,
+                                  padding: EdgeInsets.zero,
+                                  eyeStyle: const QrEyeStyle(
+                                    eyeShape: QrEyeShape.square,
+                                    color: Color(0xFF0D6E80),
+                                  ),
+                                  dataModuleStyle: const QrDataModuleStyle(
+                                    dataModuleShape: QrDataModuleShape.square,
+                                    color: Color(0xFF17324D),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
                             InkWell(
                               onTap: _copiarCodigo,
                               borderRadius: BorderRadius.circular(14),

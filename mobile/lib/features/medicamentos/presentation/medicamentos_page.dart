@@ -6,10 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
-import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
-import '../../../shared/widgets/module_header.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 enum _Mode { resumo, form, historico, detalhe }
@@ -98,22 +96,16 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   void _ensureResumo(String idosoId) {
     if (_resumoLoadedIdosoId == idosoId && _resumoFuture != null) return;
     _resumoLoadedIdosoId = idosoId;
-    _resumoFuture = _loadResumo(idosoId);
+    _resumoFuture =
+        ref.read(apiClientProvider).getResumoMedicamentos(idosoId: idosoId);
   }
 
   void _reloadResumo(String idosoId) {
     setState(() {
       _resumoLoadedIdosoId = idosoId;
-      _resumoFuture = _loadResumo(idosoId);
+      _resumoFuture =
+          ref.read(apiClientProvider).getResumoMedicamentos(idosoId: idosoId);
     });
-  }
-
-  Future<MedicamentosResumo> _loadResumo(String idosoId) async {
-    final resumo = await ref
-        .read(apiClientProvider)
-        .getResumoMedicamentos(idosoId: idosoId);
-    await _syncMedicamentoNotifications(idosoId, resumo);
-    return resumo;
   }
 
   void _ensureHistorico(String idosoId) {
@@ -248,7 +240,6 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         _doseController.text.trim().replaceAll(',', '.'),
       );
 
-      final registradoPorId = ref.read(authSessionProvider)?.id;
       final String medicamentoId;
       if (_editando && _selecionado != null) {
         await client.atualizarMedicamento(
@@ -260,7 +251,6 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
           dataInicio: _dataInicio == null ? null : _toIsoDate(_dataInicio!),
           dataFim: _dataFim == null ? null : _toIsoDate(_dataFim!),
           quantidadeEstoque: estoque,
-          registradoPorId: registradoPorId,
         );
         medicamentoId = _selecionado!.id;
       } else {
@@ -273,7 +263,6 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
           dataInicio: _dataInicio == null ? null : _toIsoDate(_dataInicio!),
           dataFim: _dataFim == null ? null : _toIsoDate(_dataFim!),
           quantidadeEstoque: estoque,
-          registradoPorId: registradoPorId,
         );
         medicamentoId = criado.id;
       }
@@ -315,53 +304,14 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     final medicamento = _selecionado;
     if (idoso == null || medicamento == null) return;
 
-    final agora = DateTime.now();
-    final horarioPrevisto =
-        _horarioPrevistoParaAgora(medicamento.proximoHorario, agora);
-    final jaAdministrado = _administracoes.any((dado) {
-      if ((dado['status'] ?? '').toString() != 'tomado') return false;
-      final previsto = DateTime.tryParse(
-        (dado['horario_previsto'] ?? '').toString(),
-      )?.toLocal();
-      if (previsto == null) return false;
-      return previsto.year == horarioPrevisto.year &&
-          previsto.month == horarioPrevisto.month &&
-          previsto.day == horarioPrevisto.day &&
-          previsto.hour == horarioPrevisto.hour &&
-          previsto.minute == horarioPrevisto.minute;
-    });
-
-    if (jaAdministrado) {
-      final confirmar = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Dose já registrada'),
-          content: Text(
-            'Este horário (${_formatTime(horarioPrevisto)}) já foi marcado '
-            'como tomado. Deseja registrar novamente mesmo assim?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Registrar mesmo assim'),
-            ),
-          ],
-        ),
-      );
-      if (confirmar != true) return;
-    }
-
-    if (!mounted) return;
     setState(() => _saving = true);
     try {
+      final agora = DateTime.now();
       await ref.read(apiClientProvider).registrarAdministracaoMedicamento(
             medicamentoId: medicamento.id,
             idosoId: idoso.id,
-            horarioPrevisto: horarioPrevisto,
+            horarioPrevisto:
+                _horarioPrevistoParaAgora(medicamento.proximoHorario, agora),
             administradoEm: agora,
             status: 'tomado',
             registradoPorId: ref.read(authSessionProvider)?.id,
@@ -370,19 +320,6 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       await _openDetalhe(medicamento);
       _invalidateHistorico();
       _reloadResumo(idoso.id);
-      try {
-        final resumoAtualizado =
-            await ref.read(apiClientProvider).getResumoMedicamentos(idosoId: idoso.id);
-        if (!mounted) return;
-        final atualizado = resumoAtualizado.medicamentos
-            .where((item) => item.id == medicamento.id)
-            .firstOrNull;
-        if (atualizado != null) {
-          setState(() => _selecionado = atualizado);
-        }
-      } catch (_) {
-        // A atualizacao do resumo em segundo plano nao deve travar o fluxo.
-      }
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -422,16 +359,10 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     if (idoso == null) return;
 
     try {
-      await ref.read(apiClientProvider).removerMedicamento(
-            medicamento.id,
-            usuarioId: ref.read(authSessionProvider)?.id,
-          );
+      await ref.read(apiClientProvider).removerMedicamento(medicamento.id);
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();
-      await LocalNotificationService.instance.cancelGroup(
-        'medicamento-${idoso.id}-${medicamento.id}',
-      );
       _reloadResumo(idoso.id);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -571,7 +502,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
                 }
                 if (snapshot.hasError) {
                   return _ErrorState(
-                    onBack: () => context.go(moduleBackRoute(context)),
+                    onBack: () => context.go('/monitoramento'),
                     onRetry: () => _reloadResumo(idoso.id),
                   );
                 }
@@ -581,71 +512,16 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
 
                 return _ResumoView(
                   resumo: resumo,
-                  onBack: () => context.go(moduleBackRoute(context)),
+                  onBack: () => context.go('/monitoramento'),
                   onAdd: _openCreateForm,
                   onOpen: _openDetalhe,
-                  onHistorico: () => context.push('/historico/medicamentos'),
+                  onHistorico: () => setState(() => _mode = _Mode.historico),
                 );
               },
             ),
         },
       ),
     );
-  }
-
-  Future<void> _syncMedicamentoNotifications(
-    String idosoId,
-    MedicamentosResumo resumo,
-  ) async {
-    try {
-      final service = LocalNotificationService.instance;
-      for (final medicamento in resumo.medicamentos) {
-        await service.replaceGroup(
-          'medicamento-$idosoId-${medicamento.id}',
-          _medicamentoNotificationRequests(medicamento),
-        );
-      }
-    } catch (_) {
-      // Nao bloqueia medicamentos se o sistema negar permissoes.
-    }
-  }
-
-  List<LocalNotificationRequest> _medicamentoNotificationRequests(
-    MedicamentoResumo medicamento,
-  ) {
-    final now = DateTime.now();
-    final end = now.add(const Duration(days: 30));
-    final requests = <LocalNotificationRequest>[];
-
-    for (final horario in medicamento.horarios) {
-      final parts = horario.horario.split(':');
-      if (parts.length < 2) continue;
-      final hour = int.tryParse(parts[0]);
-      final minute = int.tryParse(parts[1]);
-      if (hour == null || minute == null) continue;
-
-      for (var day = DateTime(now.year, now.month, now.day);
-          !day.isAfter(end) && requests.length < 64;
-          day = day.add(const Duration(days: 1))) {
-        if (!_medicamentoOccursOnDay(horario, day, now)) continue;
-        final scheduled = DateTime(day.year, day.month, day.day, hour, minute);
-        if (!scheduled.isAfter(now)) continue;
-
-        final dayKey = _isoDate(day);
-        final key = 'medicamento:${medicamento.id}:$dayKey:${horario.horario}';
-        requests.add(
-          LocalNotificationRequest(
-            id: stableNotificationId(key),
-            scheduledAt: scheduled,
-            title: 'Hora do medicamento',
-            body: '${medicamento.nome} - ${horario.horario}',
-            payload: key,
-          ),
-        );
-      }
-    }
-
-    return requests;
   }
 }
 
@@ -755,7 +631,11 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ModuleHeader(title: title, onBack: onBack, trailing: trailing);
+    return AppPageHeader(
+      title: title,
+      onBack: onBack,
+      trailing: trailing,
+    );
   }
 }
 
@@ -1197,14 +1077,9 @@ class _MedicamentoFormView extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 20, 10, 14),
       child: Column(
         children: [
-          Text(
-            editando ? 'Editar medicamento' : 'Adicionar medicamento',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF2FA3B5),
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-            ),
+          AppPageHeader(
+            title: editando ? 'Editar medicamento' : 'Adicionar medicamento',
+            onBack: onCancel,
           ),
           const SizedBox(height: 14),
           Expanded(
@@ -1841,44 +1716,9 @@ class _HistoricoView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              InkWell(
-                onTap: onBack,
-                borderRadius: BorderRadius.circular(12),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Icon(
-                    Icons.chevron_left_rounded,
-                    color: Color(0xFF2A9CAE),
-                    size: 28,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const Center(
-            child: Text(
-              'ello',
-              style: TextStyle(
-                color: Color(0xFF0E6F7E),
-                fontSize: 28,
-                fontWeight: FontWeight.w300,
-                letterSpacing: 0,
-                height: 1,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Histórico de Remédios',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: adaptive(
-                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-            ),
+          AppPageHeader(
+            title: 'Histórico de Remédios',
+            onBack: onBack,
           ),
           const SizedBox(height: 14),
           _PeriodoSelector(periodo: periodo, onChanged: onPeriodoChanged),
@@ -2512,52 +2352,6 @@ const _kToleranciaAtrasoMinutos = 30;
 String _statusComAtraso(DateTime administradoEm, DateTime horarioPrevisto) {
   final atrasoMinutos = administradoEm.difference(horarioPrevisto).inMinutes;
   return atrasoMinutos > _kToleranciaAtrasoMinutos ? 'atrasado' : 'tomado';
-}
-
-bool _medicamentoOccursOnDay(
-  MedicamentoHorario horario,
-  DateTime day,
-  DateTime reference,
-) {
-  switch (horario.frequenciaTipo.toLowerCase().trim()) {
-    case 'semanal':
-      if (horario.diasSemana.isEmpty) return true;
-      return horario.diasSemana
-          .map(_weekdayFromMedicationLabel)
-          .whereType<int>()
-          .contains(day.weekday);
-    case 'alternado':
-      final referenceDay = DateTime(
-        reference.year,
-        reference.month,
-        reference.day,
-      );
-      final targetDay = DateTime(day.year, day.month, day.day);
-      return targetDay.difference(referenceDay).inDays.isEven;
-    default:
-      return true;
-  }
-}
-
-int? _weekdayFromMedicationLabel(String value) {
-  final exactIndex = _kDiasSemana.indexOf(value);
-  if (exactIndex >= 0) return exactIndex == 0 ? DateTime.sunday : exactIndex;
-
-  final normalized = value.toLowerCase().trim();
-  if (normalized.startsWith('dom')) return DateTime.sunday;
-  if (normalized.startsWith('seg')) return DateTime.monday;
-  if (normalized.startsWith('ter')) return DateTime.tuesday;
-  if (normalized.startsWith('qua')) return DateTime.wednesday;
-  if (normalized.startsWith('qui')) return DateTime.thursday;
-  if (normalized.startsWith('sex')) return DateTime.friday;
-  if (normalized.startsWith('sab') || normalized.startsWith('sÃ¡b')) {
-    return DateTime.saturday;
-  }
-  return null;
-}
-
-String _isoDate(DateTime date) {
-  return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
 
 DateTime _horarioPrevistoParaAgora(String? proximoHorario, DateTime agora) {

@@ -111,10 +111,6 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     });
   }
 
-  void _removeImage() {
-    setState(() => _urlFoto = null);
-  }
-
   Future<void> _attachManual() async {
     FilePickerResult? result;
     try {
@@ -257,17 +253,6 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
       children: [
-        Text(
-          widget.initial == null ? 'Novo equipamento' : 'Editar equipamento',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: adaptive(
-                context, const Color(0xFF073248), AppDarkColors.textPrimary),
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 8),
         _LabeledField(label: 'Nome', controller: _nome),
         Row(
           children: [
@@ -353,14 +338,6 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                 ),
                 if (_urlFoto != null)
                   _EquipmentImagePreview(value: _urlFoto!, size: 42),
-                if (_urlFoto != null) ...[
-                  const SizedBox(width: 6),
-                  IconButton(
-                    onPressed: _removeImage,
-                    tooltip: 'Remover imagem',
-                    icon: const Icon(Icons.delete_outline_rounded),
-                  ),
-                ],
               ],
             ),
           ),
@@ -710,17 +687,7 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 2, 0, 0),
       children: [
-        Text(
-          'Registrar manutencao',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: adaptive(
-                context, const Color(0xFF111111), AppDarkColors.textPrimary),
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 8),
         const Text('Equipamento', style: TextStyle(fontSize: 13)),
         Row(
           children: [

@@ -7,9 +7,8 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/action_icon_button.dart';
-import '../../../shared/widgets/module_header.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class HumorPage extends ConsumerStatefulWidget {
@@ -46,14 +45,12 @@ class _HumorPageState extends ConsumerState<HumorPage> {
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final current = _parseBrazilianDate(_dataController.text) ?? today;
     final selected = await showDatePicker(
       context: context,
       locale: const Locale('pt', 'BR'),
-      initialDate: current.isAfter(today) ? today : current,
-      firstDate: DateTime(now.year - 3),
-      lastDate: today,
+      initialDate: _parseBrazilianDate(_dataController.text) ?? now,
+      firstDate: DateTime(now.year - 2),
+      lastDate: now,
     );
 
     if (selected == null) return;
@@ -86,15 +83,10 @@ class _HumorPageState extends ConsumerState<HumorPage> {
       return;
     }
 
-    final selectedDate = _parseBrazilianDate(_dataController.text);
-    final selectedTime = _parseTime(_horaController.text);
     final dataHumor = _toIsoDate(_dataController.text);
     final horarioRegi = _normalizeTime(_horaController.text);
 
-    if (selectedDate == null ||
-        selectedTime == null ||
-        dataHumor == null ||
-        horarioRegi == null) {
+    if (dataHumor == null || horarioRegi == null) {
       setState(() => _errorMessage = 'Informe uma data e um horário válidos.');
       return;
     }
@@ -125,7 +117,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
           );
 
       if (!mounted) return;
-      context.go(moduleBackRoute(context));
+      context.go('/monitoramento');
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _errorMessage = error.message);
@@ -198,10 +190,8 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _Header(
-                      onBack: () => context.go(moduleBackRoute(context)),
-                      onProfile: () => context.go(
-                        profileRouteFromModule(context, 'humor'),
-                      ),
+                      onBack: () => context.go('/monitoramento'),
+                      onProfile: () => context.go('/perfil?from=humor'),
                     ),
                     const SizedBox(height: 24),
                     StaggeredEntry(
@@ -326,12 +316,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                           width: 286,
                           height: 44,
                           child: OutlinedButton(
-                            onPressed: () => context.push(
-                              routeWithCurrentOrigin(
-                                context,
-                                '/historico/humor',
-                              ),
-                            ),
+                            onPressed: () => context.push('/historico/humor'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: adaptive(
                                   context,
@@ -374,7 +359,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ModuleHeader(
+    return AppPageHeader(
       title: 'Registro de humor',
       onBack: onBack,
       trailing: ActionIconButton(

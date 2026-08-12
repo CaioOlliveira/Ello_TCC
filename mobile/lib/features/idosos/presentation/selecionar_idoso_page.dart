@@ -10,7 +10,9 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/action_icon_button.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
+import 'qr_code_scanner_page.dart';
 
 class SelecionarIdosoPage extends ConsumerWidget {
   const SelecionarIdosoPage({super.key});
@@ -35,17 +37,12 @@ class SelecionarIdosoPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const _Header(),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Fichas',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: adaptive(
-                            context, Colors.black, AppDarkColors.textPrimary),
-                        fontSize: 23,
-                        fontWeight: FontWeight.w500,
-                        height: 1,
+                    AppPageHeader(
+                      title: 'Fichas',
+                      trailing: ActionIconButton(
+                        tooltip: 'Perfil do cuidador',
+                        icon: Icons.person_rounded,
+                        onTap: () => context.go('/perfil?from=idosos'),
                       ),
                     ),
                     const SizedBox(height: 9),
@@ -71,29 +68,6 @@ class SelecionarIdosoPage extends ConsumerWidget {
                         error: (_, __) => _ErrorState(
                           onRetry: () => ref.invalidate(
                             idososDoUsuarioProvider,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 44,
-                      child: OutlinedButton.icon(
-                        onPressed: () => context.go('/idosos/convite'),
-                        icon: const Icon(Icons.mail_outline_rounded, size: 19),
-                        label: const Text('Entrar com convite'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF0E7890),
-                          side: const BorderSide(
-                            color: Color(0xFF2CA0B4),
-                            width: 1,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -137,31 +111,9 @@ class ConviteIdosoPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: IconButton(
-                            onPressed: () => context.go('/idosos'),
-                            icon: const Icon(
-                              Icons.chevron_left_rounded,
-                              color: Color(0xFF238FA1),
-                              size: 32,
-                            ),
-                          ),
-                        ),
-                        const Text(
-                          'ello',
-                          style: TextStyle(
-                            color: Color(0xFF0E6F7E),
-                            fontSize: 34,
-                            fontWeight: FontWeight.w300,
-                            letterSpacing: 0,
-                            height: 1,
-                          ),
-                        ),
-                      ],
+                    AppPageHeader(
+                      title: 'Entrar com convite',
+                      onBack: () => context.go('/idosos/adicionar'),
                     ),
                     const SizedBox(height: 18),
                     StaggeredEntry(
@@ -204,7 +156,7 @@ class ConviteIdosoPage extends StatelessWidget {
                     StaggeredEntry(
                       index: 2,
                       child: Text(
-                        'Use o codigo enviado por outro cuidador\npara acessar uma ficha compartilhada',
+                        'Leia o QR Code mostrado pelo responsável\nou digite o código para acessar a ficha',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: adaptive(context, const Color(0xFF4C4C4C),
@@ -223,50 +175,6 @@ class ConviteIdosoPage extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header();
-
-  @override
-  Widget build(BuildContext context) {
-    final canPop = context.canPop();
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        if (canPop)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: () => context.pop(),
-              icon: const Icon(
-                Icons.chevron_left_rounded,
-                color: Color(0xFF238FA1),
-                size: 32,
-              ),
-            ),
-          ),
-        const Text(
-          'ello',
-          style: TextStyle(
-            color: Color(0xFF0E6F7E),
-            fontSize: 34,
-            fontWeight: FontWeight.w300,
-            letterSpacing: 0,
-            height: 1,
-          ),
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: ActionIconButton(
-            tooltip: 'Perfil do cuidador',
-            icon: Icons.person_rounded,
-            onTap: () => context.go('/perfil?from=idosos'),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -298,7 +206,9 @@ class _FichasGrid extends ConsumerWidget {
           if (index == idosos.length) {
             return StaggeredEntry(
               index: index,
-              child: _AddFichaCard(onTap: () => context.go('/idosos/cadastro')),
+              child: _AddFichaCard(
+                onTap: () => context.go('/idosos/adicionar'),
+              ),
             );
           }
 
@@ -333,88 +243,22 @@ List<Color> _gradientFor(String seed) {
   return _posterGradients[hash % _posterGradients.length];
 }
 
-class _IdosoPoster extends ConsumerStatefulWidget {
+class _IdosoPoster extends StatefulWidget {
   const _IdosoPoster({required this.idoso, required this.onTap});
 
   final IdosoResumo idoso;
   final VoidCallback onTap;
 
   @override
-  ConsumerState<_IdosoPoster> createState() => _IdosoPosterState();
+  State<_IdosoPoster> createState() => _IdosoPosterState();
 }
 
-class _IdosoPosterState extends ConsumerState<_IdosoPoster> {
+class _IdosoPosterState extends State<_IdosoPoster> {
   bool _pressed = false;
-
-  Future<void> _confirmarRemocao() async {
-    final idoso = widget.idoso;
-    final usuarioId = ref.read(authSessionProvider)?.id ?? '';
-    final ehDono = _ehDonoDaFicha(idoso, usuarioId);
-
-    final confirmou = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(ehDono ? 'Excluir ficha?' : 'Remover da sua tela?'),
-        content: Text(
-          ehDono
-              ? 'Isso vai apagar a ficha de ${_primeiroNome(idoso.nome)} e os dados vinculados a ela no banco.'
-              : 'A ficha de ${_primeiroNome(idoso.nome)} sera removida apenas da sua tela. Ela continua existindo para o dono.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFC0392B),
-              foregroundColor: Colors.white,
-            ),
-            child: Text(ehDono ? 'Excluir' : 'Remover'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmou != true || !mounted) return;
-
-    try {
-      await ref.read(apiClientProvider).removerIdoso(
-            id: idoso.id,
-            usuarioId: usuarioId,
-          );
-      ref.invalidate(idososDoUsuarioProvider);
-      if (ref.read(selectedIdosoProvider)?.id == idoso.id) {
-        ref.read(selectedIdosoProvider.notifier).state = null;
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ehDono
-              ? 'Ficha excluida.'
-              : 'Ficha removida da sua lista.'),
-        ),
-      );
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel remover a ficha.')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final idoso = widget.idoso;
-    final usuarioId = ref.watch(authSessionProvider)?.id ?? '';
-    final ehDono = _ehDonoDaFicha(idoso, usuarioId);
     final image = _avatarImage(idoso.urlFoto);
     final gradient = _gradientFor(idoso.id.isEmpty ? idoso.nome : idoso.id);
 
@@ -476,38 +320,6 @@ class _IdosoPosterState extends ConsumerState<_IdosoPoster> {
                       ],
                       stops: const [0.55, 1],
                     ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Material(
-                  color: Colors.black.withValues(alpha: 0.32),
-                  shape: const CircleBorder(),
-                  clipBehavior: Clip.antiAlias,
-                  child: PopupMenuButton<String>(
-                    tooltip: 'Opcoes da ficha',
-                    icon: const Icon(
-                      Icons.more_vert_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    onSelected: (value) {
-                      if (value == 'remover') _confirmarRemocao();
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'remover',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.delete_outline_rounded, size: 19),
-                            const SizedBox(width: 10),
-                            Text(ehDono ? 'Excluir ficha' : 'Remover da tela'),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -655,6 +467,18 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
     super.dispose();
   }
 
+  Future<void> _abrirLeitorQrCode() async {
+    FocusScope.of(context).unfocus();
+    final codigo = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const QrCodeScannerPage()),
+    );
+    if (!mounted || codigo == null || codigo.trim().isEmpty) return;
+
+    _controller.text = codigo.trim();
+    setState(() => _erro = null);
+    await _acessarFicha();
+  }
+
   Future<void> _acessarFicha() async {
     FocusScope.of(context).unfocus();
     final codigo = _controller.text.trim();
@@ -739,8 +563,66 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: _loading ? null : _abrirLeitorQrCode,
+              icon: const Icon(Icons.qr_code_scanner_rounded, size: 22),
+              label: const Text('Ler QR Code com a câmera'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF16889A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 17),
+          Row(
+            children: [
+              Expanded(
+                child: Divider(
+                  color: adaptive(
+                    context,
+                    const Color(0xFFD8E4E6),
+                    AppDarkColors.divider,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'ou digite o código',
+                  style: TextStyle(
+                    color: adaptive(
+                      context,
+                      const Color(0xFF718086),
+                      AppDarkColors.textSecondary,
+                    ),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Divider(
+                  color: adaptive(
+                    context,
+                    const Color(0xFFD8E4E6),
+                    AppDarkColors.divider,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 17),
           Text(
-            'Codigo de convite',
+            'Código de convite',
             style: TextStyle(
               color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
               fontSize: 13,
@@ -913,9 +795,4 @@ String _iniciais(String nome) {
   final primeira = partes.first[0];
   final ultima = partes.length > 1 ? partes.last[0] : '';
   return '$primeira$ultima'.toUpperCase();
-}
-
-bool _ehDonoDaFicha(IdosoResumo idoso, String usuarioId) {
-  if (idoso.ehDono != null) return idoso.ehDono!;
-  return usuarioId.isNotEmpty && idoso.criadoPorId == usuarioId;
 }

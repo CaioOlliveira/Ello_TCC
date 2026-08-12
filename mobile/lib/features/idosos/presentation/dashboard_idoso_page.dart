@@ -9,6 +9,7 @@ import '../../../app/providers.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/action_icon_button.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
@@ -270,28 +271,13 @@ class _DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        const Text(
-          'ello',
-          style: TextStyle(
-            color: Color(0xFF0E6F7E),
-            fontSize: 42,
-            fontWeight: FontWeight.w300,
-            letterSpacing: 0,
-            height: 1,
-          ),
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: ActionIconButton(
-            tooltip: 'Perfil do cuidador',
-            icon: Icons.person_rounded,
-            onTap: onProfile,
-          ),
-        ),
-      ],
+    return AppPageHeader(
+      title: 'Início',
+      trailing: ActionIconButton(
+        tooltip: 'Perfil do cuidador',
+        icon: Icons.person_rounded,
+        onTap: onProfile,
+      ),
     );
   }
 }

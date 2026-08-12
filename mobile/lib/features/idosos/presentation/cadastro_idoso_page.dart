@@ -11,6 +11,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/utils/avatar_image.dart';
 import '../../../core/utils/elder_text.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
 class CadastroIdosoPage extends ConsumerStatefulWidget {
@@ -56,6 +57,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
   ElderText get _personText => ElderText.fromSexo(_sexo);
   String get _backRoute =>
       widget.from == 'idoso-perfil' ? '/idoso/perfil' : '/dashboard';
+  String get _newFichaBackRoute =>
+      widget.from == 'adicionar' ? '/idosos/adicionar' : '/idosos';
 
   @override
   void initState() {
@@ -226,7 +229,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       return;
     }
 
-    context.go(_isEditing ? _backRoute : '/idosos');
+    context.go(_isEditing ? _backRoute : _newFichaBackRoute);
   }
 
   void _toggleMonitoramento(String id) {
@@ -540,7 +543,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Text('Voltar'),
+                      child: const Icon(Icons.chevron_left_rounded),
                     ),
                   ),
                 ),
@@ -1099,33 +1102,11 @@ class _CadastroHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(7, 4, 28, 8),
       child: Column(
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: onBack,
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(
-                    Icons.chevron_left_rounded,
-                    color: Color(0xFF238FA1),
-                    size: 31,
-                  ),
-                ),
-              ),
-              Text(
-                editing
-                    ? 'Editar ${personText.singular}'
-                    : 'Cadastro ${personText.of}',
-                style: const TextStyle(
-                  color: Color(0xFF249CB0),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          AppPageHeader(
+            title: editing
+                ? 'Editar ${personText.singular}'
+                : 'Cadastro ${personText.of}',
+            onBack: onBack,
           ),
           const SizedBox(height: 6),
           Padding(

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/theme/app_palette.dart';
-import 'app_button.dart';
+import 'app_page_header.dart';
 import 'staggered_entry.dart';
 
 class ModulePlaceholderPage extends StatelessWidget {
@@ -32,7 +32,8 @@ class ModulePlaceholderPage extends StatelessWidget {
     final canPop = context.canPop();
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -44,36 +45,15 @@ class ModulePlaceholderPage extends StatelessWidget {
                 children: [
                   StaggeredEntry(
                     index: 0,
-                    child: InkWell(
-                      onTap: () {
+                    child: AppPageHeader(
+                      title: title,
+                      onBack: () {
                         if (canPop) {
                           context.pop();
                         } else {
                           context.go('/dashboard');
                         }
                       },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.chevron_left_rounded,
-                              color: Color(0xFF2A9CAE),
-                              size: 28,
-                            ),
-                            Text(
-                              'Voltar',
-                              style: TextStyle(
-                                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                   ),
                   Expanded(
@@ -87,19 +67,6 @@ class ModulePlaceholderPage extends StatelessWidget {
                               child: _BreathingIcon(icon: _icon),
                             ),
                             const SizedBox(height: AppSizes.lg),
-                            StaggeredEntry(
-                              index: 2,
-                              child: Text(
-                                title,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: AppSizes.sm),
                             StaggeredEntry(
                               index: 3,
                               child: Container(
@@ -130,27 +97,13 @@ class ModulePlaceholderPage extends StatelessWidget {
                                 'Este modulo sera implementado nas proximas etapas.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: adaptive(context, const Color(0xFF607178), AppDarkColors.textSecondary),
+                                  color: adaptive(
+                                      context,
+                                      const Color(0xFF607178),
+                                      AppDarkColors.textSecondary),
                                   fontSize: 13,
                                   height: 1.3,
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: AppSizes.xl),
-                            StaggeredEntry(
-                              index: 5,
-                              child: AppButton(
-                                label: canPop ? 'Voltar' : 'Inicio',
-                                icon: canPop
-                                    ? Icons.arrow_back
-                                    : Icons.home_outlined,
-                                onPressed: () {
-                                  if (canPop) {
-                                    context.pop();
-                                  } else {
-                                    context.go('/dashboard');
-                                  }
-                                },
                               ),
                             ),
                           ],

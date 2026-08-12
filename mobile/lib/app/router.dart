@@ -10,6 +10,7 @@ import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
 import '../features/historico/presentation/historico_page.dart';
 import '../features/humor/presentation/humor_page.dart';
+import '../features/idosos/presentation/adicionar_ficha_page.dart';
 import '../features/idosos/presentation/cadastro_idoso_page.dart';
 import '../features/idosos/presentation/dashboard_idoso_page.dart';
 import '../features/idosos/presentation/perfil_idoso_page.dart';
@@ -59,8 +60,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ConviteIdosoPage(),
       ),
       GoRoute(
+        path: '/idosos/adicionar',
+        builder: (context, state) => const AdicionarFichaPage(),
+      ),
+      GoRoute(
         path: '/idosos/cadastro',
-        builder: (context, state) => const CadastroIdosoPage(),
+        builder: (context, state) => CadastroIdosoPage(
+          from: state.uri.queryParameters['from'],
+        ),
       ),
       GoRoute(
         path: '/idosos/editar',

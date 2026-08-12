@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import 'agenda_models.dart';
 import 'agenda_utils.dart';
 
@@ -140,7 +141,8 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
         widget.initial == null ? 'Novo compromisso' : 'Editar compromisso';
 
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -150,16 +152,9 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 18),
                 children: [
-                  const _FormBackLink(),
-                  Center(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                  AppPageHeader(
+                    title: title,
+                    onBack: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(height: 20),
                   const _FormLabel('Titulo'),
@@ -288,7 +283,8 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                             Text(
                               'Lembrete',
                               style: TextStyle(
-                                color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
+                                color: adaptive(context, Colors.black,
+                                    AppDarkColors.textPrimary),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -381,31 +377,6 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _FormBackLink extends StatelessWidget {
-  const _FormBackLink();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        InkWell(
-          onTap: () => Navigator.of(context).pop(),
-          borderRadius: BorderRadius.circular(16),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              children: [
-                Icon(Icons.chevron_left_rounded, color: Color(0xFF1995A8)),
-                Text('Voltar', style: TextStyle(fontSize: 12)),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

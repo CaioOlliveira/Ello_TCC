@@ -9,6 +9,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import '../../monitoramento/presentation/monitoramento_catalog.dart';
 
@@ -141,9 +142,12 @@ class _PermissoesDetalhadasPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context) ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        value: isDarkMode(context)
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -151,30 +155,12 @@ class _PermissoesDetalhadasPageState
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 6, 14, 0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => context.canPop()
-                              ? context.pop()
-                              : context.go('/permissoes'),
-                          icon: const Icon(
-                            Icons.chevron_left_rounded,
-                            color: Color(0xFF238FA1),
-                            size: 32,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Permissões detalhadas',
-                            style: TextStyle(
-                              color: adaptive(context, Colors.black, AppDarkColors.textPrimary),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+                    padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+                    child: AppPageHeader(
+                      title: 'Permissões detalhadas',
+                      onBack: () => context.canPop()
+                          ? context.pop()
+                          : context.go('/permissoes'),
                     ),
                   ),
                   Expanded(child: _buildBody()),
@@ -211,7 +197,10 @@ class _PermissoesDetalhadasPageState
               Text(
                 _erro ?? 'Nao foi possivel carregar.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: adaptive(context, const Color(0xFF4C4C4C), AppDarkColors.textSecondary), fontSize: 12),
+                style: TextStyle(
+                    color: adaptive(context, const Color(0xFF4C4C4C),
+                        AppDarkColors.textSecondary),
+                    fontSize: 12),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
@@ -240,7 +229,8 @@ class _PermissoesDetalhadasPageState
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
+                      color: adaptive(context, const Color(0xFFE7F4F6),
+                          AppDarkColors.tintedInfo),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Row(
@@ -293,9 +283,12 @@ class _PermissoesDetalhadasPageState
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             decoration: BoxDecoration(
-              color: adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
+              color:
+                  adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
               border: Border(
-                top: BorderSide(color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border)),
+                top: BorderSide(
+                    color: adaptive(context, const Color(0xFFE4EFF1),
+                        AppDarkColors.border)),
               ),
             ),
             child: SizedBox(
@@ -305,8 +298,10 @@ class _PermissoesDetalhadasPageState
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF0E6F7E),
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: adaptive(context, const Color(0xFFCFE1E4), AppDarkColors.borderStrong),
-                  disabledForegroundColor: adaptive(context, Colors.white, AppDarkColors.textMuted),
+                  disabledBackgroundColor: adaptive(context,
+                      const Color(0xFFCFE1E4), AppDarkColors.borderStrong),
+                  disabledForegroundColor:
+                      adaptive(context, Colors.white, AppDarkColors.textMuted),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
@@ -348,7 +343,9 @@ class _MembroCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border)),
+        border: Border.all(
+            color: adaptive(
+                context, const Color(0xFFE4EFF1), AppDarkColors.border)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -361,7 +358,8 @@ class _MembroCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: adaptive(context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
+            backgroundColor: adaptive(
+                context, const Color(0xFFD1F2F6), AppDarkColors.tintedInfo),
             backgroundImage: bytes != null ? MemoryImage(bytes) : null,
             child: bytes == null
                 ? const Icon(
@@ -381,7 +379,8 @@ class _MembroCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF17324D),
+                        AppDarkColors.textPrimary),
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
@@ -395,7 +394,8 @@ class _MembroCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: adaptive(context, const Color(0xFFE7F4F6), AppDarkColors.tintedInfo),
+                        color: adaptive(context, const Color(0xFFE7F4F6),
+                            AppDarkColors.tintedInfo),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -415,7 +415,8 @@ class _MembroCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: adaptive(context, const Color(0xFF8A8A8A), AppDarkColors.textSecondary),
+                            color: adaptive(context, const Color(0xFF8A8A8A),
+                                AppDarkColors.textSecondary),
                             fontSize: 12,
                           ),
                         ),
@@ -430,13 +431,15 @@ class _MembroCard extends StatelessWidget {
                       Icon(
                         Icons.phone_outlined,
                         size: 14,
-                        color: adaptive(context, const Color(0xFF9B9B9B), AppDarkColors.textMuted),
+                        color: adaptive(context, const Color(0xFF9B9B9B),
+                            AppDarkColors.textMuted),
                       ),
                       const SizedBox(width: 5),
                       Text(
                         membro.telefone!,
                         style: TextStyle(
-                          color: adaptive(context, const Color(0xFF5E6B73), AppDarkColors.textSecondary),
+                          color: adaptive(context, const Color(0xFF5E6B73),
+                              AppDarkColors.textSecondary),
                           fontSize: 12,
                         ),
                       ),
@@ -498,7 +501,8 @@ class _PermissaoSecao extends StatelessWidget {
               Text(
                 titulo,
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                  color: adaptive(context, const Color(0xFF073248),
+                      AppDarkColors.textPrimary),
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
@@ -569,7 +573,8 @@ class _ModuloCheckbox extends StatelessWidget {
                 border: Border.all(
                   color: selecionado
                       ? const Color(0xFF2BA8BA)
-                      : adaptive(context, const Color(0xFFC7D8DA), AppDarkColors.border),
+                      : adaptive(context, const Color(0xFFC7D8DA),
+                          AppDarkColors.border),
                   width: 1.6,
                 ),
               ),
@@ -586,7 +591,8 @@ class _ModuloCheckbox extends StatelessWidget {
               child: Text(
                 modulo.titulo,
                 style: TextStyle(
-                  color: adaptive(context, const Color(0xFF17324D), AppDarkColors.textPrimary),
+                  color: adaptive(context, const Color(0xFF17324D),
+                      AppDarkColors.textPrimary),
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   height: 1.25,

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class PermissoesFichasPage extends ConsumerWidget {
@@ -35,44 +36,9 @@ class PermissoesFichasPage extends ConsumerWidget {
                   children: [
                     StaggeredEntry(
                       index: 0,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: IconButton(
-                              onPressed: () => context.go('/perfil'),
-                              icon: const Icon(
-                                Icons.chevron_left_rounded,
-                                color: Color(0xFF238FA1),
-                                size: 32,
-                              ),
-                            ),
-                          ),
-                          const Text(
-                            'ello',
-                            style: TextStyle(
-                              color: Color(0xFF0E6F7E),
-                              fontSize: 34,
-                              fontWeight: FontWeight.w300,
-                              letterSpacing: 0,
-                              height: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    StaggeredEntry(
-                      index: 1,
-                      child: Text(
-                        'Permissões',
-                        style: TextStyle(
-                          color: adaptive(
-                              context, Colors.black, AppDarkColors.textPrimary),
-                          fontSize: 23,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: AppPageHeader(
+                        title: 'Permissões',
+                        onBack: () => context.go('/perfil'),
                       ),
                     ),
                     const SizedBox(height: 6),

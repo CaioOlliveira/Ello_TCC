@@ -9,8 +9,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
-import '../../../shared/widgets/module_header.dart';
+import '../../../shared/widgets/app_page_header.dart';
 
 enum _AlimentacaoView { lista, tipo, form, galeria }
 
@@ -78,32 +77,6 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
           );
       if (!mounted) return;
       _load();
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
-    }
-  }
-
-  Future<void> _deleteRecordatorio(RefeicaoResumo refeicao) async {
-    final usuarioId = ref.read(authSessionProvider)?.id;
-
-    try {
-      await ref.read(apiClientProvider).atualizarRefeicao(
-        id: refeicao.id,
-        data: {
-          'recordatorio': '',
-          'observacoes': refeicao.observacoes ?? '',
-          if (usuarioId != null && usuarioId.isNotEmpty)
-            'registradoPorId': usuarioId,
-        },
-      );
-      await _load();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto removida do recordatório.')),
-      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -278,15 +251,13 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                   hidratacoes: _hidratacoes,
                   loading: _loading,
                   error: _error,
-                  onBack: () => context.go(moduleBackRoute(context)),
+                  onBack: () => context.go('/monitoramento'),
                   onRetry: _load,
                   onSaveWeight: _saveWeight,
                   onAddWater: _addWater,
                   onGallery: () =>
                       setState(() => _view = _AlimentacaoView.galeria),
-                  onHistory: () => context.push(
-                    routeWithCurrentOrigin(context, '/historico/alimentacao'),
-                  ),
+                  onHistory: () => context.push('/historico/alimentacao'),
                   onAdd: () => setState(() {
                     _editing = null;
                     _draftTipo = 'Café da manhã';
@@ -330,7 +301,6 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
               _AlimentacaoView.galeria => _RecordatorioGalleryView(
                   refeicoes: _refeicoes,
                   onBack: () => setState(() => _view = _AlimentacaoView.lista),
-                  onDelete: _deleteRecordatorio,
                 ),
             },
           ),
@@ -385,24 +355,10 @@ class _AlimentacaoListView extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
-          child: Row(
-            children: [
-              ModuleBackButton(onPressed: onBack),
-              Expanded(
-                child: Text(
-                  'Alimentação',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: adaptive(context, ModuleHeader.titleColor,
-                        AppDarkColors.textPrimary),
-                    fontSize: ModuleHeader.titleStyle.fontSize,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 78),
-            ],
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+          child: AppPageHeader(
+            title: 'Alimentação',
+            onBack: onBack,
           ),
         ),
         Expanded(
@@ -719,6 +675,7 @@ class _WaterCardState extends State<_WaterCard> {
               for (var i = 0; i < cupCount; i++)
                 _WaterCup(
                   filled: i < filledCups,
+                  onTap: widget.onAddWater,
                 ),
             ],
           ),
@@ -739,29 +696,32 @@ class _WaterCardState extends State<_WaterCard> {
 }
 
 class _WaterCup extends StatelessWidget {
-  const _WaterCup({required this.filled});
+  const _WaterCup({required this.filled, required this.onTap});
 
   final bool filled;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: filled ? 1.0 : 0.86,
-      duration: const Duration(milliseconds: 360),
-      curve: Curves.elasticOut,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        transitionBuilder: (child, animation) => ScaleTransition(
-          scale: animation,
-          child: FadeTransition(opacity: animation, child: child),
-        ),
-        child: Icon(
-          filled ? Icons.local_drink_rounded : Icons.local_drink_outlined,
-          key: ValueKey(filled),
-          color: filled
-              ? const Color(0xFF098CA1)
-              : adaptive(context, const Color(0xFFC7D6D9), AppDarkColors.border),
-          size: 36,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedScale(
+        scale: filled ? 1.0 : 0.86,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.elasticOut,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          transitionBuilder: (child, animation) => ScaleTransition(
+            scale: animation,
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+          child: Icon(
+            filled ? Icons.local_drink_rounded : Icons.local_drink_outlined,
+            key: ValueKey(filled),
+            color: const Color(0xFF098CA1),
+            size: 36,
+          ),
         ),
       ),
     );
@@ -840,12 +800,10 @@ class _RecordatorioGalleryView extends StatelessWidget {
   const _RecordatorioGalleryView({
     required this.refeicoes,
     required this.onBack,
-    required this.onDelete,
   });
 
   final List<RefeicaoResumo> refeicoes;
   final VoidCallback onBack;
-  final Future<void> Function(RefeicaoResumo refeicao) onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -854,27 +812,10 @@ class _RecordatorioGalleryView extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
-          child: Row(
-            children: [
-              ModuleBackButton(onPressed: onBack),
-              Expanded(
-                child: Text(
-                  'Recordatório',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: adaptive(
-                      context,
-                      ModuleHeader.titleColor,
-                      AppDarkColors.textPrimary,
-                    ),
-                    fontSize: ModuleHeader.titleStyle.fontSize,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 78),
-            ],
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+          child: AppPageHeader(
+            title: 'Recordatório',
+            onBack: onBack,
           ),
         ),
         Expanded(
@@ -913,7 +854,6 @@ class _RecordatorioGalleryView extends StatelessWidget {
                             onTap: () => _showRecordatorioPhoto(
                               context,
                               refeicao,
-                              onDelete: onDelete,
                             ),
                             borderRadius: BorderRadius.circular(6),
                             child: ClipRRect(
@@ -954,23 +894,15 @@ class _MealTypePickerView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ModuleBackButton(onPressed: onBack),
+          AppPageHeader(
+            title: 'Registrar refeição',
+            onBack: onBack,
           ),
-          const SizedBox(height: 46),
-          Text(
+          const SizedBox(height: 22),
+          const Text(
             'Qual refeição será registrada?',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: adaptive(
-                context,
-                const Color(0xFF073248),
-                AppDarkColors.textPrimary,
-              ),
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 24),
           for (final tipo in _mealTypeOptions)
@@ -1347,9 +1279,11 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
     final selected = await showDatePicker(
       context: context,
       locale: const Locale('pt', 'BR'),
-      firstDate: DateTime(now.year - 3),
+      firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 1),
-      initialDate: current,
+      initialDate: current.isBefore(DateTime(now.year, now.month, now.day))
+          ? now
+          : current,
     );
     if (selected == null) return;
     _dataController.text = _formatDate(selected);
@@ -1379,6 +1313,19 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
     final scheduled = _scheduledDateTime();
     if (scheduled == null) {
       setState(() => _error = 'Informe data e hora válidas.');
+      return;
+    }
+    final now = DateTime.now();
+    final currentMinute = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+    );
+    if (scheduled.isBefore(currentMinute)) {
+      setState(
+          () => _error = 'A data e hora não podem ser anteriores a agora.');
       return;
     }
     if (_alimentos.isEmpty) {
@@ -1435,33 +1382,30 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: EdgeInsets.fromLTRB(
         16,
-        58,
+        10,
         16,
         22 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _tipo,
-                  style: TextStyle(
-                    color: adaptive(context, const Color(0xFF073248),
-                        AppDarkColors.textPrimary),
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
+          AppPageHeader(
+            title: widget.initial == null
+                ? 'Registrar refeição'
+                : 'Editar refeição',
+            onBack: widget.onCancel,
+            trailing: widget.initial == null
+                ? null
+                : IconButton(
+                    onPressed: () => _showMealTypeEditSheet(context),
+                    tooltip: 'Trocar tipo de refeição',
+                    icon: const Icon(Icons.swap_horiz_rounded),
                   ),
-                ),
-              ),
-              if (widget.initial != null)
-                TextButton.icon(
-                  onPressed: () => _showMealTypeEditSheet(context),
-                  icon: const Icon(Icons.swap_horiz_rounded),
-                  label: const Text('Trocar'),
-                ),
-            ],
+          ),
+          Text(
+            _tipo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           Row(
             children: [
@@ -2164,11 +2108,7 @@ Map<String, List<RefeicaoResumo>> _groupRecordatoriosByDate(
   return grouped;
 }
 
-void _showRecordatorioPhoto(
-  BuildContext context,
-  RefeicaoResumo refeicao, {
-  required Future<void> Function(RefeicaoResumo refeicao) onDelete,
-}) {
+void _showRecordatorioPhoto(BuildContext context, RefeicaoResumo refeicao) {
   final provider = _imageProvider(refeicao.recordatorio);
   if (provider == null) return;
 
@@ -2194,21 +2134,6 @@ void _showRecordatorioPhoto(
           ),
           SafeArea(
             child: Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                tooltip: 'Excluir foto',
-                onPressed: () => _confirmDeleteRecordatorioPhoto(
-                  context,
-                  refeicao,
-                  onDelete,
-                ),
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.white),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Align(
               alignment: Alignment.bottomLeft,
               child: Padding(
                 padding: const EdgeInsets.all(18),
@@ -2228,34 +2153,4 @@ void _showRecordatorioPhoto(
       ),
     ),
   );
-}
-
-Future<void> _confirmDeleteRecordatorioPhoto(
-  BuildContext context,
-  RefeicaoResumo refeicao,
-  Future<void> Function(RefeicaoResumo refeicao) onDelete,
-) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Excluir foto?'),
-      content: const Text(
-        'A foto será removida do recordatório desta refeição.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('Excluir'),
-        ),
-      ],
-    ),
-  );
-
-  if (confirmed != true) return;
-  await onDelete(refeicao);
-  if (context.mounted) Navigator.of(context).pop();
 }

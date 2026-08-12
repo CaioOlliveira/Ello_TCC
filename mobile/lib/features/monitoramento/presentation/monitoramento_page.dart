@@ -7,7 +7,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import 'monitoramento_catalog.dart';
 
@@ -103,29 +103,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'ello',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF0E6F7E),
-                        fontSize: 42,
-                        fontWeight: FontWeight.w300,
-                        letterSpacing: 0,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    Text(
-                      'Monitoramento',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: adaptive(context, const Color(0xFF073248),
-                            AppDarkColors.textPrimary),
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
-                    ),
+                    const AppPageHeader(title: 'Monitoramento'),
                     const SizedBox(height: 18),
                     Expanded(
                       child: idoso == null
@@ -216,9 +194,7 @@ class _MonitoramentoGrid extends StatelessWidget {
               index: index,
               child: _MonitoramentoTile(
                 option: option,
-                onTap: () => context.go(
-                  routeWithOrigin(option.route, 'monitoramento'),
-                ),
+                onTap: () => context.go(option.route),
               ),
             );
           },

@@ -9,6 +9,7 @@ import '../../../core/auth/google_auth_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/app_text_field.dart';
 
@@ -461,28 +462,9 @@ class _LoginFormView extends StatelessWidget {
             AppSizes.md,
             0,
           ),
-          child: Row(
-            children: [
-              TextButton.icon(
-                onPressed: loading ? null : onBack,
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF177385),
-                ),
-                icon: const Icon(Icons.chevron_left_rounded),
-                label: const Text('Voltar'),
-              ),
-              const Spacer(),
-              Text(
-                'ello',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: const Color(0xFF0E6F7E),
-                  fontSize: 32,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-              const Spacer(),
-              const SizedBox(width: 72),
-            ],
+          child: AppPageHeader(
+            title: 'Entrar',
+            onBack: loading ? null : onBack,
           ),
         ),
         Expanded(
@@ -629,28 +611,9 @@ class _CadastroFormView extends StatelessWidget {
             AppSizes.md,
             0,
           ),
-          child: Row(
-            children: [
-              TextButton.icon(
-                onPressed: loading ? null : onBack,
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF177385),
-                ),
-                icon: const Icon(Icons.chevron_left_rounded),
-                label: const Text('Voltar'),
-              ),
-              const Spacer(),
-              Text(
-                'ello',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: const Color(0xFF0E6F7E),
-                  fontSize: 32,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-              const Spacer(),
-              const SizedBox(width: 72),
-            ],
+          child: AppPageHeader(
+            title: 'Criar conta',
+            onBack: loading ? null : onBack,
           ),
         ),
         Expanded(
@@ -860,28 +823,9 @@ class _GoogleCadastroView extends StatelessWidget {
             AppSizes.md,
             0,
           ),
-          child: Row(
-            children: [
-              TextButton.icon(
-                onPressed: loading ? null : onBack,
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF177385),
-                ),
-                icon: const Icon(Icons.chevron_left_rounded),
-                label: const Text('Voltar'),
-              ),
-              const Spacer(),
-              Text(
-                'Google',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: const Color(0xFF3C4043),
-                  fontSize: 24,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
-              const SizedBox(width: 72),
-            ],
+          child: AppPageHeader(
+            title: 'Cadastro com Google',
+            onBack: loading ? null : onBack,
           ),
         ),
         Expanded(

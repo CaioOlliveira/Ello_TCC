@@ -10,7 +10,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/utils/avatar_image.dart';
-import '../../../shared/navigation/module_navigation.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class PerfilPage extends ConsumerWidget {
@@ -19,11 +19,10 @@ class PerfilPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usuario = ref.watch(authSessionProvider);
-    final query = GoRouterState.of(context).uri.queryParameters;
-    final from = query['from'];
-    final moduleFrom = query['moduleFrom'];
-    final backRoute = _routeFromOrigin(from, moduleFrom);
-    final editRoute = _profileSubRouteFromCurrent(context, '/perfil/editar');
+    final from = GoRouterState.of(context).uri.queryParameters['from'];
+    final backRoute = _routeFromOrigin(from);
+    final editRoute =
+        from == null ? '/perfil/editar' : '/perfil/editar?from=$from';
 
     return Scaffold(
       backgroundColor:
@@ -40,15 +39,9 @@ class PerfilPage extends ConsumerWidget {
               children: [
                 StaggeredEntry(
                   index: 0,
-                  child: _PerfilHeader(onBack: () => context.go(backRoute)),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Perfil e configurações',
-                  style: TextStyle(
-                    color: Color(0xFF238FA1),
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
+                  child: _PerfilHeader(
+                    title: 'Perfil e configurações',
+                    onBack: () => context.go(backRoute),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -66,7 +59,6 @@ class PerfilPage extends ConsumerWidget {
                     usuario: usuario,
                     onEditPersonalInfo: () => context.go(editRoute),
                     from: from,
-                    moduleFrom: moduleFrom,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -87,7 +79,7 @@ class PerfilPage extends ConsumerWidget {
                     child: SizedBox(
                       height: 50,
                       child: OutlinedButton.icon(
-                        onPressed: () => context.push('/idosos'),
+                        onPressed: () => context.go('/idosos'),
                         icon: const Icon(
                           Icons.switch_account_rounded,
                           size: 21,
@@ -187,15 +179,12 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
     });
   }
 
-  void _removerFoto() {
-    setState(() => _urlFoto = null);
-  }
-
   Future<void> _salvar() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final usuario = ref.read(authSessionProvider);
     if (usuario == null) return;
-    final profileRoute = _perfilRouteFromCurrent(context);
+    final from = GoRouterState.of(context).uri.queryParameters['from'];
+    final profileRoute = from == null ? '/perfil' : '/perfil?from=$from';
 
     setState(() {
       _loading = true;
@@ -229,7 +218,8 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
 
   @override
   Widget build(BuildContext context) {
-    final profileRoute = _perfilRouteFromCurrent(context);
+    final from = GoRouterState.of(context).uri.queryParameters['from'];
+    final profileRoute = from == null ? '/perfil' : '/perfil?from=$from';
 
     return Scaffold(
       backgroundColor:
@@ -242,51 +232,20 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _PerfilHeader(onBack: () => context.go(profileRoute)),
-                const SizedBox(height: 16),
-                const Text(
-                  'Editar perfil',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF238FA1),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
+                _PerfilHeader(
+                  title: 'Editar perfil',
+                  onBack: () => context.go(profileRoute),
                 ),
                 const SizedBox(height: 18),
                 Center(
-                  child: Column(
-                    children: [
-                      InkWell(
-                        onTap: _loading ? null : _selecionarFoto,
-                        borderRadius: BorderRadius.circular(99),
-                        child: _Avatar(
-                          value: _urlFoto,
-                          radius: 45,
-                          placeholder: 'adicionar\nfoto',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        children: [
-                          TextButton.icon(
-                            onPressed: _loading ? null : _selecionarFoto,
-                            icon: const Icon(Icons.photo_camera_rounded),
-                            label: Text(_urlFoto == null
-                                ? 'Adicionar foto'
-                                : 'Trocar foto'),
-                          ),
-                          if (_urlFoto != null && _urlFoto!.isNotEmpty)
-                            TextButton.icon(
-                              onPressed: _loading ? null : _removerFoto,
-                              icon: const Icon(Icons.delete_outline_rounded),
-                              label: const Text('Remover foto'),
-                            ),
-                        ],
-                      ),
-                    ],
+                  child: InkWell(
+                    onTap: _loading ? null : _selecionarFoto,
+                    borderRadius: BorderRadius.circular(99),
+                    child: _Avatar(
+                      value: _urlFoto,
+                      radius: 45,
+                      placeholder: 'adicionar\nfoto',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -427,17 +386,8 @@ class _SegurancaPerfilPageState extends ConsumerState<SegurancaPerfilPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _PerfilHeader(
+                    title: 'Segurança',
                     onBack: () => context.go(_perfilRouteFromCurrent(context))),
-                const SizedBox(height: 16),
-                const Text(
-                  'Segurança',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF238FA1),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
                 const SizedBox(height: 18),
                 _Panel(
                   child: Column(
@@ -513,42 +463,6 @@ class _SegurancaPerfilPageState extends ConsumerState<SegurancaPerfilPage> {
                         : const Text('Alterar senha'),
                   ),
                 ),
-                const SizedBox(height: 20),
-                _Panel(
-                  padding: EdgeInsets.zero,
-                  child: InkWell(
-                    onTap: () => context.go('/permissoes'),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 14),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.admin_panel_settings_outlined,
-                            color: Color(0xFF238FA1),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Gerenciar acessos das fichas',
-                              style: TextStyle(
-                                color: adaptive(context, Colors.black,
-                                    AppDarkColors.textPrimary),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            color: adaptive(context, const Color(0xFF6E7C83),
-                                AppDarkColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -573,17 +487,8 @@ class SobreAppPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _PerfilHeader(
+                  title: 'Sobre o App',
                   onBack: () => context.go(_perfilRouteFromCurrent(context))),
-              const SizedBox(height: 16),
-              const Text(
-                'Sobre o App',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF238FA1),
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
               const SizedBox(height: 18),
               _Panel(
                 child: Column(
@@ -631,38 +536,14 @@ class SobreAppPage extends StatelessWidget {
 }
 
 class _PerfilHeader extends StatelessWidget {
-  const _PerfilHeader({required this.onBack});
+  const _PerfilHeader({required this.title, required this.onBack});
 
+  final String title;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: IconButton(
-            onPressed: onBack,
-            icon: const Icon(
-              Icons.chevron_left_rounded,
-              color: Color(0xFF238FA1),
-              size: 32,
-            ),
-          ),
-        ),
-        const Text(
-          'ello',
-          style: TextStyle(
-            color: Color(0xFF0E6F7E),
-            fontSize: 34,
-            fontWeight: FontWeight.w300,
-            letterSpacing: 0,
-            height: 1,
-          ),
-        ),
-      ],
-    );
+    return AppPageHeader(title: title, onBack: onBack);
   }
 }
 
@@ -735,17 +616,15 @@ class _MenuCard extends StatelessWidget {
     required this.usuario,
     required this.onEditPersonalInfo,
     this.from,
-    this.moduleFrom,
   });
 
   final UsuarioSessao? usuario;
   final VoidCallback onEditPersonalInfo;
   final String? from;
-  final String? moduleFrom;
 
   @override
   Widget build(BuildContext context) {
-    final suffix = _querySuffix(from: from, moduleFrom: moduleFrom);
+    final suffix = from == null ? '' : '?from=$from';
     final items = [
       (
         Icons.person_outline_rounded,
@@ -1230,23 +1109,18 @@ Uint8List? _dataImageBytes(String? value) {
   }
 }
 
-String _routeFromOrigin(String? from, String? moduleFrom) {
+String _routeFromOrigin(String? from) {
   return switch (from) {
     'idosos' => '/idosos',
     'dashboard' => '/dashboard',
-    'humor' => routeWithOrigin('/humor', _moduleOriginOrDefault(moduleFrom)),
+    'humor' => '/humor',
     'monitoramento' => '/monitoramento',
-    'agenda' => routeWithOrigin('/agenda', _moduleOriginOrDefault(moduleFrom)),
-    'glicemia' =>
-      routeWithOrigin('/glicemia', _moduleOriginOrDefault(moduleFrom)),
-    'alimentacao' =>
-      routeWithOrigin('/alimentacao', _moduleOriginOrDefault(moduleFrom)),
-    'medicamentos' =>
-      routeWithOrigin('/medicamentos', _moduleOriginOrDefault(moduleFrom)),
-    'equipamentos' =>
-      routeWithOrigin('/equipamentos', _moduleOriginOrDefault(moduleFrom)),
-    'insumos' =>
-      routeWithOrigin('/insumos', _moduleOriginOrDefault(moduleFrom)),
+    'agenda' => '/agenda',
+    'glicemia' => '/glicemia',
+    'alimentacao' => '/alimentacao',
+    'medicamentos' => '/medicamentos',
+    'equipamentos' => '/equipamentos',
+    'insumos' => '/insumos',
     'relatorios' => '/relatorios',
     'idoso-perfil' => '/idoso/perfil',
     _ => '/dashboard',
@@ -1254,31 +1128,6 @@ String _routeFromOrigin(String? from, String? moduleFrom) {
 }
 
 String _perfilRouteFromCurrent(BuildContext context) {
-  final query = GoRouterState.of(context).uri.queryParameters;
-  final from = query['from'];
-  final moduleFrom = query['moduleFrom'];
-  return '/perfil${_querySuffix(from: from, moduleFrom: moduleFrom)}';
-}
-
-String _profileSubRouteFromCurrent(BuildContext context, String path) {
-  final query = GoRouterState.of(context).uri.queryParameters;
-  return '$path${_querySuffix(
-    from: query['from'],
-    moduleFrom: query['moduleFrom'],
-  )}';
-}
-
-String _querySuffix({String? from, String? moduleFrom}) {
-  final query = {
-    if (from != null) 'from': from,
-    if (moduleFrom != null) 'moduleFrom': moduleFrom,
-  };
-  if (query.isEmpty) return '';
-  return Uri(queryParameters: query).toString();
-}
-
-String _moduleOriginOrDefault(String? value) {
-  return value == 'dashboard' || value == 'monitoramento'
-      ? value!
-      : 'monitoramento';
+  final from = GoRouterState.of(context).uri.queryParameters['from'];
+  return from == null ? '/perfil' : '/perfil?from=$from';
 }

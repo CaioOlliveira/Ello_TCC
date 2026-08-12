@@ -9,8 +9,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
-import '../../../shared/widgets/module_header.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 enum _OxigenacaoMode { resumo, registrar, historico }
@@ -288,7 +287,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
 
                 if (snapshot.hasError) {
                   return _ErrorState(
-                    onBack: () => context.go(moduleBackRoute(context)),
+                    onBack: () => context.go('/monitoramento'),
                     onRetry: () => _reloadResumo(idoso.id),
                   );
                 }
@@ -300,12 +299,12 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
                   idoso: idoso,
                   resumo: resumo,
                   period: _period,
-                  onBack: () => context.go(moduleBackRoute(context)),
+                  onBack: () => context.go('/monitoramento'),
                   onRegistrar: () {
                     setState(() => _mode = _OxigenacaoMode.registrar);
                   },
                   onViewHistorico: () {
-                    context.push('/historico/oxigenacao');
+                    setState(() => _mode = _OxigenacaoMode.historico);
                   },
                   onCalendar: () => _openCalendar(idoso.id),
                   onPeriodChanged: (period) {
@@ -442,11 +441,10 @@ class _OxigenacaoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ModuleHeader(
+    return AppPageHeader(
       title: title,
       onBack: onBack,
       trailing: trailing,
-      showWordmark: showWordmark,
     );
   }
 }
@@ -1018,11 +1016,13 @@ class _AnalysisCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       resumo.analise.texto,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: adaptive(context, const Color(0xFF2F4853),
                             AppDarkColors.textPrimary),
                         fontSize: 10,
-                        height: 1.15,
+                        height: 1.08,
                       ),
                     ),
                   ],
@@ -1270,6 +1270,7 @@ class _RegistrarOxigenacaoView extends StatelessWidget {
   Widget build(BuildContext context) {
     return _FormScaffold(
       title: 'Registrar oxigenação',
+      onBack: onCancel,
       child: Form(
         key: formKey,
         child: Column(
@@ -1672,9 +1673,14 @@ class _SaveCancelButtons extends StatelessWidget {
 }
 
 class _FormScaffold extends StatelessWidget {
-  const _FormScaffold({required this.title, required this.child});
+  const _FormScaffold({
+    required this.title,
+    required this.onBack,
+    required this.child,
+  });
 
   final String title;
+  final VoidCallback onBack;
   final Widget child;
 
   @override
@@ -1683,15 +1689,7 @@ class _FormScaffold extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 24, 10, 14),
       child: Column(
         children: [
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF2FA3B5),
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          AppPageHeader(title: title, onBack: onBack),
           const SizedBox(height: 14),
           Expanded(
             child: SingleChildScrollView(

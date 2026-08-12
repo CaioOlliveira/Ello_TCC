@@ -11,8 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/navigation/module_navigation.dart';
-import '../../../shared/widgets/module_header.dart';
+import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 part 'equipamentos_formularios.dart';
@@ -134,14 +133,12 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   Future<void> _updateEquipamento(EquipamentoFormData data) async {
     final selected = _selected;
     final idoso = ref.read(selectedIdosoProvider);
-    final usuario = ref.read(authSessionProvider);
     if (selected == null || idoso == null) return;
 
     setState(() => _saving = true);
     try {
       final payload = data.toPayload(
         idosoId: idoso.id,
-        criadoPorId: usuario?.id,
         includeDefaultStatus: false,
       );
       final response = await ref.read(apiClientProvider).atualizarEquipamento(
@@ -205,10 +202,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     try {
       final response = await ref.read(apiClientProvider).atualizarEquipamento(
         id: selected.id,
-        data: {
-          'status': status,
-          'criadoPorId': ref.read(authSessionProvider)?.id,
-        },
+        data: {'status': status},
       );
       final updated = Equipamento.fromJson(response['dados'] ?? response);
       if (!mounted) return;
@@ -267,10 +261,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   Future<void> _deleteEquipamento(Equipamento selected) async {
     setState(() => _saving = true);
     try {
-      await ref.read(apiClientProvider).removerEquipamento(
-            id: selected.id,
-            usuarioId: ref.read(authSessionProvider)?.id,
-          );
+      await ref.read(apiClientProvider).removerEquipamento(id: selected.id);
       if (!mounted) return;
       setState(() {
         _equipamentos = [
@@ -300,7 +291,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
 
   void _back() {
     if (_view == _EquipamentosView.lista) {
-      context.go(moduleBackRoute(context));
+      context.go('/monitoramento');
       return;
     }
     if (_view == _EquipamentosView.manutencao ||
@@ -314,6 +305,13 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   @override
   Widget build(BuildContext context) {
     final idoso = ref.watch(selectedIdosoProvider);
+    final pageTitle = switch (_view) {
+      _EquipamentosView.lista => 'Equipamentos',
+      _EquipamentosView.cadastro => 'Novo equipamento',
+      _EquipamentosView.edicao => 'Editar equipamento',
+      _EquipamentosView.detalhes => 'Detalhes do equipamento',
+      _EquipamentosView.manutencao => 'Registrar manutenção',
+    };
 
     Widget child;
     switch (_view) {
@@ -340,9 +338,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 personOf: idoso?.elderText.of ?? 'da pessoa idosa',
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
-                onHistory: () => context.push(
-                  routeWithCurrentOrigin(context, '/historico/equipamentos'),
-                ),
+                onHistory: () => context.push('/equipamentos/historico'),
               )
             : _EquipamentoDetails(
                 equipamento: _selected!,
@@ -378,9 +374,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 personOf: idoso.elderText.of,
                 onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
                 onOpen: _loadManutencoes,
-                onHistory: () => context.push(
-                  routeWithCurrentOrigin(context, '/historico/equipamentos'),
-                ),
+                onHistory: () => context.push('/equipamentos/historico'),
               );
     }
 
@@ -400,7 +394,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _BackButton(onTap: _back),
+                    AppPageHeader(title: pageTitle, onBack: _back),
                     Expanded(
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 260),
@@ -455,17 +449,6 @@ class _EquipamentosList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          'Lista de equipamentos',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: adaptive(
-                context, const Color(0xFF073248), AppDarkColors.textPrimary),
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 8),
         const _StatusLegend(),
         const SizedBox(height: 8),
         Expanded(

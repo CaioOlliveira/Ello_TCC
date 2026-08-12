@@ -1,16 +1,5 @@
 part of 'equipamentos_page.dart';
 
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ModuleHeader(title: 'Equipamentos', onBack: onTap);
-  }
-}
-
 class _StatusLegend extends StatelessWidget {
   const _StatusLegend();
 
@@ -52,7 +41,8 @@ class _LegendItem extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF4D4D4D), AppDarkColors.textSecondary),
+              color: adaptive(context, const Color(0xFF4D4D4D),
+                  AppDarkColors.textSecondary),
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
             ),
@@ -89,7 +79,8 @@ class _DetailsHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
-                    color: adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF222222),
+                        AppDarkColors.textPrimary),
                   ),
                 ),
                 Text('Marca: ${emptyDash(equipamento.marca)}',
@@ -178,7 +169,8 @@ class _InfoTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
+                    color: adaptive(context, const Color(0xFF111111),
+                        AppDarkColors.textPrimary),
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                   ),
@@ -280,7 +272,8 @@ class _MiniLine extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF111111), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF111111),
+                    AppDarkColors.textPrimary),
                 fontSize: 12,
               ),
             ),
@@ -303,7 +296,8 @@ class _EquipmentPicture extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: adaptive(context, const Color(0xFFF4F7F8), AppDarkColors.surfaceAlt),
+        color: adaptive(
+            context, const Color(0xFFF4F7F8), AppDarkColors.surfaceAlt),
         borderRadius: BorderRadius.circular(8),
       ),
       child: equipamento.urlFoto.isNotEmpty
@@ -394,7 +388,8 @@ class _EquipmentIcon extends StatelessWidget {
                 : Icons.medical_services_outlined;
     return Icon(
       icon,
-      color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+      color:
+          adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
       size: size * 0.55,
     );
   }
@@ -423,7 +418,8 @@ class _LabeledField extends StatelessWidget {
           Text(label,
               style: TextStyle(
                 fontSize: 13,
-                color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF333333),
+                    AppDarkColors.textPrimary),
               )),
           SizedBox(
             height: maxLines == 1 ? 40 : null,
@@ -462,7 +458,8 @@ class _DateField extends StatelessWidget {
           Text(label,
               style: TextStyle(
                 fontSize: 13,
-                color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF333333),
+                    AppDarkColors.textPrimary),
               )),
           SizedBox(
             height: 40,
@@ -504,7 +501,8 @@ class _OptionField extends StatelessWidget {
           Text(label,
               style: TextStyle(
                 fontSize: 13,
-                color: adaptive(context, const Color(0xFF333333), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF333333),
+                    AppDarkColors.textPrimary),
               )),
           SizedBox(
             height: 40,
@@ -546,7 +544,8 @@ class _TypeChip extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected
-              ? adaptive(context, const Color(0xFFE1F3F6), AppDarkColors.tintedInfo)
+              ? adaptive(
+                  context, const Color(0xFFE1F3F6), AppDarkColors.tintedInfo)
               : adaptive(context, Colors.white, AppDarkColors.surface),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFF38AFC0)),
@@ -565,7 +564,8 @@ class _TypeChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+                color: adaptive(context, const Color(0xFF073248),
+                    AppDarkColors.textPrimary),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -600,7 +600,8 @@ class _MessageState extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -610,7 +611,8 @@ class _MessageState extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: adaptive(context, const Color(0xFF777777), AppDarkColors.textSecondary),
+              color: adaptive(context, const Color(0xFF777777),
+                  AppDarkColors.textSecondary),
               fontSize: 14,
             ),
           ),
@@ -673,7 +675,8 @@ TextStyle _mutedStyle(BuildContext context) {
 
 TextStyle _detailStyle(BuildContext context) {
   return TextStyle(
-    color: adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
+    color:
+        adaptive(context, const Color(0xFF222222), AppDarkColors.textPrimary),
     fontSize: 12.5,
     height: 1.2,
   );

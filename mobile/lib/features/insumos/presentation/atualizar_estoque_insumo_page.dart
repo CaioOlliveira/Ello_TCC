@@ -242,26 +242,9 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: widget.onCancel,
-              iconSize: 32,
-              tooltip: 'Voltar',
-              icon: const Icon(
-                Icons.chevron_left_rounded,
-                color: Color(0xFF2CA0B4),
-              ),
-            ),
-          ),
-          const Text(
-            'Atualizar insumo',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF2CA0B4),
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
+          AppPageHeader(
+            title: 'Atualizar insumo',
+            onBack: widget.onCancel,
           ),
           const SizedBox(height: 20),
           Center(
