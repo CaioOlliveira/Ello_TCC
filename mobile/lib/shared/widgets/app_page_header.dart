@@ -18,7 +18,7 @@ class AppPageHeader extends StatelessWidget {
   });
 
   static const double height = 52;
-  static const double titleFontSize = 20;
+  static const double titleFontSize = 22;
 
   final String title;
   final VoidCallback? onBack;
@@ -45,6 +45,7 @@ class AppPageHeader extends StatelessWidget {
                 color: AppColors.primary,
                 fontSize: titleFontSize,
                 fontWeight: FontWeight.w800,
+                letterSpacing: 0,
                 height: 1.15,
               ),
             ),

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:dio/dio.dart';
 
 import '../utils/elder_text.dart';
@@ -12,6 +14,7 @@ class IdosoResumo {
     required this.condicoes,
     this.criadoPorId,
     this.ehDono,
+    this.eAdministrador,
     this.urlFoto,
     this.pesoKg,
     this.tipoSanguineo,
@@ -24,6 +27,8 @@ class IdosoResumo {
     this.contatoEmergenciaTelefone,
     this.contatoEmergenciaParentesco,
     this.monitoramentos = const [],
+    this.permissoesVisualizar = const [],
+    this.permissoesEditar = const [],
   });
 
   factory IdosoResumo.fromJson(Map<String, dynamic> json) {
@@ -31,6 +36,13 @@ class IdosoResumo {
         json['condicoesSaude'] ??
         json['observacoes_saude'];
     final monitoramentos = json['monitoramentos'];
+    final permissoes = json['permissoes'];
+    final permissoesVisualizar = json['permissoesVisualizar'] ??
+        json['permissoes_visualizar'] ??
+        (permissoes is Map ? permissoes['visualizar'] : null);
+    final permissoesEditar = json['permissoesEditar'] ??
+        json['permissoes_editar'] ??
+        (permissoes is Map ? permissoes['editar'] : null);
     final dataNascimento = json['dataNascimento']?.toString() ??
         json['data_nascimento']?.toString();
 
@@ -46,6 +58,8 @@ class IdosoResumo {
       criadoPorId:
           json['criadoPorId']?.toString() ?? json['criado_por_id']?.toString(),
       ehDono: _boolOrNull(json['ehDono'] ?? json['eh_dono']),
+      eAdministrador:
+          _boolOrNull(json['eAdministrador'] ?? json['e_administrador']),
       urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
       pesoKg: _numOrNull(json['pesoKg'] ?? json['peso_kg']),
       tipoSanguineo: json['tipoSanguineo']?.toString() ??
@@ -70,6 +84,8 @@ class IdosoResumo {
       monitoramentos: monitoramentos is List
           ? monitoramentos.map((item) => item.toString()).toList()
           : const [],
+      permissoesVisualizar: _stringList(permissoesVisualizar),
+      permissoesEditar: _stringList(permissoesEditar),
     );
   }
 
@@ -78,6 +94,7 @@ class IdosoResumo {
   final int idade;
   final String? criadoPorId;
   final bool? ehDono;
+  final bool? eAdministrador;
   final String? urlFoto;
   final double? pesoKg;
   final String? tipoSanguineo;
@@ -91,14 +108,34 @@ class IdosoResumo {
   final String? contatoEmergenciaParentesco;
   final List<String> condicoes;
   final List<String> monitoramentos;
+  final List<String> permissoesVisualizar;
+  final List<String> permissoesEditar;
 
   ElderText get elderText => ElderText.fromSexo(sexo);
+  bool get temAcessoTotal => ehDono == true || eAdministrador == true;
+  bool get podeEditarFicha => podeEditarModulo('Ficha');
+
+  bool podeVisualizarModulo(String moduloId) {
+    return temAcessoTotal || permissoesVisualizar.contains(moduloId);
+  }
+
+  bool podeEditarModulo(String moduloId) {
+    return temAcessoTotal || permissoesEditar.contains(moduloId);
+  }
+
+  List<String> get monitoramentosVisiveis {
+    if (temAcessoTotal || permissoesVisualizar.isEmpty) return monitoramentos;
+    return monitoramentos
+        .where((moduloId) => permissoesVisualizar.contains(moduloId))
+        .toList();
+  }
 
   IdosoResumo copyWith({
     String? nome,
     int? idade,
     String? criadoPorId,
     bool? ehDono,
+    bool? eAdministrador,
     String? urlFoto,
     double? pesoKg,
     String? tipoSanguineo,
@@ -112,6 +149,8 @@ class IdosoResumo {
     String? contatoEmergenciaParentesco,
     List<String>? condicoes,
     List<String>? monitoramentos,
+    List<String>? permissoesVisualizar,
+    List<String>? permissoesEditar,
   }) {
     return IdosoResumo(
       id: id,
@@ -119,6 +158,7 @@ class IdosoResumo {
       idade: idade ?? this.idade,
       criadoPorId: criadoPorId ?? this.criadoPorId,
       ehDono: ehDono ?? this.ehDono,
+      eAdministrador: eAdministrador ?? this.eAdministrador,
       urlFoto: urlFoto ?? this.urlFoto,
       pesoKg: pesoKg ?? this.pesoKg,
       tipoSanguineo: tipoSanguineo ?? this.tipoSanguineo,
@@ -135,6 +175,8 @@ class IdosoResumo {
           contatoEmergenciaParentesco ?? this.contatoEmergenciaParentesco,
       condicoes: condicoes ?? this.condicoes,
       monitoramentos: monitoramentos ?? this.monitoramentos,
+      permissoesVisualizar: permissoesVisualizar ?? this.permissoesVisualizar,
+      permissoesEditar: permissoesEditar ?? this.permissoesEditar,
     );
   }
 }
@@ -545,6 +587,7 @@ class GlicemiaAnalise {
 class GlicemiaResumo {
   const GlicemiaResumo({
     required this.totalRegistros,
+    required this.totalRegistrosGeral,
     required this.totalInsulinas,
     required this.alerta,
     required this.analise,
@@ -562,13 +605,21 @@ class GlicemiaResumo {
     final proximaMedicao = json['proximaMedicao']?.toString();
     final mediaDia = json['mediaDia'];
 
+    final analise = GlicemiaAnalise.fromJson(
+      json['analise'] is Map<String, dynamic> ? json['analise'] : null,
+    );
+    final totalRegistros = json['totalRegistros'] is num
+        ? (json['totalRegistros'] as num).toInt()
+        : 0;
+
     return GlicemiaResumo(
       ultima: ultima is Map<String, dynamic>
           ? GlicemiaRegistro.fromJson(ultima)
           : null,
-      totalRegistros: json['totalRegistros'] is num
-          ? (json['totalRegistros'] as num).toInt()
-          : 0,
+      totalRegistros: totalRegistros,
+      totalRegistrosGeral: json['totalRegistrosGeral'] is num
+          ? (json['totalRegistrosGeral'] as num).toInt()
+          : math.max(totalRegistros, analise.totalMedicoes).toInt(),
       mediaDia: mediaDia is num ? mediaDia.toDouble() : null,
       proximaMedicao: proximaMedicao == null
           ? null
@@ -576,9 +627,7 @@ class GlicemiaResumo {
       alerta: GlicemiaAlerta.fromJson(
         json['alerta'] is Map<String, dynamic> ? json['alerta'] : null,
       ),
-      analise: GlicemiaAnalise.fromJson(
-        json['analise'] is Map<String, dynamic> ? json['analise'] : null,
-      ),
+      analise: analise,
       serie: serie is List
           ? serie
               .whereType<Map<String, dynamic>>()
@@ -596,6 +645,7 @@ class GlicemiaResumo {
 
   final GlicemiaRegistro? ultima;
   final int totalRegistros;
+  final int totalRegistrosGeral;
   final double? mediaDia;
   final DateTime? proximaMedicao;
   final GlicemiaAlerta alerta;
@@ -720,7 +770,7 @@ class PressaoAlerta {
       status: json?['status']?.toString() ?? 'sem_registro',
       titulo: json?['titulo']?.toString() ?? 'Sem medicao registrada',
       mensagem: json?['mensagem']?.toString() ??
-          'Registre a primeira pressao para gerar alertas.',
+          'Registre a primeira pressão para gerar alertas.',
       cor: json?['cor']?.toString() ?? 'neutro',
     );
   }
@@ -769,6 +819,7 @@ class PressaoAnalise {
 class PressaoResumo {
   const PressaoResumo({
     required this.totalRegistros,
+    required this.totalRegistrosGeral,
     required this.alerta,
     required this.analise,
     required this.serie,
@@ -785,13 +836,21 @@ class PressaoResumo {
     final mediaSistolicaDia = json['mediaSistolicaDia'];
     final mediaDiastolicaDia = json['mediaDiastolicaDia'];
 
+    final analise = PressaoAnalise.fromJson(
+      json['analise'] is Map<String, dynamic> ? json['analise'] : null,
+    );
+    final totalRegistros = json['totalRegistros'] is num
+        ? (json['totalRegistros'] as num).toInt()
+        : 0;
+
     return PressaoResumo(
       ultima: ultima is Map<String, dynamic>
           ? PressaoRegistro.fromJson(ultima)
           : null,
-      totalRegistros: json['totalRegistros'] is num
-          ? (json['totalRegistros'] as num).toInt()
-          : 0,
+      totalRegistros: totalRegistros,
+      totalRegistrosGeral: json['totalRegistrosGeral'] is num
+          ? (json['totalRegistrosGeral'] as num).toInt()
+          : math.max(totalRegistros, analise.totalMedicoes).toInt(),
       mediaSistolicaDia:
           mediaSistolicaDia is num ? mediaSistolicaDia.toDouble() : null,
       mediaDiastolicaDia:
@@ -802,9 +861,7 @@ class PressaoResumo {
       alerta: PressaoAlerta.fromJson(
         json['alerta'] is Map<String, dynamic> ? json['alerta'] : null,
       ),
-      analise: PressaoAnalise.fromJson(
-        json['analise'] is Map<String, dynamic> ? json['analise'] : null,
-      ),
+      analise: analise,
       serie: serie is List
           ? serie
               .whereType<Map<String, dynamic>>()
@@ -816,6 +873,7 @@ class PressaoResumo {
 
   final PressaoRegistro? ultima;
   final int totalRegistros;
+  final int totalRegistrosGeral;
   final double? mediaSistolicaDia;
   final double? mediaDiastolicaDia;
   final DateTime? proximaMedicao;
@@ -983,6 +1041,7 @@ class OxigenacaoAnalise {
 class OxigenacaoResumo {
   const OxigenacaoResumo({
     required this.totalRegistros,
+    required this.totalRegistrosGeral,
     required this.alerta,
     required this.analise,
     required this.serie,
@@ -999,13 +1058,21 @@ class OxigenacaoResumo {
     final mediaSaturacaoDia = json['mediaSaturacaoDia'];
     final mediaPulsoDia = json['mediaPulsoDia'];
 
+    final analise = OxigenacaoAnalise.fromJson(
+      json['analise'] is Map<String, dynamic> ? json['analise'] : null,
+    );
+    final totalRegistros = json['totalRegistros'] is num
+        ? (json['totalRegistros'] as num).toInt()
+        : 0;
+
     return OxigenacaoResumo(
       ultima: ultima is Map<String, dynamic>
           ? OxigenacaoRegistro.fromJson(ultima)
           : null,
-      totalRegistros: json['totalRegistros'] is num
-          ? (json['totalRegistros'] as num).toInt()
-          : 0,
+      totalRegistros: totalRegistros,
+      totalRegistrosGeral: json['totalRegistrosGeral'] is num
+          ? (json['totalRegistrosGeral'] as num).toInt()
+          : math.max(totalRegistros, analise.totalMedicoes).toInt(),
       mediaSaturacaoDia:
           mediaSaturacaoDia is num ? mediaSaturacaoDia.toDouble() : null,
       mediaPulsoDia: mediaPulsoDia is num ? mediaPulsoDia.toDouble() : null,
@@ -1015,9 +1082,7 @@ class OxigenacaoResumo {
       alerta: OxigenacaoAlerta.fromJson(
         json['alerta'] is Map<String, dynamic> ? json['alerta'] : null,
       ),
-      analise: OxigenacaoAnalise.fromJson(
-        json['analise'] is Map<String, dynamic> ? json['analise'] : null,
-      ),
+      analise: analise,
       serie: serie is List
           ? serie
               .whereType<Map<String, dynamic>>()
@@ -1029,6 +1094,7 @@ class OxigenacaoResumo {
 
   final OxigenacaoRegistro? ultima;
   final int totalRegistros;
+  final int totalRegistrosGeral;
   final double? mediaSaturacaoDia;
   final double? mediaPulsoDia;
   final DateTime? proximaMedicao;
@@ -1184,6 +1250,7 @@ class TemperaturaAnalise {
 class TemperaturaResumo {
   const TemperaturaResumo({
     required this.totalRegistros,
+    required this.totalRegistrosGeral,
     required this.alerta,
     required this.analise,
     required this.serie,
@@ -1198,13 +1265,21 @@ class TemperaturaResumo {
     final proximaMedicao = json['proximaMedicao']?.toString();
     final mediaTemperaturaDia = json['mediaTemperaturaDia'];
 
+    final analise = TemperaturaAnalise.fromJson(
+      json['analise'] is Map<String, dynamic> ? json['analise'] : null,
+    );
+    final totalRegistros = json['totalRegistros'] is num
+        ? (json['totalRegistros'] as num).toInt()
+        : 0;
+
     return TemperaturaResumo(
       ultima: ultima is Map<String, dynamic>
           ? TemperaturaRegistro.fromJson(ultima)
           : null,
-      totalRegistros: json['totalRegistros'] is num
-          ? (json['totalRegistros'] as num).toInt()
-          : 0,
+      totalRegistros: totalRegistros,
+      totalRegistrosGeral: json['totalRegistrosGeral'] is num
+          ? (json['totalRegistrosGeral'] as num).toInt()
+          : math.max(totalRegistros, analise.totalMedicoes).toInt(),
       mediaTemperaturaDia:
           mediaTemperaturaDia is num ? mediaTemperaturaDia.toDouble() : null,
       proximaMedicao: proximaMedicao == null
@@ -1213,9 +1288,7 @@ class TemperaturaResumo {
       alerta: TemperaturaAlerta.fromJson(
         json['alerta'] is Map<String, dynamic> ? json['alerta'] : null,
       ),
-      analise: TemperaturaAnalise.fromJson(
-        json['analise'] is Map<String, dynamic> ? json['analise'] : null,
-      ),
+      analise: analise,
       serie: serie is List
           ? serie
               .whereType<Map<String, dynamic>>()
@@ -1227,6 +1300,7 @@ class TemperaturaResumo {
 
   final TemperaturaRegistro? ultima;
   final int totalRegistros;
+  final int totalRegistrosGeral;
   final double? mediaTemperaturaDia;
   final DateTime? proximaMedicao;
   final TemperaturaAlerta alerta;
@@ -1284,7 +1358,10 @@ class MedicamentoResumo {
     this.unidadeEstoque,
     this.alertaEstoqueBaixo,
     this.proximoHorario,
+    this.proximoHorarioPrevisto,
     this.proximoAtrasado = false,
+    this.statusHoje = 'sem_pendencia',
+    this.dosesAdministradasHoje = 0,
     this.totalHorarios = 0,
     this.horarios = const [],
   });
@@ -1303,7 +1380,14 @@ class MedicamentoResumo {
       unidadeEstoque: json['unidadeEstoque']?.toString(),
       alertaEstoqueBaixo: alerta is num ? alerta.toDouble() : null,
       proximoHorario: json['proximoHorario']?.toString(),
+      proximoHorarioPrevisto: DateTime.tryParse(
+        json['proximoHorarioPrevisto']?.toString() ?? '',
+      )?.toLocal(),
       proximoAtrasado: json['proximoAtrasado'] == true,
+      statusHoje: json['statusHoje']?.toString() ?? 'sem_pendencia',
+      dosesAdministradasHoje: json['dosesAdministradasHoje'] is num
+          ? (json['dosesAdministradasHoje'] as num).toInt()
+          : 0,
       totalHorarios: json['totalHorarios'] is num
           ? (json['totalHorarios'] as num).toInt()
           : 0,
@@ -1324,7 +1408,10 @@ class MedicamentoResumo {
   final String? unidadeEstoque;
   final double? alertaEstoqueBaixo;
   final String? proximoHorario;
+  final DateTime? proximoHorarioPrevisto;
   final bool proximoAtrasado;
+  final String statusHoje;
+  final int dosesAdministradasHoje;
   final int totalHorarios;
   final List<MedicamentoHorario> horarios;
 
@@ -1332,6 +1419,40 @@ class MedicamentoResumo {
       quantidadeEstoque != null &&
       alertaEstoqueBaixo != null &&
       quantidadeEstoque! <= alertaEstoqueBaixo!;
+
+  MedicamentoResumo copyWith({
+    String? nome,
+    String? dosagem,
+    String? formato,
+    double? quantidadeEstoque,
+    String? unidadeEstoque,
+    double? alertaEstoqueBaixo,
+    String? proximoHorario,
+    DateTime? proximoHorarioPrevisto,
+    bool? proximoAtrasado,
+    String? statusHoje,
+    int? dosesAdministradasHoje,
+    int? totalHorarios,
+    List<MedicamentoHorario>? horarios,
+  }) {
+    return MedicamentoResumo(
+      id: id,
+      nome: nome ?? this.nome,
+      dosagem: dosagem ?? this.dosagem,
+      formato: formato ?? this.formato,
+      quantidadeEstoque: quantidadeEstoque ?? this.quantidadeEstoque,
+      unidadeEstoque: unidadeEstoque ?? this.unidadeEstoque,
+      alertaEstoqueBaixo: alertaEstoqueBaixo ?? this.alertaEstoqueBaixo,
+      proximoHorario: proximoHorario,
+      proximoHorarioPrevisto: proximoHorarioPrevisto,
+      proximoAtrasado: proximoAtrasado ?? this.proximoAtrasado,
+      statusHoje: statusHoje ?? this.statusHoje,
+      dosesAdministradasHoje:
+          dosesAdministradasHoje ?? this.dosesAdministradasHoje,
+      totalHorarios: totalHorarios ?? this.totalHorarios,
+      horarios: horarios ?? this.horarios,
+    );
+  }
 }
 
 class MedicamentosResumo {
@@ -1602,7 +1723,7 @@ class RefeicaoResumo {
           json['idosoId']?.toString() ?? json['idoso_id']?.toString() ?? '',
       tipoRefeicao: json['tipoRefeicao']?.toString() ??
           json['tipo_refeicao']?.toString() ??
-          'Refeicao',
+          'Refeição',
       alimentos: alimentosJson is List
           ? alimentosJson
               .whereType<Map<String, dynamic>>()
@@ -2003,7 +2124,7 @@ class ApiClient {
       );
       return response.data ?? <String, dynamic>{};
     } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao atualizar usuario.');
+      throw _toApiException(error, fallback: 'Erro ao atualizar usuário.');
     }
   }
 
@@ -2120,7 +2241,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao gerar codigo de convite.',
+        fallback: 'Erro ao gerar código de convite.',
       );
     }
   }
@@ -3106,7 +3227,8 @@ class ApiClient {
     }
   }
 
-  Future<void> removerEquipamento({required String id, String? usuarioId}) async {
+  Future<void> removerEquipamento(
+      {required String id, String? usuarioId}) async {
     try {
       await _dio.delete<void>(
         ApiEndpoints.equipamento(id),
@@ -3145,7 +3267,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao listar manutencoes.',
+        fallback: 'Erro ao listar manutenções.',
       );
     }
   }
@@ -3164,7 +3286,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Erro ao registrar manutencao.',
+        fallback: 'Erro ao registrar manutenção.',
       );
     }
   }
@@ -3637,6 +3759,36 @@ class ApiClient {
     }
   }
 
+  Future<MedicamentosResumo> getResumoMedicamentosConsolidado({
+    required String idosoId,
+  }) async {
+    final resumo = await getResumoMedicamentos(idosoId: idosoId);
+    if (resumo.medicamentos.isEmpty) return resumo;
+
+    final medicamentos = await Future.wait(
+      resumo.medicamentos.map((medicamento) async {
+        try {
+          final administracoes =
+              await getAdministracoesMedicamento(medicamento.id);
+          return _normalizarMedicamentoHoje(medicamento, administracoes);
+        } catch (_) {
+          return medicamento;
+        }
+      }),
+    );
+
+    final pendentes = medicamentos
+        .where(_medicamentoTemDosePendenteConsolidada)
+        .toList()
+      ..sort(_compararMedicamentosPendentesConsolidados);
+
+    return MedicamentosResumo(
+      medicamentos: medicamentos,
+      totalMedicamentos: resumo.totalMedicamentos,
+      proximoMedicamento: pendentes.isEmpty ? null : pendentes.first,
+    );
+  }
+
   Future<List<HistoricoMedicamentoEntrada>> getHistoricoMedicamentos({
     required String idosoId,
     DateTime? dataReferencia,
@@ -3956,4 +4108,175 @@ Map<String, dynamic> _mapOrEmpty(Object? value) {
     return value.map((key, data) => MapEntry(key.toString(), data));
   }
   return const <String, dynamic>{};
+}
+
+const _diasSemanaMedicamentos = [
+  'Domingo',
+  'Segunda',
+  'Terça',
+  'Quarta',
+  'Quinta',
+  'Sexta',
+  'Sábado',
+];
+
+MedicamentoResumo _normalizarMedicamentoHoje(
+  MedicamentoResumo medicamento,
+  List<Map<String, dynamic>> administracoes,
+) {
+  final agora = DateTime.now();
+  final horariosHoje = medicamento.horarios
+      .where((horario) => _horarioMedicamentoValeHoje(horario, agora))
+      .toList();
+
+  if (horariosHoje.isEmpty) {
+    return medicamento.copyWith(
+      proximoHorario: null,
+      proximoHorarioPrevisto: null,
+      proximoAtrasado: false,
+      statusHoje: 'sem_pendencia',
+      dosesAdministradasHoje: 0,
+      totalHorarios: 0,
+    );
+  }
+
+  final administrados = <String>{};
+  for (final horario in horariosHoje) {
+    if (administracoes.any(
+      (administracao) => _administracaoCorrespondeAoHorarioHoje(
+        administracao,
+        horario.horario,
+        agora,
+      ),
+    )) {
+      administrados.add(horario.horario);
+    }
+  }
+
+  final pendentes =
+      horariosHoje.where((horario) => !administrados.contains(horario.horario));
+
+  if (pendentes.isEmpty) {
+    return medicamento.copyWith(
+      proximoHorario: null,
+      proximoHorarioPrevisto: null,
+      proximoAtrasado: false,
+      statusHoje: 'dado',
+      dosesAdministradasHoje: administrados.length,
+      totalHorarios: horariosHoje.length,
+    );
+  }
+
+  final ordenados = pendentes.toList()
+    ..sort((left, right) {
+      final leftDate = _dataHorarioHoje(left.horario, agora);
+      final rightDate = _dataHorarioHoje(right.horario, agora);
+      final leftAtrasado =
+          leftDate != null && agora.difference(leftDate).inMinutes > 30;
+      final rightAtrasado =
+          rightDate != null && agora.difference(rightDate).inMinutes > 30;
+      if (leftAtrasado != rightAtrasado) return leftAtrasado ? -1 : 1;
+      if (leftDate != null && rightDate != null) {
+        return leftDate.compareTo(rightDate);
+      }
+      return left.horario.compareTo(right.horario);
+    });
+
+  final proximo = ordenados.first;
+  final proximaData = _dataHorarioHoje(proximo.horario, agora);
+  final atrasado =
+      proximaData != null && agora.difference(proximaData).inMinutes > 30;
+
+  return medicamento.copyWith(
+    proximoHorario: proximo.horario,
+    proximoHorarioPrevisto: proximaData,
+    proximoAtrasado: atrasado,
+    statusHoje: atrasado ? 'atrasado' : 'pendente',
+    dosesAdministradasHoje: administrados.length,
+    totalHorarios: horariosHoje.length,
+  );
+}
+
+bool _horarioMedicamentoValeHoje(
+  MedicamentoHorario horario,
+  DateTime referencia,
+) {
+  if (horario.frequenciaTipo == 'semanal' && horario.diasSemana.isNotEmpty) {
+    final hoje = _diasSemanaMedicamentos[referencia.weekday % 7];
+    return horario.diasSemana.any(
+      (dia) => dia.trim().toLowerCase() == hoje.toLowerCase(),
+    );
+  }
+
+  return true;
+}
+
+bool _administracaoCorrespondeAoHorarioHoje(
+  Map<String, dynamic> administracao,
+  String horario,
+  DateTime referencia,
+) {
+  final previstoTexto =
+      (administracao['horario_previsto'] ?? administracao['horarioPrevisto'])
+          ?.toString();
+  if (previstoTexto == null || previstoTexto.isEmpty) return false;
+
+  final previsto = DateTime.tryParse(previstoTexto);
+  if (previsto == null) return false;
+
+  final hoje = _dateKey(referencia);
+  final hora = horario.length >= 5 ? horario.substring(0, 5) : horario;
+  final local = previsto.toLocal();
+  final utc = previsto.toUtc();
+
+  return (_dateKey(local) == hoje && _timeKey(local) == hora) ||
+      (_dateKey(utc) == hoje && _timeKey(utc) == hora);
+}
+
+bool _medicamentoTemDosePendenteConsolidada(MedicamentoResumo medicamento) {
+  if (medicamento.statusHoje == 'dado') return false;
+  return medicamento.proximoHorario != null;
+}
+
+int _compararMedicamentosPendentesConsolidados(
+  MedicamentoResumo left,
+  MedicamentoResumo right,
+) {
+  if (left.proximoAtrasado != right.proximoAtrasado) {
+    return left.proximoAtrasado ? -1 : 1;
+  }
+
+  final leftDate = left.proximoHorarioPrevisto;
+  final rightDate = right.proximoHorarioPrevisto;
+  if (leftDate != null && rightDate != null) {
+    return leftDate.compareTo(rightDate);
+  }
+
+  return (left.proximoHorario ?? '').compareTo(right.proximoHorario ?? '');
+}
+
+DateTime? _dataHorarioHoje(String horario, DateTime referencia) {
+  final partes = horario.split(':');
+  if (partes.length < 2) return null;
+  final hora = int.tryParse(partes[0]);
+  final minuto = int.tryParse(partes[1]);
+  if (hora == null || minuto == null) return null;
+  return DateTime(
+    referencia.year,
+    referencia.month,
+    referencia.day,
+    hora,
+    minuto,
+  );
+}
+
+String _dateKey(DateTime date) {
+  return '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+}
+
+String _timeKey(DateTime date) {
+  return '${date.hour.toString().padLeft(2, '0')}:'
+      '${date.minute.toString().padLeft(2, '0')}';
 }

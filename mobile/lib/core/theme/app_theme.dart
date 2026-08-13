@@ -22,13 +22,37 @@ class AppTheme {
       textTheme: const TextTheme(
         headlineSmall: TextStyle(
           color: AppDarkColors.textPrimary,
+          fontSize: 22,
           fontWeight: FontWeight.w700,
+          height: 1.2,
         ),
         titleLarge: TextStyle(
           color: AppDarkColors.textPrimary,
+          fontSize: 20,
           fontWeight: FontWeight.w700,
+          height: 1.2,
         ),
-        bodyMedium: TextStyle(color: AppDarkColors.textPrimary),
+        titleMedium: TextStyle(
+          color: AppDarkColors.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          height: 1.25,
+        ),
+        bodyLarge: TextStyle(
+          color: AppDarkColors.textPrimary,
+          fontSize: 15,
+          height: 1.35,
+        ),
+        bodyMedium: TextStyle(
+          color: AppDarkColors.textPrimary,
+          fontSize: 14,
+          height: 1.35,
+        ),
+        bodySmall: TextStyle(
+          color: AppDarkColors.textSecondary,
+          fontSize: 12,
+          height: 1.3,
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
@@ -68,13 +92,37 @@ class AppTheme {
       textTheme: const TextTheme(
         headlineSmall: TextStyle(
           color: AppColors.darkBlue,
+          fontSize: 22,
           fontWeight: FontWeight.w700,
+          height: 1.2,
         ),
         titleLarge: TextStyle(
           color: AppColors.darkBlue,
+          fontSize: 20,
           fontWeight: FontWeight.w700,
+          height: 1.2,
         ),
-        bodyMedium: TextStyle(color: AppColors.darkBlue),
+        titleMedium: TextStyle(
+          color: AppColors.darkBlue,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          height: 1.25,
+        ),
+        bodyLarge: TextStyle(
+          color: AppColors.darkBlue,
+          fontSize: 15,
+          height: 1.35,
+        ),
+        bodyMedium: TextStyle(
+          color: AppColors.darkBlue,
+          fontSize: 14,
+          height: 1.35,
+        ),
+        bodySmall: TextStyle(
+          color: Color(0xFF5F737A),
+          fontSize: 12,
+          height: 1.3,
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(

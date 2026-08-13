@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_palette.dart';
+import 'app_page_header.dart';
 
 class ModuleHeader extends StatelessWidget {
   const ModuleHeader({
@@ -19,9 +20,9 @@ class ModuleHeader extends StatelessWidget {
   static const titleColor = Color(0xFF238FA1);
   static const titleStyle = TextStyle(
     color: titleColor,
-    fontSize: 22,
+    fontSize: AppPageHeader.titleFontSize,
     fontWeight: FontWeight.w800,
-    height: 1.05,
+    height: 1.15,
     letterSpacing: 0,
   );
 
@@ -44,7 +45,7 @@ class ModuleHeader extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         SizedBox(
-            width: 78,
+            width: 48,
             child: Align(alignment: Alignment.centerRight, child: trailing)),
       ],
     );
@@ -78,21 +79,19 @@ class ModuleBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: const Color(0xFF238FA1),
-        padding: const EdgeInsets.only(left: 0, right: 8),
-        minimumSize: const Size(78, 42),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: IconButton(
+        onPressed: onPressed,
+        tooltip: 'Voltar',
+        padding: EdgeInsets.zero,
+        icon: const Icon(
+          Icons.chevron_left_rounded,
+          color: Color(0xFF238FA1),
+          size: 30,
         ),
       ),
-      icon: const Icon(Icons.chevron_left_rounded, size: 30),
-      label: const Text('Voltar'),
     );
   }
 }

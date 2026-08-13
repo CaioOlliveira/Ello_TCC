@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'providers.dart';
 import '../features/agenda/presentation/agenda_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
@@ -29,25 +30,55 @@ import '../features/relatorios/presentation/relatorios_page.dart';
 import '../features/splash/presentation/splash_page.dart';
 import '../features/temperatura/presentation/temperatura_page.dart';
 
+String? _moduleIdFromHistorico(String tipo) {
+  return switch (tipo.toLowerCase()) {
+    'agenda' => 'Agenda',
+    'alimentacao' => 'Alimentacao',
+    'equipamentos' => 'Equipamentos',
+    'glicemia' => 'Glicemia',
+    'humor' => 'Humor',
+    'insumos' => 'Insumos',
+    'medicamentos' || 'medicacoes' || 'remedios' => 'Medicacoes',
+    'oxigenacao' => 'Oxigenacao',
+    'pressao' => 'Pressao',
+    'temperatura' => 'Temperatura',
+    _ => null,
+  };
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-      GoRoute(path: '/agenda', builder: (context, state) => const AgendaPage()),
+      GoRoute(
+        path: '/agenda',
+        builder: (context, state) => const _ModuleAccessGate(
+          moduleId: 'Agenda',
+          child: AgendaPage(),
+        ),
+      ),
       GoRoute(
         path: '/agenda/historico',
-        builder: (context, state) => const HistoricoPage(tipo: 'agenda'),
+        builder: (context, state) => const _ModuleAccessGate(
+          moduleId: 'Agenda',
+          child: HistoricoPage(tipo: 'agenda'),
+        ),
       ),
       GoRoute(
         path: '/equipamentos',
-        builder: (context, state) => const EquipamentosPage(),
+        builder: (context, state) => const _ModuleAccessGate(
+          moduleId: 'Equipamentos',
+          child: EquipamentosPage(),
+        ),
         routes: [
           GoRoute(
             path: 'historico',
-            builder: (context, state) =>
-                const HistoricoPage(tipo: 'equipamentos'),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Equipamentos',
+              child: HistoricoPage(tipo: 'equipamentos'),
+            ),
           ),
         ],
       ),
@@ -114,7 +145,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/glicemia',
-            builder: (context, state) => const GlicemiaPage(),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Glicemia',
+              child: GlicemiaPage(),
+            ),
           ),
           GoRoute(
             path: '/monitoramento',
@@ -126,28 +160,45 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/alimentacao',
-            builder: (context, state) => const AlimentacaoPage(),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Alimentacao',
+              child: AlimentacaoPage(),
+            ),
           ),
           GoRoute(
             path: '/medicamentos',
-            builder: (context, state) => const MedicamentosPage(),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Medicacoes',
+              child: MedicamentosPage(),
+            ),
           ),
           GoRoute(
               path: '/insumos',
-              builder: (context, state) => const InsumosPage()),
+              builder: (context, state) => const _ModuleAccessGate(
+                    moduleId: 'Insumos',
+                    child: InsumosPage(),
+                  )),
           GoRoute(
             path: '/relatorios',
             builder: (context, state) => const RelatoriosPage(),
           ),
           GoRoute(
             path: '/humor',
-            builder: (context, state) => const HumorPage(),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Humor',
+              child: HumorPage(),
+            ),
           ),
           GoRoute(
             path: '/historico/:tipo',
-            builder: (context, state) => HistoricoPage(
-              tipo: state.pathParameters['tipo'] ?? 'insumos',
-            ),
+            builder: (context, state) {
+              final tipo = state.pathParameters['tipo'] ?? 'insumos';
+              final moduleId = _moduleIdFromHistorico(tipo);
+              final page = HistoricoPage(tipo: tipo);
+              return moduleId == null
+                  ? page
+                  : _ModuleAccessGate(moduleId: moduleId, child: page);
+            },
           ),
           GoRoute(
             path: '/coraia',
@@ -155,25 +206,130 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/pressao',
-            builder: (context, state) => const PressaoPage(),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Pressao',
+              child: PressaoPage(),
+            ),
           ),
           GoRoute(
             path: '/oxigenacao',
-            builder: (context, state) => const OxigenacaoPage(),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Oxigenacao',
+              child: OxigenacaoPage(),
+            ),
           ),
           GoRoute(
             path: '/temperatura',
-            builder: (context, state) => const TemperaturaPage(),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Temperatura',
+              child: TemperaturaPage(),
+            ),
           ),
           GoRoute(
             path: '/idoso/perfil',
-            builder: (context, state) => const PerfilIdosoPage(),
+            builder: (context, state) => const _ModuleAccessGate(
+              moduleId: 'Ficha',
+              child: PerfilIdosoPage(),
+            ),
           ),
         ],
       ),
     ],
   );
 });
+
+class _ModuleAccessGate extends ConsumerWidget {
+  const _ModuleAccessGate({
+    required this.moduleId,
+    required this.child,
+  });
+
+  final String moduleId;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final idoso = ref.watch(selectedIdosoProvider);
+
+    if (idoso == null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.person_search_rounded,
+                    color: Color(0xFF147D8C),
+                    size: 56,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Selecione uma ficha para continuar.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.go('/idosos'),
+                    child: const Text('Escolher ficha'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (idoso.podeVisualizarModulo(moduleId)) return child;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.lock_outline_rounded,
+                  color: Color(0xFF147D8C),
+                  size: 56,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Acesso não liberado',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Peça para o responsável liberar esta funcionalidade.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Color(0xFF65757C)),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: () => context.go('/monitoramento'),
+                  child: const Text('Voltar ao monitoramento'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class AppShell extends StatelessWidget {
   const AppShell({required this.child, super.key});

@@ -94,7 +94,7 @@ class ModulePlaceholderPage extends StatelessWidget {
                             StaggeredEntry(
                               index: 4,
                               child: Text(
-                                'Este modulo sera implementado nas proximas etapas.',
+                                'Este módulo será implementado nas próximas etapas.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: adaptive(

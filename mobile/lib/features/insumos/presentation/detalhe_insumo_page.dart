@@ -157,7 +157,7 @@ class _DetailPanel extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Observacoes',
+              'Observações',
               style: TextStyle(
                 color:
                     adaptive(context, Colors.black, AppDarkColors.textPrimary),
@@ -171,7 +171,7 @@ class _DetailPanel extends StatelessWidget {
             child: Text(
               insumo.observacoes?.isNotEmpty == true
                   ? insumo.observacoes!
-                  : 'Sem observacoes.',
+                  : 'Sem observações.',
               style: TextStyle(
                 color:
                     adaptive(context, Colors.black, AppDarkColors.textPrimary),

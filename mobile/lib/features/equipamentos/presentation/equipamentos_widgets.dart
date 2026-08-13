@@ -12,7 +12,7 @@ class _StatusLegend extends StatelessWidget {
       children: [
         _LegendItem(color: Color(0xFF36C76B), label: 'Em uso'),
         _LegendItem(color: Color(0xFFFFC400), label: 'Revisao proxima'),
-        _LegendItem(color: Color(0xFFFF4040), label: 'Manutencao atrasada'),
+        _LegendItem(color: Color(0xFFFF4040), label: 'Manutenção atrasada'),
         _LegendItem(color: Color(0xFF9EA1A6), label: 'Fora de uso'),
       ],
     );
@@ -743,7 +743,7 @@ DateTime? nextMaintenanceDate(DateTime date, int? frequencyDays) {
 String normalizeStatus(String? status) {
   final normalized = status?.trim().toLowerCase().replaceAll('_', ' ') ?? '';
   if (normalized.contains('fora')) return 'Fora de uso';
-  if (normalized.contains('atras')) return 'Manutencao atrasada';
+  if (normalized.contains('atras')) return 'Manutenção atrasada';
   if (normalized.contains('revis') || normalized.contains('proxima')) {
     return 'Revisao proxima';
   }
@@ -765,16 +765,16 @@ EquipamentoStatus statusInfoFor(Equipamento equipamento) {
     final today = DateTime(now.year, now.month, now.day);
     final nextDay = DateTime(next.year, next.month, next.day);
     final days = nextDay.difference(today).inDays;
-    if (days < 0 || equipamento.status == 'Manutencao atrasada') {
+    if (days < 0 || equipamento.status == 'Manutenção atrasada') {
       return const EquipamentoStatus(
-        label: 'Manutencao atrasada',
+        label: 'Manutenção atrasada',
         color: Color(0xFFFF4040),
         icon: Icons.warning_amber_rounded,
       );
     }
     if (days <= 15 || equipamento.status == 'Revisao proxima') {
       return EquipamentoStatus(
-        label: 'Manutencao em $days dias',
+        label: 'Manutenção em $days dias',
         color: const Color(0xFFFFC400),
         icon: Icons.schedule_rounded,
       );

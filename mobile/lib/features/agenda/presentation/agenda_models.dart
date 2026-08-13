@@ -223,7 +223,7 @@ String _normalizeFrequencia(dynamic value) {
       return 'Anualmente';
     case 'nao repetir':
     case 'n\u00e3o repetir':
-      return 'Nao repetir';
+      return 'Não repetir';
     default:
       return 'Semanalmente';
   }

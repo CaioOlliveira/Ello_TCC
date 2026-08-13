@@ -119,6 +119,11 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
     if (insumo == null) return;
 
     FocusScope.of(context).unfocus();
+    final idoso = ref.read(selectedIdosoProvider);
+    if (idoso == null || !idoso.podeEditarModulo('Insumos')) {
+      setState(() => _error = 'Você não tem permissão para editar insumos.');
+      return;
+    }
     final nome = _nomeController.text.trim();
     final adicao = _toDouble(_adicaoController.text) ?? 0;
     final subtracao = _toDouble(_subtracaoController.text) ?? 0;
@@ -149,7 +154,7 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
       return;
     }
     if (consumo != null && consumo > 0 && _frequenciaUso == null) {
-      setState(() => _error = 'Selecione a frequencia do consumo.');
+      setState(() => _error = 'Selecione a frequência do consumo.');
       return;
     }
 
@@ -375,7 +380,7 @@ class _InsumoStockViewState extends ConsumerState<_InsumoStockView> {
           ),
           const SizedBox(height: 12),
           _LabeledField(
-            label: 'Observacoes',
+            label: 'Observações',
             controller: _observacoesController,
             minLines: 4,
             maxLines: 4,

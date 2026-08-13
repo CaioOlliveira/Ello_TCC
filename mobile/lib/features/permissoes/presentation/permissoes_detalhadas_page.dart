@@ -78,7 +78,7 @@ class _PermissoesDetalhadasPageState
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _erro = 'Nao foi possivel carregar as permissoes.';
+        _erro = 'Não foi possível carregar as permissões.';
         _loading = false;
       });
     }
@@ -110,7 +110,7 @@ class _PermissoesDetalhadasPageState
       if (!mounted) return;
       setState(() => _salvando = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel salvar.')),
+        const SnackBar(content: Text('Não foi possível salvar.')),
       );
     }
   }
@@ -195,7 +195,7 @@ class _PermissoesDetalhadasPageState
               ),
               const SizedBox(height: 10),
               Text(
-                _erro ?? 'Nao foi possivel carregar.',
+                _erro ?? 'Não foi possível carregar.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: adaptive(context, const Color(0xFF4C4C4C),
@@ -243,7 +243,7 @@ class _PermissoesDetalhadasPageState
                         Expanded(
                           child: Text(
                             'Como familiar, esta pessoa pode visualizar e '
-                            'editar todas as informacoes da ficha.',
+                            'editar todas as informações da ficha.',
                             style: TextStyle(
                               color: Color(0xFF0D6E80),
                               fontSize: 12.5,

@@ -125,7 +125,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nao foi possivel abrir o seletor de arquivos.'),
+          content: Text('Não foi possível abrir o seletor de arquivos.'),
         ),
       );
       return;
@@ -149,7 +149,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     if (bytes == null || bytes.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel ler o PDF.')),
+        const SnackBar(content: Text('Não foi possível ler o PDF.')),
       );
       return;
     }
@@ -188,7 +188,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Frequencia de manutencao',
+                  'Frequência de manutenção',
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF073248),
                         AppDarkColors.textPrimary),
@@ -286,13 +286,13 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           ],
         ),
         _DateField(
-          label: 'Ultima manutencao',
+          label: 'Última manutenção',
           controller: _ultimaManutencao,
           onTap: () =>
               _pickDate(_ultimaManutencao, (date) => _ultimaValue = date),
         ),
         _OptionField(
-          label: 'Frequencia de manutencao',
+          label: 'Frequência de manutenção',
           controller: _frequencia,
           onTap: _pickFrequency,
         ),
@@ -385,7 +385,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
           ],
         ),
         _LabeledField(
-          label: 'Observacoes',
+          label: 'Observações',
           controller: _observacoes,
           maxLines: 6,
         ),
@@ -489,7 +489,7 @@ class _EquipamentoDetails extends StatelessWidget {
                     children: [
                       Icon(Icons.build_rounded, size: 20),
                       SizedBox(width: 10),
-                      Text('Registrar manutencao'),
+                      Text('Registrar manutenção'),
                     ],
                   ),
                 ),
@@ -552,7 +552,7 @@ class _EquipamentoDetails extends StatelessWidget {
             Expanded(
               child: _InfoTile(
                 icon: Icons.calendar_month_rounded,
-                label: 'Ultima manutencao',
+                label: 'Última manutenção',
                 value: formatDate(equipamento.ultimaManutencaoEm),
               ),
             ),
@@ -560,7 +560,7 @@ class _EquipamentoDetails extends StatelessWidget {
             Expanded(
               child: _InfoTile(
                 icon: Icons.build_rounded,
-                label: 'Proxima manutencao',
+                label: 'Próxima manutenção',
                 value: formatDate(equipamento.proximaManutencaoEm),
               ),
             ),
@@ -568,7 +568,7 @@ class _EquipamentoDetails extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'Historico de manutencoes',
+          'Histórico de manutenções',
           style: TextStyle(
             color: adaptive(
                 context, const Color(0xFF073248), AppDarkColors.textPrimary),
@@ -581,8 +581,8 @@ class _EquipamentoDetails extends StatelessWidget {
           child: manutencoes.isEmpty
               ? const _MessageState(
                   icon: Icons.history_rounded,
-                  title: 'Sem historico',
-                  message: 'Registre a primeira manutencao.',
+                  title: 'Sem histórico',
+                  message: 'Registre a primeira manutenção.',
                 )
               : ListView.separated(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -705,8 +705,8 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
           ],
         ),
         _DateField(
-            label: 'Data da manutencao', controller: _data, onTap: _pickDate),
-        const Text('Tipo de manutencao', style: TextStyle(fontSize: 13)),
+            label: 'Data da manutenção', controller: _data, onTap: _pickDate),
+        const Text('Tipo de manutenção', style: TextStyle(fontSize: 13)),
         Row(
           children: [
             Expanded(

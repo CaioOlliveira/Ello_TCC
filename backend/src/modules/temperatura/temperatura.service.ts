@@ -316,7 +316,8 @@ const montarResumo = (
 
   return {
     ultima,
-    totalRegistros: ordenados.length,
+    totalRegistros: registrosDoDia.length,
+    totalRegistrosGeral: ordenados.length,
     mediaTemperaturaDia,
     proximaMedicao,
     faixa: faixaPadrao,

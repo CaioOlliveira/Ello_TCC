@@ -28,7 +28,7 @@ class GoogleAuthService {
 
     if (!GoogleSignIn.instance.supportsAuthenticate()) {
       throw const GoogleAuthException(
-        'Este login com Google ainda nao esta disponivel nesta plataforma.',
+        'Este login com Google ainda não está disponível nesta plataforma.',
       );
     }
 
@@ -39,18 +39,18 @@ class GoogleAuthService {
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled) {
         throw const GoogleAuthException(
-          'Nao foi possivel concluir o login com Google. '
+          'Não foi possível concluir o login com Google. '
           'Tente selecionar a conta novamente.',
         );
       }
 
       throw GoogleAuthException(
-        'Nao foi possivel entrar com Google: ${error.code.name}'
+        'Não foi possível entrar com Google: ${error.code.name}'
         '${error.description == null ? '' : ' - ${error.description}'}',
       );
     } catch (error) {
       throw GoogleAuthException(
-        'Nao foi possivel abrir o login com Google: $error',
+        'Não foi possível abrir o login com Google: $error',
       );
     }
 
@@ -58,7 +58,7 @@ class GoogleAuthService {
 
     if (idToken == null || idToken.isEmpty) {
       throw const GoogleAuthException(
-        'Nao foi possivel obter o token do Google.',
+        'Não foi possível obter o token do Google.',
       );
     }
 

@@ -346,6 +346,7 @@ const montarResumo = (
   return {
     ultima,
     totalRegistros: registrosDoDia.length,
+    totalRegistrosGeral: ordenados.length,
     mediaSistolicaDia,
     mediaDiastolicaDia,
     proximaMedicao,

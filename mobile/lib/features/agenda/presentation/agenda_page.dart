@@ -76,10 +76,26 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     }
   }
 
+  bool _canEditAgenda() {
+    return ref.read(selectedIdosoProvider)?.podeEditarModulo('Agenda') ?? false;
+  }
+
+  void _showNoEditPermission() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Você não tem permissão para editar a agenda.'),
+      ),
+    );
+  }
+
   Future<void> _openForm({AgendaCompromisso? item}) async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) {
       context.go('/idosos');
+      return;
+    }
+    if (!idoso.podeEditarModulo('Agenda')) {
+      _showNoEditPermission();
       return;
     }
 
@@ -116,6 +132,10 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     final idoso = ref.read(selectedIdosoProvider);
     final usuario = ref.read(authSessionProvider);
     if (idoso == null) return;
+    if (!idoso.podeEditarModulo('Agenda')) {
+      _showNoEditPermission();
+      return;
+    }
 
     final previousItems = List<AgendaCompromisso>.from(_items);
     final localId =
@@ -163,12 +183,16 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   Future<void> _delete(AgendaCompromisso item) async {
+    if (!_canEditAgenda()) {
+      _showNoEditPermission();
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Excluir compromisso'),
         content: Text(
-          'Deseja excluir "${item.titulo}"? Se for recorrente, todos os proximos dias tambem serao removidos.',
+          'Deseja excluir "${item.titulo}"? Se for recorrente, todos os próximos dias também serão removidos.',
         ),
         actions: [
           TextButton(
@@ -205,6 +229,10 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   Future<void> _toggleStatus(AgendaCompromisso item) async {
+    if (!_canEditAgenda()) {
+      _showNoEditPermission();
+      return;
+    }
     final nextStatus = item.status == 'concluido' ? 'agendado' : 'concluido';
     final occurrenceDate = item.dataOcorrencia ?? _selectedDay;
     final occurrenceKey = formatAgendaIsoDate(occurrenceDate);
@@ -254,12 +282,16 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   Future<void> _cancel(AgendaCompromisso item) async {
+    if (!_canEditAgenda()) {
+      _showNoEditPermission();
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancelar compromisso'),
         content: Text(
-          'Deseja cancelar "${item.titulo}"? Se for recorrente, ele deixara de aparecer nos proximos dias.',
+          'Deseja cancelar "${item.titulo}"? Se for recorrente, ele deixará de aparecer nos próximos dias.',
         ),
         actions: [
           TextButton(
@@ -280,6 +312,10 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   Future<void> _updateStatus(AgendaCompromisso item, String nextStatus) async {
+    if (!_canEditAgenda()) {
+      _showNoEditPermission();
+      return;
+    }
     final previousItems = List<AgendaCompromisso>.from(_items);
     setState(() {
       _saving = true;
@@ -447,7 +483,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: const Text('Ver Historico'),
+                  child: const Text('Ver Histórico'),
                 ),
               ),
             ),
@@ -702,7 +738,7 @@ class _DayView extends StatelessWidget {
               ? const _AgendaMessage(
                   icon: Icons.event_available_rounded,
                   title: 'Dia livre',
-                  message: 'Adicione um compromisso pelo botao +.',
+                  message: 'Adicione um compromisso pelo botão +.',
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(6, 0, 0, 78),
@@ -925,7 +961,7 @@ class _TimelineItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    item.local.isEmpty ? 'Local nao informado' : item.local,
+                    item.local.isEmpty ? 'Local não informado' : item.local,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -960,7 +996,7 @@ class _TimelineItem extends StatelessWidget {
                         child: Text(
                           item.criadoPorNome?.isNotEmpty == true
                               ? 'Adicionado por ${item.criadoPorNome}'
-                              : 'Cuidador nao informado',
+                              : 'Cuidador não informado',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

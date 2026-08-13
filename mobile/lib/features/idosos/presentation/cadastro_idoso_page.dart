@@ -358,8 +358,8 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       if (!mounted) return;
       setState(() {
         _errorMessage = _isEditing
-            ? 'Nao foi possivel atualizar a ficha. Confira sua conexao e tente novamente.'
-            : 'Nao foi possivel criar a ficha. Confira sua conexao e tente novamente.';
+            ? 'Não foi possível atualizar a ficha. Confira sua conexão e tente novamente.'
+            : 'Não foi possível criar a ficha. Confira sua conexão e tente novamente.';
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -418,7 +418,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
           key: const ValueKey('step-basico'),
           formKey: _formKey,
           subtitle: _isEditing
-              ? 'Ajuste as informacoes cadastradas'
+              ? 'Ajuste as informações cadastradas'
               : 'Comece registrando os principais dados',
           onPrimary: _goNext,
           primaryLabel: 'Continuar',
@@ -427,7 +427,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       case 1:
         return _dataStep(
           key: const ValueKey('step-saude'),
-          subtitle: 'Registre condicoes, limitacoes e alergias',
+          subtitle: 'Registre condições, limitações e alergias',
           onPrimary: _goNext,
           primaryLabel: 'Continuar',
           showBack: true,
@@ -841,7 +841,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
           ),
         ],
         const SizedBox(height: 10),
-        const _FieldLabel('Observacoes'),
+        const _FieldLabel('Observações'),
         _InputBox(
           controller: _observacoesController,
           hintText: 'Observações sobre a rotina de cuidado',
@@ -877,7 +877,7 @@ class _MonitoramentosStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'O que voce deseja monitorar',
+            'O que você deseja monitorar',
             style: TextStyle(
               color: adaptive(
                   context, const Color(0xFF073248), AppDarkColors.textPrimary),

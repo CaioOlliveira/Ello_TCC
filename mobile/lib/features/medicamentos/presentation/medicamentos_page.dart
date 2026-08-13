@@ -40,7 +40,12 @@ const _kDiaAlternado = 'Dia sim, dia não';
 
 const _kStatusDose = [
   ('tomado', 'Tomado', Icons.check_circle_rounded, Color(0xFF28A745)),
-  ('atrasado', 'Atrasado', Icons.schedule_rounded, Color(0xFFE49A20)),
+  (
+    'atrasado',
+    'Tomado com atraso',
+    Icons.schedule_rounded,
+    Color(0xFFE49A20),
+  ),
   ('nao_tomou', 'Não tomou', Icons.cancel_rounded, Color(0xFFD73A3A)),
   ('recusou', 'Recusou', Icons.block_rounded, Color(0xFF8A6FD6)),
 ];
@@ -96,15 +101,17 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   void _ensureResumo(String idosoId) {
     if (_resumoLoadedIdosoId == idosoId && _resumoFuture != null) return;
     _resumoLoadedIdosoId = idosoId;
-    _resumoFuture =
-        ref.read(apiClientProvider).getResumoMedicamentos(idosoId: idosoId);
+    _resumoFuture = ref
+        .read(apiClientProvider)
+        .getResumoMedicamentosConsolidado(idosoId: idosoId);
   }
 
   void _reloadResumo(String idosoId) {
     setState(() {
       _resumoLoadedIdosoId = idosoId;
-      _resumoFuture =
-          ref.read(apiClientProvider).getResumoMedicamentos(idosoId: idosoId);
+      _resumoFuture = ref
+          .read(apiClientProvider)
+          .getResumoMedicamentosConsolidado(idosoId: idosoId);
     });
   }
 
@@ -134,7 +141,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   }
 
   /// Forca o proximo _ensureHistorico a buscar dados novos, usado depois de
-  /// qualquer acao que gere uma nova entrada no historico (criar, editar,
+  /// qualquer acao que gere uma nova entrada no histórico (criar, editar,
   /// remover ou registrar dose).
   void _invalidateHistorico() {
     _historicoLoadedIdosoId = null;
@@ -155,7 +162,27 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     _lembretesAtivos = true;
   }
 
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  bool _canEditMedicamentos() {
+    return ref.read(selectedIdosoProvider)?.podeEditarModulo('Medicacoes') ??
+        false;
+  }
+
+  void _showNoEditPermission() {
+    _showMessage('Você não tem permissão para editar medicamentos.');
+  }
+
   Future<void> _openCreateForm() async {
+    if (!_canEditMedicamentos()) {
+      _showNoEditPermission();
+      return;
+    }
     setState(() {
       _resetForm();
       _editando = false;
@@ -165,6 +192,10 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   }
 
   Future<void> _openEditForm(MedicamentoResumo medicamento) async {
+    if (!_canEditMedicamentos()) {
+      _showNoEditPermission();
+      return;
+    }
     setState(() {
       _resetForm();
       _editando = true;
@@ -202,6 +233,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   }
 
   Future<void> _openDetalhe(MedicamentoResumo medicamento) async {
+    final idoso = ref.read(selectedIdosoProvider);
     setState(() {
       _selecionado = medicamento;
       _mode = _Mode.detalhe;
@@ -211,10 +243,24 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
 
     try {
       final client = ref.read(apiClientProvider);
-      final administracoes =
-          await client.getAdministracoesMedicamento(medicamento.id);
+      final results = await Future.wait<dynamic>([
+        client.getAdministracoesMedicamento(medicamento.id),
+        if (idoso != null)
+          client.getResumoMedicamentosConsolidado(idosoId: idoso.id),
+      ]);
+      final administracoes = results[0] as List<Map<String, dynamic>>;
+      final resumo =
+          results.length > 1 ? results[1] as MedicamentosResumo : null;
+      final atualizado = resumo?.medicamentos
+          .where((item) => item.id == medicamento.id)
+          .firstOrNull;
       if (!mounted) return;
       setState(() {
+        if (resumo != null && idoso != null) {
+          _resumoLoadedIdosoId = idoso.id;
+          _resumoFuture = Future.value(resumo);
+        }
+        _selecionado = atualizado ?? medicamento;
         _administracoes = administracoes;
         _carregandoDetalhe = false;
       });
@@ -227,18 +273,49 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   Future<void> _salvar() async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
+    if (!idoso.podeEditarModulo('Medicacoes')) {
+      _showNoEditPermission();
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    if (_formato == null || _formato!.trim().isEmpty) {
+      _showMessage('Selecione o formato do medicamento.');
+      return;
+    }
+
+    if (_horarios.isEmpty) {
+      _showMessage('Adicione pelo menos um horário.');
+      return;
+    }
+
+    if (_frequenciaTipo == 'semanal' && _diasSemana.isEmpty) {
+      _showMessage('Selecione pelo menos um dia da semana.');
+      return;
+    }
+
+    final dose = double.tryParse(
+      _doseController.text.trim().replaceAll(',', '.'),
+    );
+    if (dose == null || dose <= 0) {
+      _showMessage('Informe a quantidade por dose.');
+      return;
+    }
+
+    final estoqueTexto = _estoqueController.text.trim();
+    final estoque = estoqueTexto.isEmpty
+        ? null
+        : double.tryParse(estoqueTexto.replaceAll(',', '.'));
+    if (estoqueTexto.isNotEmpty && (estoque == null || estoque < 0)) {
+      _showMessage('Informe um estoque válido.');
+      return;
+    }
 
     setState(() => _saving = true);
 
     try {
       final client = ref.read(apiClientProvider);
-      final estoque = double.tryParse(
-        _estoqueController.text.trim().replaceAll(',', '.'),
-      );
-      final dose = double.tryParse(
-        _doseController.text.trim().replaceAll(',', '.'),
-      );
+      final usuarioId = ref.read(authSessionProvider)?.id;
 
       final String medicamentoId;
       if (_editando && _selecionado != null) {
@@ -251,6 +328,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
           dataInicio: _dataInicio == null ? null : _toIsoDate(_dataInicio!),
           dataFim: _dataFim == null ? null : _toIsoDate(_dataFim!),
           quantidadeEstoque: estoque,
+          registradoPorId: usuarioId,
         );
         medicamentoId = _selecionado!.id;
       } else {
@@ -263,22 +341,21 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
           dataInicio: _dataInicio == null ? null : _toIsoDate(_dataInicio!),
           dataFim: _dataFim == null ? null : _toIsoDate(_dataFim!),
           quantidadeEstoque: estoque,
+          registradoPorId: usuarioId,
         );
         medicamentoId = criado.id;
       }
 
-      if (_horarios.isNotEmpty) {
-        await client.substituirHorariosMedicamento(
-          medicamentoId: medicamentoId,
-          horarios: [
-            for (final horario in _horarios)
-              (horario: horario, quantidadeDose: dose, unidadeDose: null),
-          ],
-          frequenciaTipo: _frequenciaTipo,
-          diasSemana: _frequenciaTipo == 'semanal' ? _diasSemana : null,
-          registradoPorId: ref.read(authSessionProvider)?.id,
-        );
-      }
+      await client.substituirHorariosMedicamento(
+        medicamentoId: medicamentoId,
+        horarios: [
+          for (final horario in _horarios)
+            (horario: horario, quantidadeDose: dose, unidadeDose: null),
+        ],
+        frequenciaTipo: _frequenciaTipo,
+        diasSemana: _frequenciaTipo == 'semanal' ? _diasSemana : null,
+        registradoPorId: usuarioId,
+      );
 
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
@@ -292,7 +369,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel salvar o medicamento.')),
+        const SnackBar(content: Text('Não foi possível salvar o medicamento.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -303,23 +380,57 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     final idoso = ref.read(selectedIdosoProvider);
     final medicamento = _selecionado;
     if (idoso == null || medicamento == null) return;
+    if (!idoso.podeEditarModulo('Medicacoes')) {
+      _showNoEditPermission();
+      return;
+    }
+    if (!_medicamentoTemDosePendente(medicamento)) {
+      _showMessage('Não há dose pendente para registrar agora.');
+      return;
+    }
 
     setState(() => _saving = true);
     try {
       final agora = DateTime.now();
+      final dose = _doseParaProximaAdministracao(medicamento);
       await ref.read(apiClientProvider).registrarAdministracaoMedicamento(
             medicamentoId: medicamento.id,
             idosoId: idoso.id,
-            horarioPrevisto:
+            horarioPrevisto: medicamento.proximoHorarioPrevisto ??
                 _horarioPrevistoParaAgora(medicamento.proximoHorario, agora),
             administradoEm: agora,
             status: 'tomado',
+            quantidadeDose: dose,
             registradoPorId: ref.read(authSessionProvider)?.id,
           );
       if (!mounted) return;
-      await _openDetalhe(medicamento);
       _invalidateHistorico();
-      _reloadResumo(idoso.id);
+      final client = ref.read(apiClientProvider);
+      final results = await Future.wait<dynamic>([
+        client.getResumoMedicamentosConsolidado(idosoId: idoso.id),
+        client.getAdministracoesMedicamento(medicamento.id),
+      ]);
+      final resumo = results[0] as MedicamentosResumo;
+      final administracoes = results[1] as List<Map<String, dynamic>>;
+      final atualizado = resumo.medicamentos
+          .where((item) => item.id == medicamento.id)
+          .firstOrNull;
+      final medicamentoRegistrado = _medicamentoComDoseRegistrada(
+        atualizado ?? medicamento,
+        referenciaAnterior: medicamento,
+        dose: atualizado == null ? dose : null,
+      );
+      final resumoAtualizado = _resumoComMedicamentoRegistrado(
+        resumo,
+        medicamentoRegistrado,
+      );
+      setState(() {
+        _resumoLoadedIdosoId = idoso.id;
+        _resumoFuture = Future.value(resumoAtualizado);
+        _selecionado = medicamentoRegistrado;
+        _administracoes = administracoes;
+        _carregandoDetalhe = false;
+      });
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -328,7 +439,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel registrar a dose.')),
+        const SnackBar(content: Text('Não foi possível registrar a dose.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -336,6 +447,10 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   }
 
   Future<void> _remover(MedicamentoResumo medicamento) async {
+    if (!_canEditMedicamentos()) {
+      _showNoEditPermission();
+      return;
+    }
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -359,7 +474,10 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     if (idoso == null) return;
 
     try {
-      await ref.read(apiClientProvider).removerMedicamento(medicamento.id);
+      await ref.read(apiClientProvider).removerMedicamento(
+            medicamento.id,
+            usuarioId: ref.read(authSessionProvider)?.id,
+          );
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();
@@ -550,6 +668,11 @@ class _ResumoView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final proximoMedicamento =
+        _medicamentoTemDosePendente(resumo.proximoMedicamento)
+            ? resumo.proximoMedicamento
+            : null;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
       child: Column(
@@ -563,12 +686,17 @@ class _ResumoView extends StatelessWidget {
                 : ListView(
                     padding: const EdgeInsets.only(bottom: 8),
                     children: [
-                      if (resumo.proximoMedicamento != null)
+                      if (proximoMedicamento != null)
                         StaggeredEntry(
                           index: 0,
                           child: _ProximoMedicamentoCard(
-                            medicamento: resumo.proximoMedicamento!,
+                            medicamento: proximoMedicamento,
                           ),
+                        )
+                      else
+                        const StaggeredEntry(
+                          index: 0,
+                          child: _MedicamentosDoDiaConcluidosCard(),
                         ),
                       const SizedBox(height: 14),
                       for (var i = 0; i < resumo.medicamentos.length; i++) ...[
@@ -613,7 +741,7 @@ class _ResumoView extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              child: const Text('Ver Historico'),
+              child: const Text('Ver Histórico'),
             ),
           ),
         ],
@@ -647,14 +775,30 @@ class _ProximoMedicamentoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final atrasado = medicamento.proximoAtrasado;
-    final corDestaque =
-        atrasado ? const Color(0xFFD73A3A) : const Color(0xFF148A9C);
-    final corFundoIcone =
-        atrasado ? const Color(0xFFF6D3D3) : const Color(0xFFD8F1F4);
-    final corBadgeFundo =
-        atrasado ? const Color(0xFFF6D3D3) : const Color(0xFFF3E3C4);
-    final corBadgeTexto =
-        atrasado ? const Color(0xFFB13030) : const Color(0xFF8A6420);
+    final minutosAteDose = medicamento.proximoHorarioPrevisto
+        ?.difference(DateTime.now())
+        .inMinutes;
+    final emBreve = !atrasado && minutosAteDose != null && minutosAteDose <= 30;
+    final corDestaque = atrasado
+        ? const Color(0xFFD73A3A)
+        : emBreve
+            ? const Color(0xFFE47A00)
+            : const Color(0xFF148A9C);
+    final corFundoIcone = atrasado
+        ? const Color(0xFFF6D3D3)
+        : emBreve
+            ? const Color(0xFFFFF3E3)
+            : const Color(0xFFD8F1F4);
+    final corBadgeFundo = atrasado
+        ? const Color(0xFFF6D3D3)
+        : emBreve
+            ? const Color(0xFFF3E3C4)
+            : const Color(0xFFD8F1F4);
+    final corBadgeTexto = atrasado
+        ? const Color(0xFFB13030)
+        : emBreve
+            ? const Color(0xFF8A6420)
+            : const Color(0xFF116E7D);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -744,6 +888,61 @@ class _ProximoMedicamentoCard extends StatelessWidget {
   }
 }
 
+class _MedicamentosDoDiaConcluidosCard extends StatelessWidget {
+  const _MedicamentosDoDiaConcluidosCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: _cardDecoration(context),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF8EF),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_circle_outline_rounded,
+              color: Color(0xFF28A745),
+              size: 25,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tudo em dia',
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF28A745),
+                        AppDarkColors.textPrimary),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Todos os remédios de hoje foram tomados.',
+                  style: TextStyle(
+                    color: adaptive(context, const Color(0xFF607178),
+                        AppDarkColors.textSecondary),
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MedicamentoCard extends StatelessWidget {
   const _MedicamentoCard({required this.medicamento, required this.onTap});
 
@@ -752,6 +951,10 @@ class _MedicamentoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusText = _medicamentoStatusText(medicamento);
+    final statusIcon = _medicamentoStatusIcon(medicamento);
+    final statusColor = _medicamentoStatusColor(context, medicamento);
+
     return Material(
       color: adaptive(context, Colors.white, AppDarkColors.surface),
       borderRadius: BorderRadius.circular(11),
@@ -798,35 +1001,20 @@ class _MedicamentoCard extends StatelessWidget {
                             Row(
                               children: [
                                 Icon(
-                                  medicamento.proximoAtrasado
-                                      ? Icons.warning_rounded
-                                      : Icons.access_time_rounded,
-                                  color: medicamento.proximoAtrasado
-                                      ? const Color(0xFFD73A3A)
-                                      : adaptive(
-                                          context,
-                                          const Color(0xFF8A8A8A),
-                                          AppDarkColors.textSecondary),
+                                  statusIcon,
+                                  color: statusColor,
                                   size: 13,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  medicamento.proximoHorario == null
-                                      ? 'Sem horário'
-                                      : medicamento.proximoAtrasado
-                                          ? 'Atrasado: ${medicamento.proximoHorario}'
-                                          : 'Proximo horário: ${medicamento.proximoHorario}',
+                                  statusText,
                                   style: TextStyle(
-                                    color: medicamento.proximoAtrasado
-                                        ? const Color(0xFFD73A3A)
-                                        : adaptive(
-                                            context,
-                                            const Color(0xFF727272),
-                                            AppDarkColors.textSecondary),
+                                    color: statusColor,
                                     fontSize: 11.5,
-                                    fontWeight: medicamento.proximoAtrasado
+                                    fontWeight: medicamento.proximoAtrasado ||
+                                            medicamento.statusHoje == 'dado'
                                         ? FontWeight.w700
-                                        : FontWeight.w400,
+                                        : FontWeight.w500,
                                   ),
                                 ),
                               ],
@@ -847,7 +1035,7 @@ class _MedicamentoCard extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Text(
                                   medicamento.quantidadeEstoque == null
-                                      ? 'Estoque nao informado'
+                                      ? 'Estoque não informado'
                                       : 'Estoque: ${_formatNumber(medicamento.quantidadeEstoque!)} ${medicamento.unidadeEstoque ?? ''}',
                                   style: TextStyle(
                                     color: medicamento.estoqueBaixo
@@ -1009,7 +1197,7 @@ class _MedicamentoFormView extends StatelessWidget {
     if (escolhido != null) onFormatoChanged(escolhido);
   }
 
-  /// O que mostrar como chip no campo Frequencia. As tres opcoes (diaria,
+  /// O que mostrar como chip no campo Frequência. As três opções (diaria,
   /// dias especificos, alternado) sao mutuamente exclusivas.
   List<String> get _frequenciaChips {
     if (frequenciaTipo == 'alternado') return const [_kDiaAlternado];
@@ -1148,7 +1336,7 @@ class _MedicamentoFormView extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const _FieldLabel('Frequencia'),
+                    const _FieldLabel('Frequência'),
                     _ChipsField(
                       values: _frequenciaChips,
                       onAdd: () => _escolherFrequencia(context),
@@ -1986,6 +2174,13 @@ class _DetalheView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canRegisterDose = _medicamentoTemDosePendente(medicamento);
+    final registerLabel = canRegisterDose
+        ? 'Remédio dado'
+        : medicamento.statusHoje == 'dado'
+            ? 'Dose registrada hoje'
+            : 'Sem dose pendente';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
       child: Column(
@@ -2027,12 +2222,12 @@ class _DetalheView extends StatelessWidget {
                         _DetailRow(
                           'Estoque',
                           medicamento.quantidadeEstoque == null
-                              ? 'Nao informado'
+                              ? 'Não informado'
                               : '${_formatNumber(medicamento.quantidadeEstoque!)} ${medicamento.unidadeEstoque ?? ''}',
                         ),
                         if (medicamento.proximoHorario != null)
                           _DetailRow(
-                            'Proximo horário',
+                            'Próximo horário',
                             medicamento.proximoHorario!,
                           ),
                       ],
@@ -2058,11 +2253,14 @@ class _DetalheView extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: saving ? null : onRegistrarDose,
+                      onPressed:
+                          saving || !canRegisterDose ? null : onRegistrarDose,
                       icon: const Icon(Icons.check_circle_rounded, size: 18),
-                      label: const Text('Remédio dado'),
+                      label: Text(registerLabel),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF28A745),
+                        backgroundColor: canRegisterDose
+                            ? const Color(0xFF28A745)
+                            : const Color(0xFF9DA8AD),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -2352,6 +2550,149 @@ const _kToleranciaAtrasoMinutos = 30;
 String _statusComAtraso(DateTime administradoEm, DateTime horarioPrevisto) {
   final atrasoMinutos = administradoEm.difference(horarioPrevisto).inMinutes;
   return atrasoMinutos > _kToleranciaAtrasoMinutos ? 'atrasado' : 'tomado';
+}
+
+double? _doseParaProximaAdministracao(MedicamentoResumo medicamento) {
+  final horario = medicamento.proximoHorario;
+  if (horario != null) {
+    for (final item in medicamento.horarios) {
+      if (item.horario == horario && item.quantidadeDose != null) {
+        return item.quantidadeDose;
+      }
+    }
+  }
+
+  for (final item in medicamento.horarios) {
+    if (item.quantidadeDose != null) return item.quantidadeDose;
+  }
+
+  return null;
+}
+
+String _medicamentoStatusText(MedicamentoResumo medicamento) {
+  if (_medicamentoComTodasDosesDadas(medicamento)) {
+    final total = medicamento.dosesAdministradasHoje;
+    return total > 1 ? '$total doses dadas hoje' : 'Dose de hoje dada';
+  }
+
+  if (medicamento.proximoHorario == null) return 'Sem pendência hoje';
+
+  if (medicamento.proximoAtrasado || medicamento.statusHoje == 'atrasado') {
+    return 'Atrasado: ${medicamento.proximoHorario}';
+  }
+
+  return 'Pendente: ${medicamento.proximoHorario}';
+}
+
+IconData _medicamentoStatusIcon(MedicamentoResumo medicamento) {
+  if (_medicamentoComTodasDosesDadas(medicamento)) {
+    return Icons.check_circle_rounded;
+  }
+
+  if (medicamento.proximoAtrasado || medicamento.statusHoje == 'atrasado') {
+    return Icons.warning_rounded;
+  }
+
+  if (medicamento.proximoHorario != null) {
+    return Icons.access_time_rounded;
+  }
+
+  return Icons.event_available_rounded;
+}
+
+Color _medicamentoStatusColor(
+  BuildContext context,
+  MedicamentoResumo medicamento,
+) {
+  if (_medicamentoComTodasDosesDadas(medicamento)) {
+    return const Color(0xFF28A745);
+  }
+
+  if (medicamento.proximoAtrasado || medicamento.statusHoje == 'atrasado') {
+    return const Color(0xFFD73A3A);
+  }
+
+  if (medicamento.proximoHorario != null) {
+    return const Color(0xFFE49A20);
+  }
+
+  return adaptive(
+      context, const Color(0xFF727272), AppDarkColors.textSecondary);
+}
+
+bool _medicamentoComTodasDosesDadas(MedicamentoResumo? medicamento) {
+  if (medicamento == null) return false;
+  if (medicamento.statusHoje == 'dado') return true;
+  return medicamento.totalHorarios > 0 &&
+      medicamento.dosesAdministradasHoje >= medicamento.totalHorarios;
+}
+
+bool _medicamentoTemDosePendente(MedicamentoResumo? medicamento) {
+  if (medicamento == null) return false;
+  return medicamento.proximoHorario != null &&
+      !_medicamentoComTodasDosesDadas(medicamento);
+}
+
+MedicamentoResumo _medicamentoComDoseRegistrada(
+  MedicamentoResumo medicamento, {
+  required MedicamentoResumo referenciaAnterior,
+  double? dose,
+}) {
+  final quantidadeEstoque =
+      dose == null || medicamento.quantidadeEstoque == null
+          ? medicamento.quantidadeEstoque
+          : (medicamento.quantidadeEstoque! - dose)
+              .clamp(0, double.infinity)
+              .toDouble();
+  final doses = medicamento.dosesAdministradasHoje >
+          referenciaAnterior.dosesAdministradasHoje
+      ? medicamento.dosesAdministradasHoje
+      : referenciaAnterior.dosesAdministradasHoje + 1;
+
+  return medicamento.copyWith(
+    quantidadeEstoque: quantidadeEstoque,
+    proximoHorario: null,
+    proximoHorarioPrevisto: null,
+    proximoAtrasado: false,
+    statusHoje: 'dado',
+    dosesAdministradasHoje: doses,
+  );
+}
+
+MedicamentosResumo _resumoComMedicamentoRegistrado(
+  MedicamentosResumo resumo,
+  MedicamentoResumo medicamentoAtualizado,
+) {
+  final medicamentos = resumo.medicamentos
+      .map(
+        (item) =>
+            item.id == medicamentoAtualizado.id ? medicamentoAtualizado : item,
+      )
+      .toList();
+
+  final pendentes = medicamentos.where(_medicamentoTemDosePendente).toList()
+    ..sort(_compareMedicamentosPendentes);
+
+  return MedicamentosResumo(
+    medicamentos: medicamentos,
+    totalMedicamentos: resumo.totalMedicamentos,
+    proximoMedicamento: pendentes.isEmpty ? null : pendentes.first,
+  );
+}
+
+int _compareMedicamentosPendentes(
+  MedicamentoResumo left,
+  MedicamentoResumo right,
+) {
+  if (left.proximoAtrasado != right.proximoAtrasado) {
+    return left.proximoAtrasado ? -1 : 1;
+  }
+  final leftDate = left.proximoHorarioPrevisto;
+  final rightDate = right.proximoHorarioPrevisto;
+  if (leftDate != null && rightDate != null) {
+    return leftDate.compareTo(rightDate);
+  }
+  return (left.proximoHorario ?? '').compareTo(right.proximoHorario ?? '');
 }
 
 DateTime _horarioPrevistoParaAgora(String? proximoHorario, DateTime agora) {

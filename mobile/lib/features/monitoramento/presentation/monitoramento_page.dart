@@ -28,6 +28,14 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
       context.go('/idosos');
       return;
     }
+    if (!idoso.podeEditarFicha) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Você não tem permissão para editar esta ficha.'),
+        ),
+      );
+      return;
+    }
 
     final selectedIds = await showModalBottomSheet<List<String>>(
       context: context,
@@ -72,7 +80,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nao foi possivel atualizar os monitoramentos.'),
+          content: Text('Não foi possível atualizar os monitoramentos.'),
         ),
       );
     } finally {
@@ -85,7 +93,9 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
     final idoso = ref.watch(selectedIdosoProvider);
     final options = idoso == null
         ? const <MonitoramentoOption>[]
-        : monitoramentoOptionsByIds(idoso.monitoramentos);
+        : monitoramentoOptionsByIds(idoso.monitoramentosVisiveis);
+    final canManageMonitoramentos = idoso?.podeEditarFicha ?? false;
+    final hasFullAccess = idoso?.temAcessoTotal ?? false;
 
     return Scaffold(
       backgroundColor:
@@ -114,49 +124,54 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
                                   'Selecione uma ficha para ver os monitoramentos.',
                             )
                           : options.isEmpty
-                              ? const _MessageState(
+                              ? _MessageState(
                                   icon: Icons.dashboard_customize_outlined,
-                                  title: 'Nenhum monitoramento',
-                                  message:
-                                      'Adicione ao menos um item para acompanhar.',
+                                  title: hasFullAccess
+                                      ? 'Nenhum monitoramento'
+                                      : 'Sem acesso liberado',
+                                  message: hasFullAccess
+                                      ? 'Adicione ao menos um item para acompanhar.'
+                                      : 'Peça para o responsável liberar algum monitoramento para você.',
                                 )
                               : _MonitoramentoGrid(options: options),
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 48,
-                      child: OutlinedButton.icon(
-                        onPressed: _saving ? null : _abrirSeletor,
-                        icon: _saving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF1696AA),
-                                ),
-                              )
-                            : const Icon(Icons.add_rounded, size: 27),
-                        label: const Text('Adicionar registro'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: adaptive(
-                              context,
-                              const Color(0xFF073248),
-                              AppDarkColors.textPrimary),
-                          side: const BorderSide(
-                            color: Color(0xFF1696AA),
-                            width: 1.4,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
+                    if (canManageMonitoramentos) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: _saving ? null : _abrirSeletor,
+                          icon: _saving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF1696AA),
+                                  ),
+                                )
+                              : const Icon(Icons.add_rounded, size: 27),
+                          label: const Text('Adicionar registro'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: adaptive(
+                                context,
+                                const Color(0xFF073248),
+                                AppDarkColors.textPrimary),
+                            side: const BorderSide(
+                              color: Color(0xFF1696AA),
+                              width: 1.4,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

@@ -1,4 +1,5 @@
 import { registrarHistorico } from "../../database/audit.js";
+import type { PoolClient } from "pg";
 import { getPool } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
 import { AppError } from "../../common/errors/app-error.js";
@@ -49,11 +50,7 @@ const fields = {
   ativo: "ativo",
 } as const;
 
-const startOfDay = (date: Date) => {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-};
+const FUSO_CUIDADO_OFFSET = "-03:00";
 
 const NOMES_DIAS_SEMANA = [
   "Domingo",
@@ -65,33 +62,54 @@ const NOMES_DIAS_SEMANA = [
   "Sábado",
 ];
 
-const diaEhValido = (
-  candidata: Date,
+const somarDiasDataChave = (dataChave: string, dias: number) => {
+  const [ano, mes, dia] = dataChave.split("-").map(Number);
+  const date = new Date(Date.UTC(ano, (mes || 1) - 1, dia || 1, 12));
+  date.setUTCDate(date.getUTCDate() + dias);
+  return `${date.getUTCFullYear().toString().padStart(4, "0")}-${(
+    date.getUTCMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${date.getUTCDate().toString().padStart(2, "0")}`;
+};
+
+const diaSemanaDataChave = (dataChave: string) => {
+  const [ano, mes, dia] = dataChave.split("-").map(Number);
+  const date = new Date(Date.UTC(ano, (mes || 1) - 1, dia || 1, 12));
+  return date.getUTCDay();
+};
+
+const dataHoraCuidadoParaDate = (dataChave: string, horaMinuto: string) =>
+  new Date(`${dataChave}T${horaMinuto}:00${FUSO_CUIDADO_OFFSET}`);
+
+const dataDateColumnChave = (date: Date) =>
+  `${date.getUTCFullYear().toString().padStart(4, "0")}-${(
+    date.getUTCMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${date.getUTCDate().toString().padStart(2, "0")}`;
+
+const diaEhValidoNaData = (
+  dataChave: string,
   tipoFrequencia: string,
   diasSemana: string | null,
   dataAncora: Date | null,
 ): boolean => {
   if (tipoFrequencia === "semanal" && diasSemana) {
     const dias = new Set(diasSemana.split(",").map((item) => item.trim()));
-    return dias.has(NOMES_DIAS_SEMANA[candidata.getDay()]);
+    return dias.has(NOMES_DIAS_SEMANA[diaSemanaDataChave(dataChave)]);
   }
 
   if (tipoFrequencia === "alternado") {
     if (!dataAncora) return true;
-
-    // data_inicio vem do banco como uma coluna "date" (sem hora), que o
-    // driver do Postgres materializa como meia-noite UTC. Comparamos os
-    // componentes de calendario (candidata em hora local, ancora em UTC)
-    // em vez de subtrair instantes, para nao depender do fuso do servidor.
-    const diaCandidataUtc = Date.UTC(
-      candidata.getFullYear(),
-      candidata.getMonth(),
-      candidata.getDate(),
-    );
+    const [ano, mes, dia] = dataChave.split("-").map(Number);
+    const diaCandidataUtc = Date.UTC(ano, (mes || 1) - 1, dia || 1);
+    const [anoAncora, mesAncora, diaAncora] =
+      dataDateColumnChave(dataAncora).split("-").map(Number);
     const diaAncoraUtc = Date.UTC(
-      dataAncora.getUTCFullYear(),
-      dataAncora.getUTCMonth(),
-      dataAncora.getUTCDate(),
+      anoAncora,
+      (mesAncora || 1) - 1,
+      diaAncora || 1,
     );
     const diffDias = Math.round(
       (diaCandidataUtc - diaAncoraUtc) / (1000 * 60 * 60 * 24),
@@ -103,19 +121,149 @@ const diaEhValido = (
 };
 
 const jaAdministradoEm = (
-  candidata: Date,
+  dataChave: string,
+  horaMinuto: string,
   administracoes: { horarioPrevisto: Date }[],
 ) =>
   administracoes.some((administracao) => {
     const previsto = administracao.horarioPrevisto;
-    return (
-      previsto.getFullYear() === candidata.getFullYear() &&
-      previsto.getMonth() === candidata.getMonth() &&
-      previsto.getDate() === candidata.getDate() &&
-      previsto.getHours() === candidata.getHours() &&
-      previsto.getMinutes() === candidata.getMinutes()
-    );
+    return horarioPrevistoCorresponde(dataChave, horaMinuto, previsto);
   });
+
+const dataLocalChave = (date: Date) =>
+  `${date.getFullYear().toString().padStart(4, "0")}-${(date.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+
+const horarioLocalChave = (date: Date) =>
+  `${date.getHours().toString().padStart(2, "0")}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+
+const horarioUtcChave = (date: Date) =>
+  `${date.getUTCHours().toString().padStart(2, "0")}:${date
+    .getUTCMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+
+const dataUtcChave = (date: Date) =>
+  `${date.getUTCFullYear().toString().padStart(4, "0")}-${(
+    date.getUTCMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}-${date.getUTCDate().toString().padStart(2, "0")}`;
+
+const formatadorSaoPaulo = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Sao_Paulo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+const partesSaoPaulo = (date: Date) => {
+  const parts = formatadorSaoPaulo.formatToParts(date);
+  const valor = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return {
+    data: `${valor("year")}-${valor("month")}-${valor("day")}`,
+    horario: `${valor("hour")}:${valor("minute")}`,
+  };
+};
+
+const horarioPrevistoCorresponde = (
+  dataChave: string,
+  horaMinuto: string,
+  previsto: Date,
+) => {
+  const partesPrevistoSaoPaulo = partesSaoPaulo(previsto);
+
+  return (
+    (dataLocalChave(previsto) === dataChave &&
+      horarioLocalChave(previsto) === horaMinuto) ||
+    (dataUtcChave(previsto) === dataChave &&
+      horarioUtcChave(previsto) === horaMinuto) ||
+    (partesPrevistoSaoPaulo.data === dataChave &&
+      partesPrevistoSaoPaulo.horario === horaMinuto)
+  );
+};
+
+const administracaoNoDia = (
+  administracao: { horarioPrevisto: Date },
+  dataChave: string,
+) => {
+  const previsto = administracao.horarioPrevisto;
+  return (
+    dataLocalChave(previsto) === dataChave ||
+    dataUtcChave(previsto) === dataChave ||
+    partesSaoPaulo(previsto).data === dataChave
+  );
+};
+
+const chavesDataHoraPossiveis = (date: Date) => {
+  const sp = partesSaoPaulo(date);
+  return new Set([
+    `${dataLocalChave(date)} ${horarioLocalChave(date)}`,
+    `${dataUtcChave(date)} ${horarioUtcChave(date)}`,
+    `${sp.data} ${sp.horario}`,
+  ]);
+};
+
+const mesmaDataHoraPossivel = (left: Date, right: Date) => {
+  const leftKeys = chavesDataHoraPossiveis(left);
+  const rightKeys = chavesDataHoraPossiveis(right);
+  return [...leftKeys].some((key) => rightKeys.has(key));
+};
+
+const horarioPrevistoCanonico = async (
+  client: PoolClient,
+  medicamentoId: string,
+  horarioPrevisto: Date,
+  dataAncora: Date | null,
+) => {
+  const horariosResult = await client.query<{
+    horario: string;
+    tipo_frequencia: string | null;
+    dias_semana: string | null;
+  }>(
+    `
+      select horario, tipo_frequencia, dias_semana
+      from horarios_medicamentos
+      where medicamento_id = $1
+    `,
+    [medicamentoId],
+  );
+
+  const datasPossiveis = new Set([
+    partesSaoPaulo(horarioPrevisto).data,
+    dataUtcChave(horarioPrevisto),
+    dataLocalChave(horarioPrevisto),
+  ]);
+
+  for (const row of horariosResult.rows) {
+    const horaFormatada = formatarHorario(row.horario);
+    if (!horaFormatada) continue;
+
+    for (const dataChave of datasPossiveis) {
+      if (
+        diaEhValidoNaData(
+          dataChave,
+          row.tipo_frequencia ?? "diaria",
+          row.dias_semana,
+          dataAncora,
+        ) &&
+        horarioPrevistoCorresponde(dataChave, horaFormatada, horarioPrevisto)
+      ) {
+        return dataHoraCuidadoParaDate(dataChave, horaFormatada);
+      }
+    }
+  }
+
+  return horarioPrevisto;
+};
 
 const proximaOcorrencia = (
   horaMinuto: string,
@@ -125,14 +273,20 @@ const proximaOcorrencia = (
   dataAncora: Date | null,
   administracoesHoje: { horarioPrevisto: Date }[],
 ): { data: Date; atrasado: boolean } | null => {
-  const [hora, minuto] = horaMinuto.split(":").map((parte) => Number(parte));
+  const dataHoje = partesSaoPaulo(agora).data;
 
   for (let offset = 0; offset < 15; offset++) {
-    const candidata = new Date(agora);
-    candidata.setDate(candidata.getDate() + offset);
-    candidata.setHours(hora || 0, minuto || 0, 0, 0);
+    const dataCandidata = somarDiasDataChave(dataHoje, offset);
+    const candidata = dataHoraCuidadoParaDate(dataCandidata, horaMinuto);
 
-    if (!diaEhValido(candidata, tipoFrequencia, diasSemana, dataAncora)) {
+    if (
+      !diaEhValidoNaData(
+        dataCandidata,
+        tipoFrequencia,
+        diasSemana,
+        dataAncora,
+      )
+    ) {
       continue;
     }
 
@@ -142,7 +296,7 @@ const proximaOcorrencia = (
       return { data: candidata, atrasado: false };
     }
 
-    if (!jaAdministradoEm(candidata, administracoesHoje)) {
+    if (!jaAdministradoEm(dataCandidata, horaMinuto, administracoesHoje)) {
       return { data: candidata, atrasado: atrasoMs > TOLERANCIA_ATRASO_MS };
     }
   }
@@ -176,7 +330,7 @@ const rotuloStatusAdministracao = (
         ) {
           return {
             descricao: "deu o remédio com atraso",
-            texto: "Atrasado",
+            texto: "Tomado com atraso",
             cor: "alerta" as const,
           };
         }
@@ -394,7 +548,16 @@ export const medicamentosService = {
     );
 
     const agora = new Date();
-    const inicioDeHoje = startOfDay(agora);
+    const dataHojeChave = partesSaoPaulo(agora).data;
+    const inicioDeHoje = dataHoraCuidadoParaDate(dataHojeChave, "00:00");
+    const fimDeHoje = dataHoraCuidadoParaDate(
+      somarDiasDataChave(dataHojeChave, 1),
+      "00:00",
+    );
+    const inicioBuscaAdministracoes = new Date(inicioDeHoje);
+    inicioBuscaAdministracoes.setDate(inicioBuscaAdministracoes.getDate() - 1);
+    const fimBuscaAdministracoes = new Date(fimDeHoje);
+    fimBuscaAdministracoes.setDate(fimBuscaAdministracoes.getDate() + 1);
     const medicamentos = [];
     let proximoMedicamento: Record<string, unknown> | null = null;
     let proximaData: Date | null = null;
@@ -405,25 +568,40 @@ export const medicamentosService = {
         horario: string;
         tipo_frequencia: string | null;
         dias_semana: string | null;
+        quantidade_dose: number | string | null;
+        unidade_dose: string | null;
       }>(
         `
-          select horario, tipo_frequencia, dias_semana
+          select horario, tipo_frequencia, dias_semana, quantidade_dose, unidade_dose
           from horarios_medicamentos
           where medicamento_id = $1
         `,
         [medicamento.id],
       );
 
-      const administracoesHojeResult = await getPool().query<{
+      const administracoesResult = await getPool().query<{
         horarioPrevisto: Date;
+        status: string;
+        administradoEm: Date | null;
       }>(
         `
-          select horario_previsto as "horarioPrevisto"
+          select
+            horario_previsto as "horarioPrevisto",
+            status,
+            administrado_em as "administradoEm"
           from administracoes_medicamentos
           where medicamento_id = $1
             and horario_previsto >= $2
+            and horario_previsto < $3
         `,
-        [medicamento.id, inicioDeHoje.toISOString()],
+        [
+          medicamento.id,
+          inicioBuscaAdministracoes.toISOString(),
+          fimBuscaAdministracoes.toISOString(),
+        ],
+      );
+      const administracoesHoje = administracoesResult.rows.filter((item) =>
+        administracaoNoDia(item, dataHojeChave),
       );
 
       const dataAncora = medicamento.data_inicio
@@ -443,7 +621,7 @@ export const medicamentosService = {
           row.tipo_frequencia ?? "diaria",
           row.dias_semana,
           dataAncora,
-          administracoesHojeResult.rows,
+          administracoesHoje,
         );
         if (!ocorrencia) continue;
         const maisUrgente =
@@ -457,6 +635,10 @@ export const medicamentosService = {
           atrasado = ocorrencia.atrasado;
         }
       }
+      const proximaOcorrenciaHoje =
+        proximaOcorrenciaMedicamento &&
+        partesSaoPaulo(proximaOcorrenciaMedicamento).data === dataHojeChave;
+      const proximoHorarioHoje = proximaOcorrenciaHoje ? proximoHorario : null;
 
       const item = {
         id: medicamento.id,
@@ -472,8 +654,19 @@ export const medicamentosService = {
           medicamento.alerta_estoque_baixo == null
             ? null
             : Number(medicamento.alerta_estoque_baixo),
-        proximoHorario,
-        proximoAtrasado: atrasado,
+        proximoHorario: proximoHorarioHoje,
+        proximoHorarioPrevisto: proximaOcorrenciaHoje
+          ? proximaOcorrenciaMedicamento?.toISOString()
+          : null,
+        proximoAtrasado: proximaOcorrenciaHoje ? atrasado : false,
+        statusHoje: proximoHorarioHoje
+          ? atrasado
+            ? "atrasado"
+            : "pendente"
+          : administracoesHoje.length > 0
+            ? "dado"
+            : "sem_pendencia",
+        dosesAdministradasHoje: administracoesHoje.length,
         totalHorarios: horariosResult.rows.length,
         horarios: horariosResult.rows,
       };
@@ -481,6 +674,7 @@ export const medicamentosService = {
       medicamentos.push(item);
 
       const substituiProximo =
+        proximaOcorrenciaHoje &&
         proximaOcorrenciaMedicamento &&
         (!proximaData ||
           (atrasado && !proximoAtrasado) ||
@@ -662,17 +856,13 @@ export const medicamentosService = {
 
     try {
       await client.query("begin");
-      await client.query(
-        "select pg_advisory_xact_lock(hashtext($1), hashtext($2))",
-        [medicamentoId, input.horarioPrevisto],
-      );
-
       const medicamentoResult = await client.query<{
         id: string;
         idoso_id: string;
+        data_inicio: Date | null;
       }>(
         `
-          select id, idoso_id
+          select id, idoso_id, data_inicio
           from medicamentos
           where id = $1
           for update
@@ -689,19 +879,53 @@ export const medicamentosService = {
         );
       }
 
-      const duplicadoResult = await client.query<{ id: string }>(
+      const horarioPrevistoOriginal = new Date(input.horarioPrevisto);
+      const horarioPrevisto = await horarioPrevistoCanonico(
+        client,
+        medicamentoId,
+        horarioPrevistoOriginal,
+        medicamento.data_inicio,
+      );
+      await client.query(
+        "select pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+        [medicamentoId, horarioPrevisto.toISOString()],
+      );
+      const inicioBuscaDuplicado = new Date(horarioPrevisto);
+      inicioBuscaDuplicado.setDate(inicioBuscaDuplicado.getDate() - 1);
+      const fimBuscaDuplicado = new Date(horarioPrevisto);
+      fimBuscaDuplicado.setDate(fimBuscaDuplicado.getDate() + 1);
+      const duplicadoResult = await client.query<{
+        id: string;
+        horarioPrevisto: Date;
+      }>(
         `
-          select id
+          select id, horario_previsto as "horarioPrevisto"
           from administracoes_medicamentos
           where medicamento_id = $1
             and idoso_id = $2
-            and horario_previsto = $3
-          limit 1
+            and horario_previsto >= $3
+            and horario_previsto < $4
         `,
-        [medicamentoId, input.idosoId, input.horarioPrevisto],
+        [
+          medicamentoId,
+          input.idosoId,
+          inicioBuscaDuplicado.toISOString(),
+          fimBuscaDuplicado.toISOString(),
+        ],
       );
 
-      if ((duplicadoResult.rowCount ?? 0) > 0) {
+      const horarioCanonicoPartes = partesSaoPaulo(horarioPrevisto);
+      const duplicado = duplicadoResult.rows.some(
+        (item) =>
+          mesmaDataHoraPossivel(item.horarioPrevisto, horarioPrevisto) ||
+          horarioPrevistoCorresponde(
+            horarioCanonicoPartes.data,
+            horarioCanonicoPartes.horario,
+            item.horarioPrevisto,
+          ),
+      );
+
+      if (duplicado) {
         throw new AppError(
           "DOSE_JA_ADMINISTRADA",
           "Esta medicacao ja foi registrada como administrada neste horario.",
@@ -727,7 +951,7 @@ export const medicamentosService = {
         [
           medicamentoId,
           input.idosoId,
-          input.horarioPrevisto,
+          horarioPrevisto.toISOString(),
           input.administradoEm ?? null,
           input.status,
           input.quantidadeDose ?? null,

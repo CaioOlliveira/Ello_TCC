@@ -57,7 +57,7 @@ class _AgendaHistoryPageState extends ConsumerState<AgendaHistoryPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nao foi possivel carregar o historico da agenda.'),
+          content: Text('Não foi possível carregar o histórico da agenda.'),
         ),
       );
     } finally {
@@ -117,7 +117,7 @@ class _AgendaHistoryPageState extends ConsumerState<AgendaHistoryPage> {
                               icon: Icons.person_search_rounded,
                               title: 'Escolha uma ficha',
                               message:
-                                  'Selecione uma ficha para ver o historico.',
+                                  'Selecione uma ficha para ver o histórico.',
                             )
                           : _loading
                               ? const Center(
@@ -127,7 +127,7 @@ class _AgendaHistoryPageState extends ConsumerState<AgendaHistoryPage> {
                               : filteredItems.isEmpty
                                   ? const _HistoryMessage(
                                       icon: Icons.history_rounded,
-                                      title: 'Sem historico',
+                                      title: 'Sem histórico',
                                       message:
                                           'Nenhuma alteracao encontrada neste periodo.',
                                     )
@@ -598,7 +598,7 @@ class _AgendaHistoryItem {
   final bool timeChanged;
 
   String get title {
-    final who = userName?.isNotEmpty == true ? userName! : 'Usuario';
+    final who = userName?.isNotEmpty == true ? userName! : 'Usuário';
     return '$who ${_actionVerb(this)} compromisso';
   }
 
@@ -827,7 +827,7 @@ String _actionSubtitle(_AgendaHistoryItem item, String title) {
     case 'Reabriu':
       return 'Compromisso reaberto: $title';
     case 'Remarcou':
-      return 'Novo horario de $title';
+      return 'Novo horário de $title';
     case 'Atualizou':
       return 'Compromisso atualizado: $title';
   }

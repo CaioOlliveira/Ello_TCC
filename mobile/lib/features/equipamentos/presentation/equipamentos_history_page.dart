@@ -59,7 +59,7 @@ class _EquipamentosHistoryPageState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nao foi possivel carregar o historico.'),
+          content: Text('Não foi possível carregar o histórico.'),
         ),
       );
     } finally {
@@ -119,7 +119,7 @@ class _EquipamentosHistoryPageState
                               icon: Icons.person_search_rounded,
                               title: 'Escolha uma ficha',
                               message:
-                                  'Selecione uma ficha para ver o historico.',
+                                  'Selecione uma ficha para ver o histórico.',
                             )
                           : _loading
                               ? const Center(
@@ -129,7 +129,7 @@ class _EquipamentosHistoryPageState
                               : filteredItems.isEmpty
                                   ? const _HistoryMessage(
                                       icon: Icons.history_rounded,
-                                      title: 'Sem historico',
+                                      title: 'Sem histórico',
                                       message:
                                           'Nenhuma alteracao encontrada neste periodo.',
                                     )
@@ -565,14 +565,14 @@ class _EquipmentHistoryItem {
   final String? equipmentName;
 
   String get title {
-    final who = userName?.isNotEmpty == true ? userName! : 'Usuario';
+    final who = userName?.isNotEmpty == true ? userName! : 'Usuário';
     return '$who ${_verb(action, entityType)}';
   }
 
   String get subtitle {
     if (equipmentName?.isNotEmpty == true) return equipmentName!;
     return entityType == 'manutencoes_equipamentos'
-        ? 'Manutencao registrada'
+        ? 'Manutenção registrada'
         : 'Equipamento';
   }
 
@@ -689,16 +689,16 @@ String _verb(String action, String entityType) {
     case 'criar':
     case 'registrar_manutencao':
       return entityType == 'manutencoes_equipamentos'
-          ? 'registrou manutencao'
+          ? 'registrou manutenção'
           : 'adicionou equipamento';
     case 'remover':
       return entityType == 'manutencoes_equipamentos'
-          ? 'removeu manutencao'
+          ? 'removeu manutenção'
           : 'removeu equipamento';
     default:
       if (normalizedAction.contains('verific')) return 'verificou equipamento';
       return entityType == 'manutencoes_equipamentos'
-          ? 'atualizou manutencao'
+          ? 'atualizou manutenção'
           : 'editou equipamento';
   }
 }

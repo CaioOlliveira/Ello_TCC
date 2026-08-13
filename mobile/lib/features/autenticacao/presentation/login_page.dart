@@ -79,7 +79,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (!mounted) return;
       setState(() {
         _errorMessage =
-            'Nao foi possivel conectar ao servidor. Tente novamente.';
+            'Não foi possível conectar ao servidor. Tente novamente.';
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -94,7 +94,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!_aceitouTermos) {
       setState(() {
         _errorMessage =
-            'Aceite os termos de uso e a politica de privacidade para continuar.';
+            'Aceite os termos de uso e a política de privacidade para continuar.';
       });
       return;
     }
@@ -127,7 +127,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (!mounted) return;
       setState(() {
         _errorMessage =
-            'Nao foi possivel conectar ao servidor. Tente novamente.';
+            'Não foi possível conectar ao servidor. Tente novamente.';
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -174,7 +174,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _view = AuthView.cadastroGoogle;
           _aceitouTermos = false;
           _errorMessage =
-              'Essa conta Google ainda nao esta cadastrada no Ello. Complete seu cadastro para continuar.';
+              'Essa conta Google ainda não está cadastrada no Ello. Complete seu cadastro para continuar.';
         });
         return;
       }
@@ -182,7 +182,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (mounted) {
         setState(() {
           _errorMessage =
-              'Nao foi possivel encontrar os dados da conta Google.';
+              'Não foi possível encontrar os dados da conta Google.';
         });
       }
     } on GoogleAuthException catch (error) {
@@ -194,7 +194,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Nao foi possivel entrar com Google: $error';
+        _errorMessage = 'Não foi possível entrar com Google: $error';
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -218,7 +218,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!_aceitouTermos) {
       setState(() {
         _errorMessage =
-            'Aceite os termos de uso e a politica de privacidade para continuar.';
+            'Aceite os termos de uso e a política de privacidade para continuar.';
       });
       return;
     }
@@ -249,7 +249,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Nao foi possivel cadastrar com Google: $error';
+        _errorMessage = 'Não foi possível cadastrar com Google: $error';
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -743,7 +743,7 @@ class _CadastroFormView extends StatelessWidget {
                           ),
                           TextSpan(text: ' e a '),
                           TextSpan(
-                            text: 'politica de privacidade',
+                            text: 'política de privacidade',
                             style: TextStyle(color: Color(0xFF177385)),
                           ),
                         ],
@@ -869,7 +869,7 @@ class _GoogleCadastroView extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSizes.sm),
                   Text(
-                    'Essa conta Google ainda nao esta cadastrada no Ello. Confirme seus dados para continuar.',
+                    'Essa conta Google ainda não está cadastrada no Ello. Confirme seus dados para continuar.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFF5F6368),
@@ -937,7 +937,7 @@ class _GoogleCadastroView extends StatelessWidget {
                           ),
                           TextSpan(text: ' e a '),
                           TextSpan(
-                            text: 'politica de privacidade',
+                            text: 'política de privacidade',
                             style: TextStyle(color: Color(0xFF1A73E8)),
                           ),
                         ],
@@ -1077,7 +1077,7 @@ class _BottomChoicesPanel extends StatelessWidget {
                   fontWeight: FontWeight.w400,
                 ),
                 children: [
-                  TextSpan(text: 'Nao tem uma conta? '),
+                  TextSpan(text: 'Não tem uma conta? '),
                   TextSpan(
                     text: 'Cadastre-se',
                     style: TextStyle(

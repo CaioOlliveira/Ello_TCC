@@ -69,7 +69,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('Nao foi possivel carregar equipamentos.');
+      if (mounted) _showMessage('Não foi possível carregar equipamentos.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -93,8 +93,17 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('Nao foi possivel carregar manutencoes.');
+      if (mounted) _showMessage('Não foi possível carregar manutenções.');
     }
+  }
+
+  bool _canEditEquipamentos() {
+    return ref.read(selectedIdosoProvider)?.podeEditarModulo('Equipamentos') ??
+        false;
+  }
+
+  void _showNoEditPermission() {
+    _showMessage('Você não tem permissão para editar equipamentos.');
   }
 
   Future<void> _saveEquipamento(EquipamentoFormData data) async {
@@ -102,6 +111,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     final usuario = ref.read(authSessionProvider);
     if (idoso == null) {
       context.go('/idosos');
+      return;
+    }
+    if (!idoso.podeEditarModulo('Equipamentos')) {
+      _showNoEditPermission();
       return;
     }
 
@@ -124,7 +137,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('Nao foi possivel salvar equipamento.');
+      if (mounted) _showMessage('Não foi possível salvar equipamento.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -134,6 +147,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     final selected = _selected;
     final idoso = ref.read(selectedIdosoProvider);
     if (selected == null || idoso == null) return;
+    if (!idoso.podeEditarModulo('Equipamentos')) {
+      _showNoEditPermission();
+      return;
+    }
 
     setState(() => _saving = true);
     try {
@@ -158,7 +175,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('Nao foi possivel editar equipamento.');
+      if (mounted) _showMessage('Não foi possível editar equipamento.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -168,6 +185,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     final selected = _selected;
     final usuario = ref.read(authSessionProvider);
     if (selected == null) return;
+    if (!_canEditEquipamentos()) {
+      _showNoEditPermission();
+      return;
+    }
 
     setState(() => _saving = true);
     try {
@@ -188,7 +209,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('Nao foi possivel registrar manutencao.');
+      if (mounted) _showMessage('Não foi possível registrar manutenção.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -197,6 +218,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   Future<void> _setStatus(String status) async {
     final selected = _selected;
     if (selected == null) return;
+    if (!_canEditEquipamentos()) {
+      _showNoEditPermission();
+      return;
+    }
 
     setState(() => _saving = true);
     try {
@@ -216,7 +241,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('Nao foi possivel atualizar status.');
+      if (mounted) _showMessage('Não foi possível atualizar status.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -225,6 +250,10 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   Future<void> _confirmDeleteEquipamento() async {
     final selected = _selected;
     if (selected == null) return;
+    if (!_canEditEquipamentos()) {
+      _showNoEditPermission();
+      return;
+    }
 
     final shouldDelete = await showDialog<bool>(
       context: context,
@@ -233,7 +262,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           title: const Text('Excluir equipamento'),
           content: Text(
-            'Tem certeza que deseja excluir "${selected.nome}"? Essa acao nao pode ser desfeita.',
+            'Tem certeza que deseja excluir "${selected.nome}"? Essa ação não pode ser desfeita.',
           ),
           actions: [
             TextButton(
@@ -275,7 +304,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
     } on ApiException catch (error) {
       if (mounted) _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('Nao foi possivel excluir equipamento.');
+      if (mounted) _showMessage('Não foi possível excluir equipamento.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -336,7 +365,13 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 loading: _loading,
                 equipamentos: _equipamentos,
                 personOf: idoso?.elderText.of ?? 'da pessoa idosa',
-                onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
+                onAdd: () {
+                  if (!_canEditEquipamentos()) {
+                    _showNoEditPermission();
+                    return;
+                  }
+                  setState(() => _view = _EquipamentosView.cadastro);
+                },
                 onOpen: _loadManutencoes,
                 onHistory: () => context.push('/equipamentos/historico'),
               )
@@ -344,12 +379,23 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 equipamento: _selected!,
                 manutencoes: _manutencoes,
                 saving: _saving,
-                onRegister: () =>
-                    setState(() => _view = _EquipamentosView.manutencao),
+                onRegister: () {
+                  if (!_canEditEquipamentos()) {
+                    _showNoEditPermission();
+                    return;
+                  }
+                  setState(() => _view = _EquipamentosView.manutencao);
+                },
                 onStatusChanged: () => _setStatus(
                   _selected!.status == 'Fora de uso' ? 'Em uso' : 'Fora de uso',
                 ),
-                onEdit: () => setState(() => _view = _EquipamentosView.edicao),
+                onEdit: () {
+                  if (!_canEditEquipamentos()) {
+                    _showNoEditPermission();
+                    return;
+                  }
+                  setState(() => _view = _EquipamentosView.edicao);
+                },
                 onDelete: _confirmDeleteEquipamento,
               );
       case _EquipamentosView.manutencao:
@@ -372,7 +418,13 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                 loading: _loading,
                 equipamentos: _equipamentos,
                 personOf: idoso.elderText.of,
-                onAdd: () => setState(() => _view = _EquipamentosView.cadastro),
+                onAdd: () {
+                  if (!_canEditEquipamentos()) {
+                    _showNoEditPermission();
+                    return;
+                  }
+                  setState(() => _view = _EquipamentosView.cadastro);
+                },
                 onOpen: _loadManutencoes,
                 onHistory: () => context.push('/equipamentos/historico'),
               );
@@ -509,7 +561,7 @@ class _EquipamentosList extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            child: const Text('Ver Historico'),
+            child: const Text('Ver Histórico'),
           ),
         ),
       ],
@@ -572,13 +624,13 @@ class _EquipamentoCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Ultima calibracao: ${formatDate(equipamento.ultimaManutencaoEm)}',
+                              'Última calibração: ${formatDate(equipamento.ultimaManutencaoEm)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: _mutedStyle(context),
                             ),
                             Text(
-                              'Proxima calibracao: ${formatDate(equipamento.proximaManutencaoEm)}',
+                              'Próxima calibração: ${formatDate(equipamento.proximaManutencaoEm)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: _mutedStyle(context),

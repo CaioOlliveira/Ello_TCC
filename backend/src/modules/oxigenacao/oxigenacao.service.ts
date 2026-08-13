@@ -320,6 +320,7 @@ const montarResumo = (
   return {
     ultima,
     totalRegistros: registrosDoDia.length,
+    totalRegistrosGeral: ordenados.length,
     mediaSaturacaoDia,
     mediaPulsoDia,
     proximaMedicao,

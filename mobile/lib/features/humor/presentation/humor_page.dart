@@ -7,7 +7,6 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -75,6 +74,13 @@ class _HumorPageState extends ConsumerState<HumorPage> {
 
     if (idoso == null) {
       context.go('/idosos');
+      return;
+    }
+
+    if (!idoso.podeEditarModulo('Humor')) {
+      setState(
+        () => _errorMessage = 'Você não tem permissão para editar humor.',
+      );
       return;
     }
 
@@ -191,7 +197,6 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                   children: [
                     _Header(
                       onBack: () => context.go('/monitoramento'),
-                      onProfile: () => context.go('/perfil?from=humor'),
                     ),
                     const SizedBox(height: 24),
                     StaggeredEntry(
@@ -311,31 +316,30 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                     const SizedBox(height: 10),
                     StaggeredEntry(
                       index: 6,
-                      child: Center(
-                        child: SizedBox(
-                          width: 286,
-                          height: 44,
-                          child: OutlinedButton(
-                            onPressed: () => context.push('/historico/humor'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: adaptive(
-                                  context,
-                                  const Color(0xFF073248),
-                                  AppDarkColors.textPrimary),
-                              side: const BorderSide(
-                                color: Color(0xFF38AFC0),
-                                width: 1.4,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(7),
-                              ),
-                              textStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/historico/humor'),
+                          icon: const Icon(Icons.history_rounded),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: adaptive(
+                                context,
+                                const Color(0xFF073248),
+                                AppDarkColors.textPrimary),
+                            side: const BorderSide(
+                              color: Color(0xFF38AFC0),
+                              width: 1.4,
                             ),
-                            child: const Text('Ver histórico'),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
+                          label: const Text('Ver histórico'),
                         ),
                       ),
                     ),
@@ -352,21 +356,15 @@ class _HumorPageState extends ConsumerState<HumorPage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onBack, required this.onProfile});
+  const _Header({required this.onBack});
 
   final VoidCallback onBack;
-  final VoidCallback onProfile;
 
   @override
   Widget build(BuildContext context) {
     return AppPageHeader(
       title: 'Registro de humor',
       onBack: onBack,
-      trailing: ActionIconButton(
-        tooltip: 'Perfil do cuidador',
-        icon: Icons.person_rounded,
-        onTap: onProfile,
-      ),
     );
   }
 }

@@ -16,6 +16,7 @@ export type Idoso = {
   idade: number;
   criadoPorId?: string | null;
   ehDono?: boolean;
+  eAdministrador?: boolean;
   urlFoto?: string | null;
   pesoKg?: number | null;
   tipoSanguineo?: string | null;
@@ -29,6 +30,8 @@ export type Idoso = {
   contatoEmergenciaParentesco?: string | null;
   condicoes: string[];
   monitoramentos: string[];
+  permissoesVisualizar: string[];
+  permissoesEditar: string[];
 };
 
 const idosos: Idoso[] = [
@@ -38,6 +41,26 @@ const idosos: Idoso[] = [
     idade: 78,
     sexo: "Feminino",
     monitoramentos: [
+      "Medicacoes",
+      "Humor",
+      "Agenda",
+      "Alimentacao",
+      "Equipamentos",
+      "Insumos",
+      "Glicemia",
+    ],
+    permissoesVisualizar: [
+      "Ficha",
+      "Medicacoes",
+      "Humor",
+      "Agenda",
+      "Alimentacao",
+      "Equipamentos",
+      "Insumos",
+      "Glicemia",
+    ],
+    permissoesEditar: [
+      "Ficha",
       "Medicacoes",
       "Humor",
       "Agenda",
@@ -56,6 +79,8 @@ type IdosoRow = {
   idade: number | null;
   criado_por_id: string | null;
   eh_dono?: boolean | null;
+  e_administrador?: boolean | null;
+  permissoes?: unknown;
   url_foto: string | null;
   peso_kg: string | number | null;
   tipo_sanguineo: string | null;
@@ -86,32 +111,65 @@ const normalizarMonitoramentos = (value: unknown): string[] => {
   return [];
 };
 
-const mapearIdoso = (row: IdosoRow): Idoso => ({
-  id: row.id,
-  nome: row.nome,
-  idade: Number(row.idade ?? 0),
-  criadoPorId: row.criado_por_id,
-  ehDono: Boolean(row.eh_dono),
-  urlFoto: row.url_foto,
-  pesoKg: row.peso_kg == null ? null : Number(row.peso_kg),
-  tipoSanguineo: row.tipo_sanguineo,
-  dataNascimento: row.data_nascimento,
-  sexo: row.sexo,
-  limitacoes: row.limitacoes,
-  observacoesGerais: row.observacoes_gerais,
-  alergiasRestricoes: row.alergias_restricoes,
-  contatoEmergenciaNome: row.contato_emergencia_nome,
-  contatoEmergenciaTelefone: row.contato_emergencia_telefone,
-  contatoEmergenciaParentesco: row.contato_emergencia_parentesco,
-  condicoes:
-    typeof row.observacoes_saude === "string" && row.observacoes_saude.trim()
-      ? row.observacoes_saude
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean)
-      : [],
-  monitoramentos: normalizarMonitoramentos(row.monitoramentos),
-});
+const normalizarPermissoes = (
+  value: unknown,
+  fallbackVisualizar: string[],
+  fallbackEditar: string[] = [],
+) => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const permissoes = value as Record<string, unknown>;
+    return {
+      visualizar: normalizarMonitoramentos(permissoes.visualizar),
+      editar: normalizarMonitoramentos(permissoes.editar),
+    };
+  }
+
+  return {
+    visualizar: fallbackVisualizar,
+    editar: fallbackEditar,
+  };
+};
+
+const mapearIdoso = (row: IdosoRow): Idoso => {
+  const monitoramentos = normalizarMonitoramentos(row.monitoramentos);
+  const permissoesTotais = ["Ficha", ...monitoramentos];
+  const ehDono = Boolean(row.eh_dono);
+  const eAdministrador = Boolean(row.e_administrador);
+  const permissoes =
+    ehDono || eAdministrador
+      ? { visualizar: permissoesTotais, editar: permissoesTotais }
+      : normalizarPermissoes(row.permissoes, permissoesTotais);
+
+  return {
+    id: row.id,
+    nome: row.nome,
+    idade: Number(row.idade ?? 0),
+    criadoPorId: row.criado_por_id,
+    ehDono,
+    eAdministrador,
+    urlFoto: row.url_foto,
+    pesoKg: row.peso_kg == null ? null : Number(row.peso_kg),
+    tipoSanguineo: row.tipo_sanguineo,
+    dataNascimento: row.data_nascimento,
+    sexo: row.sexo,
+    limitacoes: row.limitacoes,
+    observacoesGerais: row.observacoes_gerais,
+    alergiasRestricoes: row.alergias_restricoes,
+    contatoEmergenciaNome: row.contato_emergencia_nome,
+    contatoEmergenciaTelefone: row.contato_emergencia_telefone,
+    contatoEmergenciaParentesco: row.contato_emergencia_parentesco,
+    condicoes:
+      typeof row.observacoes_saude === "string" && row.observacoes_saude.trim()
+        ? row.observacoes_saude
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : [],
+    monitoramentos,
+    permissoesVisualizar: permissoes.visualizar,
+    permissoesEditar: permissoes.editar,
+  };
+};
 
 const isUuid = (value: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -252,6 +310,8 @@ export const idososService = {
             when $1::uuid is null then false
             else dono.dono_id = $1::uuid
           end as eh_dono,
+          coalesce(acesso.e_administrador, false) as e_administrador,
+          acesso.permissoes,
           nome_completo as nome,
           url_foto,
           peso_kg,
@@ -292,6 +352,14 @@ export const idososService = {
             fichas_idosos.criado_por_id
           ) as dono_id
         ) dono on true
+        left join lateral (
+          select mf.e_administrador, mf.permissoes
+          from membros_ficha mf
+          where mf.idoso_id = fichas_idosos.id
+            and mf.usuario_id = $1::uuid
+            and mf.status = 'ativo'
+          limit 1
+        ) acesso on true
         where ativo = true
           and (
             $1::uuid is null
@@ -324,6 +392,8 @@ export const idososService = {
           fichas_idosos.id,
           dono.dono_id as criado_por_id,
           dono.dono_id = $1::uuid as eh_dono,
+          coalesce(acesso.e_administrador, false) as e_administrador,
+          acesso.permissoes,
           nome_completo as nome,
           url_foto,
           peso_kg,
@@ -364,6 +434,14 @@ export const idososService = {
             fichas_idosos.criado_por_id
           ) as dono_id
         ) dono on true
+        left join lateral (
+          select mf.e_administrador, mf.permissoes
+          from membros_ficha mf
+          where mf.idoso_id = fichas_idosos.id
+            and mf.usuario_id = $1::uuid
+            and mf.status = 'ativo'
+          limit 1
+        ) acesso on true
         where ativo = true
           and (
             dono.dono_id = $1::uuid

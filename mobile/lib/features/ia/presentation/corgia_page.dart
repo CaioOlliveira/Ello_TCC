@@ -142,7 +142,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       _addErrorMessage(error.message);
     } catch (_) {
       if (!mounted) return;
-      _addErrorMessage('Nao foi possivel abrir este chat.');
+      _addErrorMessage('Não foi possível abrir este chat.');
     } finally {
       if (mounted) setState(() => _openingConversation = false);
     }
@@ -210,7 +210,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
         _messages.add(
           _ChatMessage(
             text: resultado.resposta.isEmpty
-                ? 'Nao consegui gerar uma resposta agora. Tente novamente.'
+                ? 'Não consegui gerar uma resposta agora. Tente novamente.'
                 : _cleanAiText(resultado.resposta),
             fromUser: false,
           ),
@@ -226,7 +226,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       _addErrorMessage(error.message);
     } catch (_) {
       if (!mounted) return;
-      _addErrorMessage('Nao foi possivel falar com a IA agora.');
+      _addErrorMessage('Não foi possível falar com a IA agora.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -254,7 +254,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       });
     } catch (_) {
       if (!mounted) return;
-      _addErrorMessage('Nao foi possivel anexar a imagem.');
+      _addErrorMessage('Não foi possível anexar a imagem.');
     }
   }
 
@@ -312,7 +312,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
 
     final available = await _speech.initialize();
     if (!available) {
-      _addErrorMessage('Nao foi possivel iniciar o microfone.');
+      _addErrorMessage('Não foi possível iniciar o microfone.');
       return;
     }
 
@@ -373,7 +373,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       _addErrorMessage(error.message);
     } catch (_) {
       if (!mounted) return;
-      _addErrorMessage('Nao foi possivel carregar o relatorio da IA.');
+      _addErrorMessage('Não foi possível carregar o relatorio da IA.');
     } finally {
       if (mounted) setState(() => _loadingReport = false);
     }
@@ -392,7 +392,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       _messages.add(
         _ChatMessage(
           text: message.isEmpty
-              ? 'Nao foi possivel falar com a IA agora.'
+              ? 'Não foi possível falar com a IA agora.'
               : message,
           fromUser: false,
           isError: true,
@@ -630,7 +630,7 @@ class _ChatHeader extends StatelessWidget {
       child: AppPageHeader(
         title: title,
         leading: IconButton(
-          tooltip: 'Historico',
+          tooltip: 'Histórico',
           onPressed: loading ? null : onHistory,
           icon: const Icon(
             Icons.history_rounded,

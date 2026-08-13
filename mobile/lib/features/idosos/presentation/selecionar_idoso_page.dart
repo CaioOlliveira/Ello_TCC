@@ -483,7 +483,7 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
     FocusScope.of(context).unfocus();
     final codigo = _controller.text.trim();
     if (codigo.isEmpty) {
-      setState(() => _erro = 'Digite o codigo do convite.');
+      setState(() => _erro = 'Digite o código do convite.');
       return;
     }
 
@@ -534,7 +534,7 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _erro = 'Nao foi possivel acessar a ficha com esse codigo.';
+        _erro = 'Não foi possível acessar a ficha com esse código.';
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -644,7 +644,7 @@ class _InviteCardState extends ConsumerState<_InviteCard> {
               color: Color(0xFF0D6E80),
             ),
             decoration: InputDecoration(
-              hintText: 'CODIGO',
+              hintText: 'CÓDIGO',
               hintStyle: TextStyle(
                 color: adaptive(
                     context, const Color(0xFFBFD9DD), AppDarkColors.textMuted),
@@ -744,7 +744,7 @@ class _ErrorState extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'Nao foi possivel carregar as fichas.',
+          'Não foi possível carregar as fichas.',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: adaptive(

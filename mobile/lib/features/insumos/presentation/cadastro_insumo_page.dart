@@ -81,6 +81,11 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
 
   Future<void> _save() async {
     FocusScope.of(context).unfocus();
+    final idoso = ref.read(selectedIdosoProvider);
+    if (idoso == null || !idoso.podeEditarModulo('Insumos')) {
+      setState(() => _error = 'Você não tem permissão para editar insumos.');
+      return;
+    }
 
     final nome = _nomeController.text.trim();
     final estoque = _toDouble(_estoqueController.text);
@@ -101,7 +106,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
       return;
     }
     if (consumo != null && consumo > 0 && _frequenciaUso == null) {
-      setState(() => _error = 'Selecione a frequencia do consumo.');
+      setState(() => _error = 'Selecione a frequência do consumo.');
       return;
     }
 
@@ -303,7 +308,7 @@ class _InsumoFormViewState extends ConsumerState<_InsumoFormView> {
           ),
           const SizedBox(height: 13),
           _LabeledField(
-            label: 'Observacoes',
+            label: 'Observações',
             controller: _observacoesController,
             minLines: 5,
             maxLines: 5,
@@ -428,13 +433,13 @@ class _FrequencySelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _FormLabel('Frequencia de uso'),
+        const _FormLabel('Frequência de uso'),
         SizedBox(
           height: 48,
           child: DropdownButtonFormField<String>(
             initialValue: value,
             onChanged: onChanged,
-            decoration: _inputDecoration(context, 'Selecione a frequencia'),
+            decoration: _inputDecoration(context, 'Selecione a frequência'),
             style: TextStyle(
                 color: adaptive(context, const Color(0xFF17324D),
                     AppDarkColors.textPrimary),

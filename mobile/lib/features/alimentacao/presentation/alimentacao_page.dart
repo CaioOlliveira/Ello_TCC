@@ -69,7 +69,24 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
     }
   }
 
+  bool _canEditAlimentacao() {
+    return ref.read(selectedIdosoProvider)?.podeEditarModulo('Alimentacao') ??
+        false;
+  }
+
+  void _showNoEditPermission() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Você não tem permissão para editar alimentação.'),
+      ),
+    );
+  }
+
   Future<void> _concluir(RefeicaoResumo refeicao) async {
+    if (!_canEditAlimentacao()) {
+      _showNoEditPermission();
+      return;
+    }
     try {
       await ref.read(apiClientProvider).concluirRefeicao(
             id: refeicao.id,
@@ -88,6 +105,10 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
   Future<void> _saveWeight(double pesoKg) async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
+    if (!idoso.podeEditarModulo('Alimentacao')) {
+      _showNoEditPermission();
+      return;
+    }
 
     try {
       await ref.read(apiClientProvider).atualizarIdoso(
@@ -109,6 +130,10 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
   Future<void> _addWater() async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
+    if (!idoso.podeEditarModulo('Alimentacao')) {
+      _showNoEditPermission();
+      return;
+    }
     final personText = idoso.elderText;
 
     final now = DateTime.now();
@@ -258,17 +283,29 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                   onGallery: () =>
                       setState(() => _view = _AlimentacaoView.galeria),
                   onHistory: () => context.push('/historico/alimentacao'),
-                  onAdd: () => setState(() {
-                    _editing = null;
-                    _draftTipo = 'Café da manhã';
-                    _view = _AlimentacaoView.tipo;
-                  }),
+                  onAdd: () {
+                    if (!_canEditAlimentacao()) {
+                      _showNoEditPermission();
+                      return;
+                    }
+                    setState(() {
+                      _editing = null;
+                      _draftTipo = 'Café da manhã';
+                      _view = _AlimentacaoView.tipo;
+                    });
+                  },
                   onDetails: _showDetails,
-                  onEdit: (refeicao) => setState(() {
-                    _editing = refeicao;
-                    _draftTipo = _normalizeMealType(refeicao.tipoRefeicao);
-                    _view = _AlimentacaoView.form;
-                  }),
+                  onEdit: (refeicao) {
+                    if (!_canEditAlimentacao()) {
+                      _showNoEditPermission();
+                      return;
+                    }
+                    setState(() {
+                      _editing = refeicao;
+                      _draftTipo = _normalizeMealType(refeicao.tipoRefeicao);
+                      _view = _AlimentacaoView.form;
+                    });
+                  },
                   onConclude: _concluir,
                 ),
               _AlimentacaoView.tipo => _MealTypePickerView(

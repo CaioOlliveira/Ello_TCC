@@ -97,7 +97,7 @@ class LocalNotificationService {
       android: AndroidNotificationDetails(
         'ello_reminders',
         'Lembretes do Ello',
-        channelDescription: 'Compromissos e horarios de medicamentos',
+        channelDescription: 'Compromissos e horários de medicamentos',
         importance: Importance.high,
         priority: Priority.high,
       ),

@@ -22,7 +22,6 @@ class DashboardIdosoPage extends ConsumerStatefulWidget {
 }
 
 class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
-  static const _cacheDuration = Duration(minutes: 2);
   static final Map<String, _DashboardCacheEntry> _cache = {};
 
   var _loading = false;
@@ -39,14 +38,10 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
     if (idoso == null) return;
 
     final cached = _cache[idoso.id];
-    final hasFreshCache = cached != null &&
-        DateTime.now().difference(cached.updatedAt) < _cacheDuration;
 
     if (cached != null && mounted) {
       setState(() => _resumo = cached.resumo);
     }
-
-    if (!force && hasFreshCache) return;
 
     setState(() => _loading = cached == null);
     try {
@@ -56,6 +51,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
         api.listarHumores(idosoId: idoso.id),
         api.listarRefeicoes(idosoId: idoso.id),
         api.getResumoGlicemia(idosoId: idoso.id),
+        api.getResumoMedicamentosConsolidado(idosoId: idoso.id),
       ]);
 
       if (!mounted) return;
@@ -64,6 +60,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
         humores: results[1] as List<Map<String, dynamic>>,
         refeicoes: results[2] as List<RefeicaoResumo>,
         glicemia: results[3] as GlicemiaResumo,
+        medicamentos: results[4] as MedicamentosResumo,
         dica: cached?.resumo.dica ?? _resumo.dica,
       );
 
@@ -142,17 +139,16 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                       nome: idoso?.nome ?? 'Selecione uma ficha',
                       idade: idoso?.idade,
                       foto: idoso?.urlFoto,
-                      onEdit: idoso == null
-                          ? null
-                          : () => context.go('/idosos/editar?from=dashboard'),
                     ),
                   ),
                   const SizedBox(height: 14),
                   StaggeredEntry(
                     index: 3,
                     child: _MedicationAlert(
+                      title: _resumo.proximoMedicamentoTitulo,
                       label: _resumo.proximoMedicamentoLabel,
                       time: _resumo.proximoMedicamentoHora,
+                      tone: _resumo.proximoMedicamentoTom,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -326,13 +322,11 @@ class _IdosoHeroCard extends StatelessWidget {
     required this.nome,
     this.idade,
     this.foto,
-    this.onEdit,
   });
 
   final String nome;
   final int? idade;
   final String? foto;
-  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -340,15 +334,19 @@ class _IdosoHeroCard extends StatelessWidget {
 
     return Container(
       height: 126,
-      padding: const EdgeInsets.fromLTRB(24, 13, 14, 13),
+      padding: const EdgeInsets.fromLTRB(24, 13, 20, 13),
       decoration: BoxDecoration(
-        color: const Color(0xFF3CAAB6),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2BA8BA), Color(0xFF0E6F7E)],
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+            color: const Color(0xFF0E6F7E).withValues(alpha: 0.32),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -373,7 +371,7 @@ class _IdosoHeroCard extends StatelessWidget {
           const SizedBox(width: 18),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.only(right: 4),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,65 +415,118 @@ class _IdosoHeroCard extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              onPressed: onEdit,
-              visualDensity: VisualDensity.compact,
-              tooltip: 'Editar ficha',
-              icon: const Icon(
-                Icons.edit_outlined,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _MedicationAlert extends StatelessWidget {
-  const _MedicationAlert({required this.label, required this.time});
+enum _MedicationAlertTone { late, soon, later, done, empty }
 
+class _MedicationAlertColors {
+  const _MedicationAlertColors({
+    required this.background,
+    required this.badgeBackground,
+    required this.accent,
+    required this.icon,
+  });
+
+  final Color background;
+  final Color badgeBackground;
+  final Color accent;
+  final IconData icon;
+}
+
+_MedicationAlertColors _medicationAlertColors(
+  BuildContext context,
+  _MedicationAlertTone tone,
+) {
+  final darkSurface = adaptive(context, Colors.white, AppDarkColors.surfaceAlt);
+
+  return switch (tone) {
+    _MedicationAlertTone.late => _MedicationAlertColors(
+        background: adaptive(
+            context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
+        badgeBackground: darkSurface,
+        accent: const Color(0xFFD73A3A),
+        icon: Icons.warning_amber_rounded,
+      ),
+    _MedicationAlertTone.soon => _MedicationAlertColors(
+        background: adaptive(
+            context, const Color(0xFFFFF3E3), AppDarkColors.tintedWarn),
+        badgeBackground: darkSurface,
+        accent: const Color(0xFFE47A00),
+        icon: Icons.notifications_active_rounded,
+      ),
+    _MedicationAlertTone.later => _MedicationAlertColors(
+        background: adaptive(
+            context, const Color(0xFFE8F8FA), AppDarkColors.tintedInfo),
+        badgeBackground: darkSurface,
+        accent: const Color(0xFF168FA1),
+        icon: Icons.notifications_none_rounded,
+      ),
+    _MedicationAlertTone.done => _MedicationAlertColors(
+        background: adaptive(
+            context, const Color(0xFFEAF8EF), AppDarkColors.surfaceAlt),
+        badgeBackground: darkSurface,
+        accent: const Color(0xFF28A745),
+        icon: Icons.check_circle_outline_rounded,
+      ),
+    _MedicationAlertTone.empty => _MedicationAlertColors(
+        background: adaptive(
+            context, const Color(0xFFF3F8F9), AppDarkColors.surfaceAlt),
+        badgeBackground: darkSurface,
+        accent: const Color(0xFF168FA1),
+        icon: Icons.medication_outlined,
+      ),
+  };
+}
+
+class _MedicationAlert extends StatelessWidget {
+  const _MedicationAlert({
+    required this.title,
+    required this.label,
+    required this.time,
+    required this.tone,
+  });
+
+  final String title;
   final String label;
   final String time;
+  final _MedicationAlertTone tone;
 
   @override
   Widget build(BuildContext context) {
+    final colors = _medicationAlertColors(context, tone);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-      decoration: _dashboardCardDecoration(
-        color: adaptive(
-            context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
-      ),
+      decoration: _dashboardCardDecoration(color: colors.background),
       child: Row(
         children: [
-          const Icon(Icons.notifications_none_rounded,
-              color: Color(0xFFE47A00), size: 31),
+          Icon(colors.icon, color: colors.accent, size: 31),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Próximo medicamento',
+                Text(
+                  title,
                   style: TextStyle(
-                    color: Color(0xFFE47A00),
+                    color: colors.accent,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 Text(
                   label,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF555555),
                         AppDarkColors.textSecondary),
                     fontSize: 12,
+                    height: 1.15,
                   ),
                 ),
               ],
@@ -484,13 +535,13 @@ class _MedicationAlert extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
-              color: adaptive(context, Colors.white, AppDarkColors.surfaceAlt),
+              color: colors.badgeBackground,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               time,
-              style: const TextStyle(
-                color: Color(0xFFE47A00),
+              style: TextStyle(
+                color: colors.accent,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -709,11 +760,119 @@ class _TipCard extends StatelessWidget {
   }
 }
 
+class _MedicamentosDashboardInfo {
+  const _MedicamentosDashboardInfo({
+    required this.resumoLabel,
+    required this.proximoTitulo,
+    required this.proximoLabel,
+    required this.proximoHorario,
+    required this.proximoTom,
+  });
+
+  final String resumoLabel;
+  final String proximoTitulo;
+  final String proximoLabel;
+  final String proximoHorario;
+  final _MedicationAlertTone proximoTom;
+}
+
+_MedicamentosDashboardInfo _medicamentosDashboardInfo(
+  MedicamentosResumo resumo,
+) {
+  if (resumo.totalMedicamentos == 0) {
+    return const _MedicamentosDashboardInfo(
+      resumoLabel: 'nenhum cadastrado',
+      proximoTitulo: 'Medicamentos',
+      proximoLabel: 'Cadastre medicamentos',
+      proximoHorario: '--:--',
+      proximoTom: _MedicationAlertTone.empty,
+    );
+  }
+
+  final pendentes = resumo.medicamentos
+      .where(_medicamentoTemDosePendente)
+      .toList()
+    ..sort(_compareMedicamentosPendentes);
+
+  if (pendentes.isEmpty) {
+    return const _MedicamentosDashboardInfo(
+      resumoLabel: 'sem pendências',
+      proximoTitulo: 'Tudo em dia',
+      proximoLabel: 'Todos os remédios de hoje foram tomados.',
+      proximoHorario: 'OK',
+      proximoTom: _MedicationAlertTone.done,
+    );
+  }
+
+  final atrasados = pendentes.where(_medicamentoAtrasado).length;
+  final proximo = _medicamentoTemDosePendente(resumo.proximoMedicamento)
+      ? resumo.proximoMedicamento!
+      : pendentes.first;
+  final dosagem = proximo.dosagem?.trim();
+  final minutosAteDose =
+      proximo.proximoHorarioPrevisto?.difference(DateTime.now()).inMinutes;
+  final tom = _medicamentoAtrasado(proximo)
+      ? _MedicationAlertTone.late
+      : minutosAteDose != null && minutosAteDose <= 30
+          ? _MedicationAlertTone.soon
+          : _MedicationAlertTone.later;
+
+  return _MedicamentosDashboardInfo(
+    resumoLabel: atrasados > 0
+        ? '$atrasados ${atrasados == 1 ? 'atrasado' : 'atrasados'}'
+        : '${pendentes.length} ${pendentes.length == 1 ? 'pendente' : 'pendentes'}',
+    proximoTitulo: _medicamentoAtrasado(proximo)
+        ? 'Medicamento atrasado'
+        : 'Próximo medicamento',
+    proximoLabel: dosagem == null || dosagem.isEmpty
+        ? proximo.nome
+        : '${proximo.nome} - $dosagem',
+    proximoHorario: proximo.proximoHorario ?? '--:--',
+    proximoTom: tom,
+  );
+}
+
+bool _medicamentoComTodasDosesDadas(MedicamentoResumo? medicamento) {
+  if (medicamento == null) return false;
+  if (medicamento.statusHoje == 'dado') return true;
+  return medicamento.totalHorarios > 0 &&
+      medicamento.dosesAdministradasHoje >= medicamento.totalHorarios;
+}
+
+bool _medicamentoTemDosePendente(MedicamentoResumo? medicamento) {
+  if (medicamento == null) return false;
+  return medicamento.proximoHorario != null &&
+      !_medicamentoComTodasDosesDadas(medicamento);
+}
+
+bool _medicamentoAtrasado(MedicamentoResumo medicamento) {
+  return medicamento.proximoAtrasado || medicamento.statusHoje == 'atrasado';
+}
+
+int _compareMedicamentosPendentes(
+  MedicamentoResumo left,
+  MedicamentoResumo right,
+) {
+  final leftAtrasado = _medicamentoAtrasado(left);
+  final rightAtrasado = _medicamentoAtrasado(right);
+  if (leftAtrasado != rightAtrasado) return leftAtrasado ? -1 : 1;
+
+  final leftDate = left.proximoHorarioPrevisto;
+  final rightDate = right.proximoHorarioPrevisto;
+  if (leftDate != null && rightDate != null) {
+    return leftDate.compareTo(rightDate);
+  }
+
+  return (left.proximoHorario ?? '').compareTo(right.proximoHorario ?? '');
+}
+
 class _DashboardResumo {
   const _DashboardResumo({
     this.medicamentosLabel = 'em breve',
+    this.proximoMedicamentoTitulo = 'Medicamentos',
     this.proximoMedicamentoLabel = 'Cadastre medicamentos',
     this.proximoMedicamentoHora = '--:--',
+    this.proximoMedicamentoTom = _MedicationAlertTone.empty,
     this.humorLabel = 'não registrado ainda',
     this.ultimaRefeicaoLabel = 'não registrado ainda',
     this.insulinaLabel = 'não registrado ainda',
@@ -728,6 +887,7 @@ class _DashboardResumo {
     required List<Map<String, dynamic>> humores,
     required List<RefeicaoResumo> refeicoes,
     required GlicemiaResumo glicemia,
+    required MedicamentosResumo medicamentos,
     required String dica,
   }) {
     final nextAppointment = _nextAppointment(compromissos);
@@ -736,11 +896,14 @@ class _DashboardResumo {
     final latestInsulin = glicemia.insulinaRecente;
     final hasInsulinToday =
         latestInsulin != null && _isSameLocalDay(latestInsulin.aplicadoEm);
+    final medicamentosInfo = _medicamentosDashboardInfo(medicamentos);
 
     return _DashboardResumo(
-      medicamentosLabel: '0 pendentes',
-      proximoMedicamentoLabel: 'Nenhum pendente',
-      proximoMedicamentoHora: '--:--',
+      medicamentosLabel: medicamentosInfo.resumoLabel,
+      proximoMedicamentoTitulo: medicamentosInfo.proximoTitulo,
+      proximoMedicamentoLabel: medicamentosInfo.proximoLabel,
+      proximoMedicamentoHora: medicamentosInfo.proximoHorario,
+      proximoMedicamentoTom: medicamentosInfo.proximoTom,
       humorLabel: latestMood ?? 'não registrado ainda',
       ultimaRefeicaoLabel: latestMeal == null
           ? 'não registrado ainda'
@@ -756,8 +919,10 @@ class _DashboardResumo {
   }
 
   final String medicamentosLabel;
+  final String proximoMedicamentoTitulo;
   final String proximoMedicamentoLabel;
   final String proximoMedicamentoHora;
+  final _MedicationAlertTone proximoMedicamentoTom;
   final String humorLabel;
   final String ultimaRefeicaoLabel;
   final String insulinaLabel;
@@ -767,8 +932,10 @@ class _DashboardResumo {
 
   _DashboardResumo copyWith({
     String? medicamentosLabel,
+    String? proximoMedicamentoTitulo,
     String? proximoMedicamentoLabel,
     String? proximoMedicamentoHora,
+    _MedicationAlertTone? proximoMedicamentoTom,
     String? humorLabel,
     String? ultimaRefeicaoLabel,
     String? insulinaLabel,
@@ -778,10 +945,14 @@ class _DashboardResumo {
   }) {
     return _DashboardResumo(
       medicamentosLabel: medicamentosLabel ?? this.medicamentosLabel,
+      proximoMedicamentoTitulo:
+          proximoMedicamentoTitulo ?? this.proximoMedicamentoTitulo,
       proximoMedicamentoLabel:
           proximoMedicamentoLabel ?? this.proximoMedicamentoLabel,
       proximoMedicamentoHora:
           proximoMedicamentoHora ?? this.proximoMedicamentoHora,
+      proximoMedicamentoTom:
+          proximoMedicamentoTom ?? this.proximoMedicamentoTom,
       humorLabel: humorLabel ?? this.humorLabel,
       ultimaRefeicaoLabel: ultimaRefeicaoLabel ?? this.ultimaRefeicaoLabel,
       insulinaLabel: insulinaLabel ?? this.insulinaLabel,

@@ -38,7 +38,7 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
   _ChartPeriod _historicoPeriod = _ChartPeriod.dia;
 
   _TemperaturaMode _mode = _TemperaturaMode.resumo;
-  _ChartPeriod _period = _ChartPeriod.dia;
+  _ChartPeriod _period = _ChartPeriod.semanal;
   DateTime _referenceDate = DateTime.now();
   DateTime _medicaoDate = DateTime.now();
   TimeOfDay _medicaoTime = TimeOfDay.now();
@@ -62,7 +62,7 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
     _resumoFuture = ref.read(apiClientProvider).getResumoTemperatura(
           idosoId: idosoId,
           dataReferencia: _referenceDate,
-          periodo: _period.apiValue,
+          periodo: _period.summaryApiValue,
         );
   }
 
@@ -73,7 +73,7 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
       _resumoFuture = ref.read(apiClientProvider).getResumoTemperatura(
             idosoId: idosoId,
             dataReferencia: _referenceDate,
-            periodo: _period.apiValue,
+            periodo: _period.summaryApiValue,
           );
     });
   }
@@ -143,8 +143,20 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
     return Navigator.of(context, rootNavigator: true).context;
   }
 
+  void _showNoEditPermission() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Você não tem permissão para editar este registro.'),
+      ),
+    );
+  }
+
   Future<void> _salvar(IdosoResumo idoso) async {
     FocusScope.of(context).unfocus();
+    if (!idoso.podeEditarModulo('Temperatura')) {
+      _showNoEditPermission();
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _saving = true);
@@ -299,6 +311,10 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
                   period: _period,
                   onBack: () => context.go('/monitoramento'),
                   onRegistrar: () {
+                    if (!idoso.podeEditarModulo('Temperatura')) {
+                      _showNoEditPermission();
+                      return;
+                    }
                     setState(() => _mode = _TemperaturaMode.registrar);
                   },
                   onViewHistorico: () {
@@ -324,6 +340,13 @@ extension _ChartPeriodApi on _ChartPeriod {
       _ChartPeriod.dia => 'dia',
       _ChartPeriod.semanal => 'semanal',
       _ChartPeriod.mes => 'mes',
+    };
+  }
+
+  String get summaryApiValue {
+    return switch (this) {
+      _ChartPeriod.mes => 'mes',
+      _ChartPeriod.dia || _ChartPeriod.semanal => 'dia',
     };
   }
 }
@@ -372,6 +395,7 @@ class _ResumoTemperaturaView extends StatelessWidget {
             child: resumo.totalRegistros == 0
                 ? _PrimeiraMedicaoState(
                     idosoNome: idoso.nome,
+                    hasPreviousRecords: resumo.totalRegistrosGeral > 0,
                     onRegistrar: onRegistrar,
                   )
                 : ListView(
@@ -512,10 +536,12 @@ class _NavRow extends StatelessWidget {
 class _PrimeiraMedicaoState extends StatelessWidget {
   const _PrimeiraMedicaoState({
     required this.idosoNome,
+    required this.hasPreviousRecords,
     required this.onRegistrar,
   });
 
   final String idosoNome;
+  final bool hasPreviousRecords;
   final VoidCallback onRegistrar;
 
   @override
@@ -543,7 +569,9 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                'Faça a primeira medição',
+                hasPreviousRecords
+                    ? 'Faça a medição do dia'
+                    : 'Faça a primeira medição',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: adaptive(context, const Color(0xFF073248),
@@ -554,7 +582,9 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Ainda não há registros de temperatura para $idosoNome. Comece registrando a medição atual.',
+                hasPreviousRecords
+                    ? 'Ainda não há registros de temperatura hoje para $idosoNome. Registre a medição do dia e mantenha o acompanhamento atualizado.'
+                    : 'Ainda não há registros de temperatura para $idosoNome. Comece registrando a medição atual.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: adaptive(context, const Color(0xFF607178),
@@ -570,7 +600,11 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: onRegistrar,
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('Registrar primeira temperatura'),
+                  label: Text(
+                    hasPreviousRecords
+                        ? 'Registrar temperatura'
+                        : 'Registrar primeira temperatura',
+                  ),
                   style: _primaryButtonStyle(),
                 ),
               ),
@@ -777,10 +811,15 @@ class _ChartCard extends StatelessWidget {
 }
 
 class _PeriodSelector extends StatelessWidget {
-  const _PeriodSelector({required this.period, required this.onChanged});
+  const _PeriodSelector({
+    required this.period,
+    required this.onChanged,
+    this.showDay = false,
+  });
 
   final _ChartPeriod period;
   final ValueChanged<_ChartPeriod> onChanged;
+  final bool showDay;
 
   @override
   Widget build(BuildContext context) {
@@ -792,11 +831,12 @@ class _PeriodSelector extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _PeriodItem(
-            label: 'Dia',
-            selected: period == _ChartPeriod.dia,
-            onTap: () => onChanged(_ChartPeriod.dia),
-          ),
+          if (showDay)
+            _PeriodItem(
+              label: 'Dia',
+              selected: period == _ChartPeriod.dia,
+              onTap: () => onChanged(_ChartPeriod.dia),
+            ),
           _PeriodItem(
             label: 'Semanal',
             selected: period == _ChartPeriod.semanal,
@@ -1054,7 +1094,11 @@ class _HistoricoTemperaturaView extends StatelessWidget {
             showWordmark: true,
           ),
           const SizedBox(height: 12),
-          _PeriodSelector(period: period, onChanged: onPeriodChanged),
+          _PeriodSelector(
+            period: period,
+            onChanged: onPeriodChanged,
+            showDay: true,
+          ),
           const SizedBox(height: 14),
           Expanded(
             child: entradas.isEmpty

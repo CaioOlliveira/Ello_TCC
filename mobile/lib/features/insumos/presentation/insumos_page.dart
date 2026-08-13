@@ -87,7 +87,24 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
     _load();
   }
 
+  bool _canEditInsumos() {
+    return ref.read(selectedIdosoProvider)?.podeEditarModulo('Insumos') ??
+        false;
+  }
+
+  void _showNoEditPermission() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Você não tem permissão para editar insumos.'),
+      ),
+    );
+  }
+
   void _showCadastro() {
+    if (!_canEditInsumos()) {
+      _showNoEditPermission();
+      return;
+    }
     setState(() {
       _view = _InsumosView.cadastro;
       _selected = null;
@@ -111,6 +128,10 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
 
   void _showAtualizar() {
     if (_selected == null) return;
+    if (!_canEditInsumos()) {
+      _showNoEditPermission();
+      return;
+    }
     setState(() {
       _view = _InsumosView.atualizar;
       _error = null;
@@ -134,6 +155,10 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
   }
 
   Future<void> _deleteSelected() async {
+    if (!_canEditInsumos()) {
+      _showNoEditPermission();
+      return;
+    }
     final insumo = _selected;
     if (insumo == null) return;
 

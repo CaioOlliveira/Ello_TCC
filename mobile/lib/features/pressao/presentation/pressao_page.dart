@@ -40,7 +40,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
   _ChartPeriod _historicoPeriod = _ChartPeriod.dia;
 
   _PressaoMode _mode = _PressaoMode.resumo;
-  _ChartPeriod _period = _ChartPeriod.dia;
+  _ChartPeriod _period = _ChartPeriod.semanal;
   DateTime _referenceDate = DateTime.now();
   DateTime _medicaoDate = DateTime.now();
   TimeOfDay _medicaoTime = TimeOfDay.now();
@@ -66,7 +66,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     _resumoFuture = ref.read(apiClientProvider).getResumoPressao(
           idosoId: idosoId,
           dataReferencia: _referenceDate,
-          periodo: _period.apiValue,
+          periodo: _period.summaryApiValue,
         );
   }
 
@@ -77,7 +77,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
       _resumoFuture = ref.read(apiClientProvider).getResumoPressao(
             idosoId: idosoId,
             dataReferencia: _referenceDate,
-            periodo: _period.apiValue,
+            periodo: _period.summaryApiValue,
           );
     });
   }
@@ -147,8 +147,20 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     return Navigator.of(context, rootNavigator: true).context;
   }
 
+  void _showNoEditPermission() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Você não tem permissão para editar este registro.'),
+      ),
+    );
+  }
+
   Future<void> _salvar(IdosoResumo idoso) async {
     FocusScope.of(context).unfocus();
+    if (!idoso.podeEditarModulo('Pressao')) {
+      _showNoEditPermission();
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _saving = true);
@@ -185,7 +197,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel registrar pressão.')),
+        const SnackBar(content: Text('Não foi possível registrar pressão.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -307,6 +319,10 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
                   period: _period,
                   onBack: () => context.go('/monitoramento'),
                   onRegistrar: () {
+                    if (!idoso.podeEditarModulo('Pressao')) {
+                      _showNoEditPermission();
+                      return;
+                    }
                     setState(() => _mode = _PressaoMode.registrar);
                   },
                   onViewHistorico: () {
@@ -332,6 +348,13 @@ extension _ChartPeriodApi on _ChartPeriod {
       _ChartPeriod.dia => 'dia',
       _ChartPeriod.semanal => 'semanal',
       _ChartPeriod.mes => 'mes',
+    };
+  }
+
+  String get summaryApiValue {
+    return switch (this) {
+      _ChartPeriod.mes => 'mes',
+      _ChartPeriod.dia || _ChartPeriod.semanal => 'dia',
     };
   }
 }
@@ -380,6 +403,7 @@ class _ResumoPressaoView extends StatelessWidget {
             child: resumo.totalRegistros == 0
                 ? _PrimeiraMedicaoState(
                     idosoNome: idoso.nome,
+                    hasPreviousRecords: resumo.totalRegistrosGeral > 0,
                     onRegistrar: onRegistrar,
                   )
                 : ListView(
@@ -419,7 +443,7 @@ class _ResumoPressaoView extends StatelessWidget {
                         child: _NavRow(
                           icon: Icons.history_rounded,
                           iconColor: const Color(0xFF25A1B2),
-                          title: 'Ver historico de pressão',
+                          title: 'Ver histórico de pressão',
                           onTap: onViewHistorico,
                         ),
                       ),
@@ -520,10 +544,12 @@ class _NavRow extends StatelessWidget {
 class _PrimeiraMedicaoState extends StatelessWidget {
   const _PrimeiraMedicaoState({
     required this.idosoNome,
+    required this.hasPreviousRecords,
     required this.onRegistrar,
   });
 
   final String idosoNome;
+  final bool hasPreviousRecords;
   final VoidCallback onRegistrar;
 
   @override
@@ -551,7 +577,9 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                'Faça a primeira medição',
+                hasPreviousRecords
+                    ? 'Faça a medição do dia'
+                    : 'Faça a primeira medição',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: adaptive(context, const Color(0xFF073248),
@@ -562,7 +590,9 @@ class _PrimeiraMedicaoState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Ainda não ha registros de pressão para $idosoNome. Comece registrando a medicao atual.',
+                hasPreviousRecords
+                    ? 'Ainda não há registros de pressão hoje para $idosoNome. Registre a medição do dia e mantenha o acompanhamento atualizado.'
+                    : 'Ainda não há registros de pressão para $idosoNome. Comece registrando a medição atual.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: adaptive(context, const Color(0xFF607178),
@@ -578,7 +608,11 @@ class _PrimeiraMedicaoState extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: onRegistrar,
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('Registrar primeira pressão'),
+                  label: Text(
+                    hasPreviousRecords
+                        ? 'Registrar pressão'
+                        : 'Registrar primeira pressão',
+                  ),
                   style: _primaryButtonStyle(),
                 ),
               ),
@@ -799,10 +833,15 @@ class _ChartCard extends StatelessWidget {
 }
 
 class _PeriodSelector extends StatelessWidget {
-  const _PeriodSelector({required this.period, required this.onChanged});
+  const _PeriodSelector({
+    required this.period,
+    required this.onChanged,
+    this.showDay = false,
+  });
 
   final _ChartPeriod period;
   final ValueChanged<_ChartPeriod> onChanged;
+  final bool showDay;
 
   @override
   Widget build(BuildContext context) {
@@ -814,11 +853,12 @@ class _PeriodSelector extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _PeriodItem(
-            label: 'Dia',
-            selected: period == _ChartPeriod.dia,
-            onTap: () => onChanged(_ChartPeriod.dia),
-          ),
+          if (showDay)
+            _PeriodItem(
+              label: 'Dia',
+              selected: period == _ChartPeriod.dia,
+              onTap: () => onChanged(_ChartPeriod.dia),
+            ),
           _PeriodItem(
             label: 'Semanal',
             selected: period == _ChartPeriod.semanal,
@@ -1072,11 +1112,15 @@ class _HistoricoPressaoView extends StatelessWidget {
         children: [
           _PressaoHeader(
             onBack: onBack,
-            title: 'Historico da pressão',
+            title: 'Histórico da pressão',
             showWordmark: true,
           ),
           const SizedBox(height: 12),
-          _PeriodSelector(period: period, onChanged: onPeriodChanged),
+          _PeriodSelector(
+            period: period,
+            onChanged: onPeriodChanged,
+            showDay: true,
+          ),
           const SizedBox(height: 14),
           Expanded(
             child: entradas.isEmpty

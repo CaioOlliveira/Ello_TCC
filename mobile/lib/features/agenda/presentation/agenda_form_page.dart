@@ -236,14 +236,14 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                     suffixIcon: Icons.location_on_outlined,
                   ),
                   const SizedBox(height: 8),
-                  const _FormLabel('Frequencia'),
+                  const _FormLabel('Frequência'),
                   DropdownButtonFormField<String>(
                     initialValue: _frequencia,
                     decoration: _fieldDecoration(context),
                     items: const [
                       DropdownMenuItem(
                         value: 'Nao repetir',
-                        child: Text('Nao repetir'),
+                        child: Text('Não repetir'),
                       ),
                       DropdownMenuItem(
                         value: 'Diariamente',
@@ -267,7 +267,7 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  const _FormLabel('Observacoes'),
+                  const _FormLabel('Observações'),
                   _AgendaTextField(
                     controller: _observacoesController,
                     minLines: 4,

@@ -80,7 +80,7 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _erro = 'Nao foi possivel carregar os acessos dessa ficha.';
+        _erro = 'Não foi possível carregar os acessos dessa ficha.';
         _loading = false;
       });
     }
@@ -92,7 +92,7 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
     await Clipboard.setData(ClipboardData(text: codigo));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Codigo copiado.')),
+      const SnackBar(content: Text('Código copiado.')),
     );
   }
 
@@ -266,7 +266,7 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
               ),
               const SizedBox(height: 10),
               Text(
-                _erro ?? 'Nao foi possivel carregar.',
+                _erro ?? 'Não foi possível carregar.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: adaptive(context, const Color(0xFF4C4C4C),
@@ -585,7 +585,7 @@ class _CompartilharCard extends StatelessWidget {
             if (convite.expiraEm != null) ...[
               const SizedBox(height: 8),
               Text(
-                'O codigo expira em ${_formatarData(convite.expiraEm!)}.',
+                'O código expira em ${_formatarData(convite.expiraEm!)}.',
                 style: TextStyle(
                     color: adaptive(context, const Color(0xFF9B9B9B),
                         AppDarkColors.textMuted),
@@ -598,7 +598,7 @@ class _CompartilharCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onCopiar,
                 icon: const Icon(Icons.ios_share_rounded, size: 19),
-                label: const Text('Compartilhar codigo'),
+                label: const Text('Compartilhar código'),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF0E6F7E),
                   foregroundColor: Colors.white,

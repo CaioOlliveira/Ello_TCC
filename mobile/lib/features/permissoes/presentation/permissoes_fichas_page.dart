@@ -45,7 +45,7 @@ class PermissoesFichasPage extends ConsumerWidget {
                     StaggeredEntry(
                       index: 2,
                       child: Text(
-                        'Fichas em que voce é administrador. Toque em uma '
+                        'Fichas em que você é administrador. Toque em uma '
                         'para gerenciar acessos e permissões.',
                         style: TextStyle(
                           color: adaptive(context, const Color(0xFF4C4C4C),
@@ -77,7 +77,7 @@ class PermissoesFichasPage extends ConsumerWidget {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'Nao foi possivel carregar as fichas.',
+                                'Não foi possível carregar as fichas.',
                                 style: TextStyle(
                                   color: adaptive(
                                       context,

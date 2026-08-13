@@ -573,7 +573,7 @@ class _UsuarioCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  usuario?.nome ?? 'Usuario',
+                  usuario?.nome ?? 'Usuário',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -701,7 +701,7 @@ void _showPersonalInfoSheet(
               ),
               const SizedBox(height: 18),
               Text(
-                'Informacoes pessoais',
+                'Informações pessoais',
                 style: TextStyle(
                   color: adaptive(context, const Color(0xFF073248),
                       AppDarkColors.textPrimary),
@@ -734,7 +734,7 @@ void _showPersonalInfoSheet(
                     onEdit();
                   },
                   icon: const Icon(Icons.edit_outlined, size: 19),
-                  label: const Text('Editar informacoes'),
+                  label: const Text('Editar informações'),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0E6F7E),
                     foregroundColor: Colors.white,
