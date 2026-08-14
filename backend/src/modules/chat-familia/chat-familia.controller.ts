@@ -2,10 +2,18 @@ import type { RequestHandler } from "express";
 
 import { asyncHandler } from "../../common/utils/async-handler.js";
 import {
+  listarConversasFamiliaSchema,
   criarMensagemFamiliaSchema,
   listarMensagensFamiliaSchema,
 } from "./chat-familia.schemas.js";
 import { chatFamiliaService } from "./chat-familia.service.js";
+
+export const listarConversasFamilia: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const input = listarConversasFamiliaSchema.parse(req.query);
+    res.json(await chatFamiliaService.listarConversas(input));
+  },
+);
 
 export const listarMensagensFamilia: RequestHandler = asyncHandler(
   async (req, res) => {
@@ -18,5 +26,13 @@ export const criarMensagemFamilia: RequestHandler = asyncHandler(
   async (req, res) => {
     const input = criarMensagemFamiliaSchema.parse(req.body);
     res.status(201).json(await chatFamiliaService.criarMensagem(input));
+  },
+);
+
+export const apagarConversaFamilia: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const input = listarMensagensFamiliaSchema.parse(req.query);
+    await chatFamiliaService.apagarConversa(input);
+    res.status(204).send();
   },
 );

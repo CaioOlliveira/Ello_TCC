@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 export const alimentoConsumidoSchema = z.object({
-  nome: z.string().min(1, "Nome do alimento e obrigatorio."),
+  nome: z.string().min(1, "Nome do alimento é obrigatório."),
   pesoGramas: z.number().nonnegative().optional(),
   calorias: z.number().nonnegative().optional(),
 });
 
 export const criarRefeicaoSchema = z.object({
-  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
   tipoRefeicao: z.enum([
     "Cafe da manha",
     "Café da manhã",
@@ -24,15 +24,15 @@ export const criarRefeicaoSchema = z.object({
   alimentos: z
     .array(alimentoConsumidoSchema)
     .min(1, "Informe ao menos um alimento."),
-  aceitacao: z.string().min(1, "Aceitacao e obrigatoria."),
+  aceitacao: z.string().min(1, "Aceitação é obrigatória."),
   registradoEm: z
     .string()
     .datetime("Data deve estar em formato ISO.")
     .optional(),
-  dataConsumo: z.string().date("Data de consumo invalida.").optional(),
+  dataConsumo: z.string().date("Data de consumo inválida.").optional(),
   horaConsumo: z
     .string()
-    .regex(/^\d{2}:\d{2}$/, "Hora invalida.")
+    .regex(/^\d{2}:\d{2}$/, "Hora inválida.")
     .optional(),
   recordatorio: z.string().optional(),
   observacoes: z.string().optional(),

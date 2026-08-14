@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,14 +25,43 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
   var _peers = <FamiliaChatPeer>[];
   var _summaries = <String, _ChatSummary>{};
   String? _error;
+  Timer? _presenceTimer;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _load();
+      _startPresenceTimer();
+    });
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _presenceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPresenceTimer() {
+    _sendPresence();
+    _presenceTimer?.cancel();
+    _presenceTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _sendPresence();
+      _load(refreshingPresence: true);
+    });
+  }
+
+  Future<void> _sendPresence() async {
+    final usuario = ref.read(authSessionProvider);
+    if (usuario == null || usuario.id.isEmpty) return;
+    try {
+      await ref
+          .read(apiClientProvider)
+          .registrarPresenca(usuarioId: usuario.id);
+    } catch (_) {}
+  }
+
+  Future<void> _load({bool refreshingPresence = false}) async {
     final idoso = ref.read(selectedIdosoProvider);
     final usuario = ref.read(authSessionProvider);
 
@@ -55,15 +85,17 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
       return;
     }
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    if (!refreshingPresence) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
       final participantes = await ref
           .read(apiClientProvider)
-          .listarParticipantes(idosoId: idoso.id);
+          .listarConversasFamilia(idosoId: idoso.id, usuarioId: usuario.id);
       final peers = participantes
           .where((membro) => membro.usuarioId != usuario.id)
           .map(FamiliaChatPeer.fromMembro)
@@ -82,19 +114,19 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
       setState(() {
         _peers = peers;
         _summaries = summaries;
-        _loading = false;
+        if (!refreshingPresence) _loading = false;
       });
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
-        _loading = false;
+        if (!refreshingPresence) _loading = false;
         _error = error.message;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _loading = false;
-        _error = 'Nao foi possivel carregar os contatos.';
+        if (!refreshingPresence) _loading = false;
+        _error = 'Não foi possível carregar os contatos.';
       });
     }
   }
@@ -104,27 +136,14 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
     required String idosoId,
     required FamiliaChatPeer peer,
   }) async {
-    try {
-      final apiMessages =
-          await ref.read(apiClientProvider).listarMensagensFamilia(
-                idosoId: idosoId,
-                usuarioId: ownerId,
-                outroUsuarioId: peer.id,
-              );
-      final messages = apiMessages
-          .map((message) => _FamilyChatMessage.fromApi(message, ownerId))
-          .toList();
-      if (messages.isNotEmpty) {
-        await _FamilyChatStore.saveMessages(
-          ownerId: ownerId,
-          idosoId: idosoId,
-          peerId: peer.id,
-          messages: messages,
-        );
-        return _ChatSummary.fromMessage(messages.last);
-      }
-    } catch (_) {
-      // Se a API estiver indisponivel, a tela segue com o historico local.
+    final preview = peer.lastMessagePreview?.trim();
+    if ((preview != null && preview.isNotEmpty) || peer.lastMessageAt != null) {
+      return _ChatSummary(
+        preview: preview == null || preview.isEmpty
+            ? _fallbackPreview(peer)
+            : preview,
+        updatedAt: peer.lastMessageAt ?? DateTime.now(),
+      );
     }
 
     return _FamilyChatStore.summary(
@@ -165,11 +184,9 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
-              child: RefreshIndicator(
-                color: const Color(0xFF1598AA),
-                onRefresh: _load,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 102),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 16),
+                child: Column(
                   children: [
                     const _FamiliaChatHeader(),
                     const SizedBox(height: 18),
@@ -179,8 +196,8 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Container(
-                            width: 54,
-                            height: 54,
+                            width: 58,
+                            height: 58,
                             decoration: BoxDecoration(
                               color: adaptive(context, const Color(0xFFEAF8FA),
                                   AppDarkColors.tintedInfo),
@@ -198,20 +215,20 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Chat da Familia',
+                                  'Chat da Família',
                                   style: TextStyle(
                                     color: adaptive(
                                         context,
                                         const Color(0xFF00808F),
                                         AppDarkColors.textPrimary),
-                                    fontSize: 18,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.w900,
                                     height: 1,
                                   ),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  'Converse com as pessoas que cuidam junto com voce',
+                                  'Converse com as pessoas que cuidam junto com você',
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -219,7 +236,7 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
                                         context,
                                         const Color(0xFF64757C),
                                         AppDarkColors.textSecondary),
-                                    fontSize: 10.5,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -230,22 +247,46 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    Text(
-                      'Conversas',
-                      style: TextStyle(
-                        color: adaptive(context, const Color(0xFF00808F),
-                            AppDarkColors.textPrimary),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Conversas',
+                        style: TextStyle(
+                          color: adaptive(context, const Color(0xFF00808F),
+                              AppDarkColors.textPrimary),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 5),
-                    _ConversationPanel(
-                      loading: _loading,
-                      error: _error,
-                      peers: _peers,
-                      summaries: _summaries,
-                      onTap: _openChat,
+                    Expanded(
+                      child: RefreshIndicator(
+                        color: const Color(0xFF1598AA),
+                        onRefresh: _load,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.zero,
+                              children: [
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: constraints.maxHeight,
+                                  ),
+                                  child: _ConversationPanel(
+                                    loading: _loading,
+                                    error: _error,
+                                    peers: _peers,
+                                    summaries: _summaries,
+                                    onTap: _openChat,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -280,6 +321,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
   var _messages = <_FamilyChatMessage>[];
   _PendingImage? _pendingImage;
   late FamiliaChatPeer _peer;
+  Timer? _presenceTimer;
 
   @override
   void initState() {
@@ -290,14 +332,60 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
           name: 'Contato',
           role: 'cuidador',
         );
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadMessages());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMessages();
+      _startPresenceTimer();
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _presenceTimer?.cancel();
     super.dispose();
+  }
+
+  void _startPresenceTimer() {
+    _sendPresence();
+    _refreshPeerPresence();
+    _presenceTimer?.cancel();
+    _presenceTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _sendPresence();
+      _refreshPeerPresence();
+    });
+  }
+
+  Future<void> _sendPresence() async {
+    final usuario = ref.read(authSessionProvider);
+    if (usuario == null || usuario.id.isEmpty) return;
+    try {
+      await ref
+          .read(apiClientProvider)
+          .registrarPresenca(usuarioId: usuario.id);
+    } catch (_) {}
+  }
+
+  Future<void> _refreshPeerPresence() async {
+    final idoso = ref.read(selectedIdosoProvider);
+    if (idoso == null || idoso.id.isEmpty) return;
+    try {
+      final usuario = ref.read(authSessionProvider);
+      if (usuario == null || usuario.id.isEmpty) return;
+      final participantes = await ref
+          .read(apiClientProvider)
+          .listarConversasFamilia(idosoId: idoso.id, usuarioId: usuario.id);
+      MembroFicha? membro;
+      for (final participante in participantes) {
+        if (participante.usuarioId == _peer.id) {
+          membro = participante;
+          break;
+        }
+      }
+      if (membro == null || !mounted) return;
+      final membroAtualizado = membro;
+      setState(() => _peer = FamiliaChatPeer.fromMembro(membroAtualizado));
+    } catch (_) {}
   }
 
   Future<void> _loadMessages() async {
@@ -357,6 +445,137 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
     );
   }
 
+  bool get _canDeleteConversation {
+    final usuario = ref.read(authSessionProvider);
+    final idoso = ref.read(selectedIdosoProvider);
+    if (usuario == null || idoso == null) return false;
+    final responsavel = idoso.ehDono == true || idoso.criadoPorId == usuario.id;
+    return responsavel && _peer.removedFromFicha;
+  }
+
+  Future<void> _confirmDeleteConversation() async {
+    final usuario = ref.read(authSessionProvider);
+    final idoso = ref.read(selectedIdosoProvider);
+    if (usuario == null || idoso == null) return;
+    if (!_canDeleteConversation) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Remova o cuidador da ficha antes de apagar esta conversa.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Apagar conversa?'),
+        content: const Text(
+          'As mensagens desta conversa serão apagadas para a ficha. Esta ação só pode ser feita pelo responsável.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Apagar'),
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true) return;
+    if (!mounted) return;
+
+    final confirmationController = TextEditingController();
+    final typedConfirmation = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final canConfirm =
+                confirmationController.text.trim().toUpperCase() == 'APAGAR';
+
+            return AlertDialog(
+              title: const Text('Confirmação final'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Esta conversa será excluída para todos nesta ficha.',
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Para confirmar, digite APAGAR.',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: confirmationController,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'APAGAR',
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: canConfirm
+                      ? () => Navigator.of(dialogContext).pop(true)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFD73A3A),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Apagar definitivamente'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    confirmationController.dispose();
+    if (typedConfirmation != true) return;
+
+    try {
+      await ref.read(apiClientProvider).apagarConversaFamilia(
+            idosoId: idoso.id,
+            usuarioId: usuario.id,
+            outroUsuarioId: _peer.id,
+          );
+      await _FamilyChatStore.clearMessages(
+        ownerId: usuario.id,
+        idosoId: idoso.id,
+        peerId: _peer.id,
+      );
+      if (!mounted) return;
+      context.go('/chat');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível apagar esta conversa.')),
+      );
+    }
+  }
+
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty && _pendingImage == null) return;
@@ -372,6 +591,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
       fromMe: true,
       createdAt: DateTime.now(),
       imageDataUrl: pendingImage?.dataUrl,
+      status: _MessageStatus.pending,
     );
 
     setState(() {
@@ -477,7 +697,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel anexar a imagem.')),
+        const SnackBar(content: Text('Não foi possível anexar a imagem.')),
       );
     }
   }
@@ -509,7 +729,11 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
               constraints: const BoxConstraints(maxWidth: 430),
               child: Column(
                 children: [
-                  _ChatDetailHeader(peer: _peer),
+                  _ChatDetailHeader(
+                    peer: _peer,
+                    canDelete: _canDeleteConversation,
+                    onDelete: _confirmDeleteConversation,
+                  ),
                   Expanded(
                     child: Container(
                       margin: const EdgeInsets.fromLTRB(12, 16, 12, 10),
@@ -654,11 +878,8 @@ class _ConversationPanel extends StatelessWidget {
         ],
       ),
       child: loading
-          ? const SizedBox(
-              height: 118,
-              child: Center(
-                child: CircularProgressIndicator(color: Color(0xFF1598AA)),
-              ),
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1598AA)),
             )
           : error != null
               ? _PanelMessage(text: error!)
@@ -673,7 +894,7 @@ class _ConversationPanel extends StatelessWidget {
                           _ConversationTile(
                             peer: peers[index],
                             summary: summaries[peers[index].id],
-                            unreadCount: index == 0 ? 1 : 0,
+                            unreadCount: peers[index].unreadCount,
                             onTap: () => onTap(peers[index]),
                           ),
                           if (index < peers.length - 1)
@@ -700,23 +921,20 @@ class _PanelMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 118,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: adaptive(
-                context,
-                const Color(0xFF64757C),
-                AppDarkColors.textSecondary,
-              ),
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: adaptive(
+              context,
+              const Color(0xFF64757C),
+              AppDarkColors.textSecondary,
             ),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
@@ -745,11 +963,11 @@ class _ConversationTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 9, 0, 9),
+          padding: const EdgeInsets.fromLTRB(4, 12, 0, 12),
           child: Row(
             children: [
-              _PeerAvatar(peer: peer, size: 42),
-              const SizedBox(width: 10),
+              _PeerAvatarWithPresence(peer: peer, size: 48),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,13 +976,13 @@ class _ConversationTile extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            peer.name,
+                            peer.displayName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: adaptive(context, const Color(0xFF142B31),
                                   AppDarkColors.textPrimary),
-                              fontSize: 13,
+                              fontSize: 15,
                               fontWeight: FontWeight.w900,
                               height: 1,
                             ),
@@ -775,7 +993,7 @@ class _ConversationTile extends StatelessWidget {
                           peer.roleLabel,
                           style: const TextStyle(
                             color: Color(0xFF00808F),
-                            fontSize: 10.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w900,
                             height: 1,
                           ),
@@ -790,7 +1008,7 @@ class _ConversationTile extends StatelessWidget {
                       style: TextStyle(
                         color: adaptive(context, const Color(0xFF4D5D62),
                             AppDarkColors.textSecondary),
-                        fontSize: 11,
+                        fontSize: 13,
                         height: 1.15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -807,7 +1025,7 @@ class _ConversationTile extends StatelessWidget {
                     style: TextStyle(
                       color: adaptive(context, const Color(0xFF9AA6AA),
                           AppDarkColors.textMuted),
-                      fontSize: 9.5,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -841,101 +1059,94 @@ class _ConversationTile extends StatelessWidget {
 }
 
 class _ChatDetailHeader extends StatelessWidget {
-  const _ChatDetailHeader({required this.peer});
+  const _ChatDetailHeader({
+    required this.peer,
+    required this.canDelete,
+    required this.onDelete,
+  });
 
   final FamiliaChatPeer peer;
+  final bool canDelete;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 2, 14, 0),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(4, 6, 14, 8),
+      child: Row(
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  tooltip: 'Voltar',
-                  onPressed: () => context.go('/chat'),
-                  icon: const Icon(
-                    Icons.chevron_left_rounded,
-                    color: Color(0xFF008EA0),
-                    size: 28,
-                  ),
-                ),
-              ),
-              Text(
-                'ello',
-                style: TextStyle(
-                  color: adaptive(
-                    context,
-                    const Color(0xFF007C8A),
-                    AppDarkColors.textPrimary,
-                  ),
-                  fontSize: 28,
-                  height: 1,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
+          IconButton(
+            tooltip: 'Voltar',
+            onPressed: () => context.go('/chat'),
+            icon: const Icon(
+              Icons.chevron_left_rounded,
+              color: Color(0xFF008EA0),
+              size: 30,
+            ),
           ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              _PeerAvatar(peer: peer, size: 54),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          _PeerAvatarWithPresence(peer: peer, size: 48),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            peer.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: adaptive(context, const Color(0xFF006B78),
-                                  AppDarkColors.textPrimary),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              height: 1,
-                            ),
+                    Flexible(
+                      child: Text(
+                        peer.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: adaptive(
+                            context,
+                            const Color(0xFF006B78),
+                            AppDarkColors.textPrimary,
                           ),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          height: 1,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          peer.roleLabel,
-                          style: const TextStyle(
-                            color: Color(0xFF00808F),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            height: 1,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(width: 6),
                     Text(
-                      'Online',
-                      style: TextStyle(
-                        color: adaptive(
-                          context,
-                          const Color(0xFF66767B),
-                          AppDarkColors.textSecondary,
-                        ),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                      peer.roleLabel,
+                      style: const TextStyle(
+                        color: Color(0xFF00808F),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 5),
+                Text(
+                  _presenceText(peer),
+                  style: TextStyle(
+                    color: adaptive(
+                      context,
+                      const Color(0xFF66767B),
+                      AppDarkColors.textSecondary,
+                    ),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
+          if (canDelete)
+            IconButton(
+              tooltip: 'Apagar conversa',
+              onPressed: onDelete,
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: Color(0xFF008EA0),
+              ),
+            ),
         ],
       ),
     );
@@ -952,34 +1163,78 @@ class _PeerAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bytes = _decodeDataUrl(peer.photoUrl);
     final initials = _initials(peer.name);
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: adaptive(
-            context, const Color(0xFFEAF8FA), AppDarkColors.tintedInfo),
-        borderRadius: BorderRadius.circular(size >= 50 ? 9 : 7),
-        image: bytes == null
-            ? peer.photoUrl != null && peer.photoUrl!.startsWith('http')
-                ? DecorationImage(
-                    image: NetworkImage(peer.photoUrl!),
-                    fit: BoxFit.cover,
-                  )
-                : null
-            : DecorationImage(image: MemoryImage(bytes), fit: BoxFit.cover),
+    final photoUrl = peer.photoUrl?.trim();
+    ImageProvider<Object>? imageProvider;
+    if (bytes != null) {
+      imageProvider = MemoryImage(bytes);
+    } else if (photoUrl != null && photoUrl.startsWith('http')) {
+      imageProvider = NetworkImage(photoUrl);
+    }
+
+    return CircleAvatar(
+      radius: size / 2,
+      backgroundColor: adaptive(
+        context,
+        const Color(0xFFEAF8FA),
+        AppDarkColors.tintedInfo,
       ),
-      child: bytes == null &&
-              (peer.photoUrl == null || !peer.photoUrl!.startsWith('http'))
+      backgroundImage: imageProvider,
+      child: imageProvider == null
           ? Text(
               initials,
               style: TextStyle(
                 color: const Color(0xFF007C8A),
-                fontSize: size >= 50 ? 20 : 15,
+                fontSize: size >= 50 ? 21 : 16,
                 fontWeight: FontWeight.w900,
               ),
             )
           : null,
+    );
+  }
+}
+
+class _OnlineDot extends StatelessWidget {
+  const _OnlineDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 9,
+      height: 9,
+      decoration: BoxDecoration(
+        color: const Color(0xFF2DBE68),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: adaptive(context, Colors.white, AppDarkColors.bg),
+          width: 1.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _PeerAvatarWithPresence extends StatelessWidget {
+  const _PeerAvatarWithPresence({required this.peer, required this.size});
+
+  final FamiliaChatPeer peer;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        children: [
+          _PeerAvatar(peer: peer, size: size),
+          if (peer.online)
+            const Positioned(
+              right: 1,
+              bottom: 1,
+              child: _OnlineDot(),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -1028,8 +1283,8 @@ class _FamilyMessageBubble extends StatelessWidget {
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 250),
-        padding: const EdgeInsets.fromLTRB(12, 10, 10, 8),
+        constraints: const BoxConstraints(maxWidth: 300),
+        padding: const EdgeInsets.fromLTRB(14, 11, 11, 8),
         decoration: BoxDecoration(
           color: bubbleColor,
           borderRadius: BorderRadius.only(
@@ -1067,8 +1322,8 @@ class _FamilyMessageBubble extends StatelessWidget {
                       const Color(0xFF25363C),
                       AppDarkColors.textPrimary,
                     ),
-                    fontSize: 11.5,
-                    height: 1.25,
+                    fontSize: 15,
+                    height: 1.28,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -1082,17 +1337,13 @@ class _FamilyMessageBubble extends StatelessWidget {
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF9AA6AA),
                         AppDarkColors.textMuted),
-                    fontSize: 9,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (isMine) ...[
-                  const SizedBox(width: 3),
-                  const Icon(
-                    Icons.done_all_rounded,
-                    size: 12,
-                    color: Color(0xFF52AFC0),
-                  ),
+                  const SizedBox(width: 4),
+                  _MessageTicks(status: message.status),
                 ],
               ],
             ),
@@ -1167,6 +1418,26 @@ class _PendingFamilyImagePreview extends StatelessWidget {
   }
 }
 
+class _MessageTicks extends StatelessWidget {
+  const _MessageTicks({required this.status});
+
+  final _MessageStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final delivered = status != _MessageStatus.pending;
+    final color = status == _MessageStatus.read
+        ? const Color(0xFF1E9BDE)
+        : const Color(0xFF8FA1A7);
+
+    return Icon(
+      delivered ? Icons.done_all_rounded : Icons.done_rounded,
+      size: 16,
+      color: color,
+    );
+  }
+}
+
 class _FamilyInput extends StatelessWidget {
   const _FamilyInput({
     required this.controller,
@@ -1186,7 +1457,7 @@ class _FamilyInput extends StatelessWidget {
       children: [
         Expanded(
           child: Container(
-            height: 38,
+            constraints: const BoxConstraints(minHeight: 48),
             decoration: BoxDecoration(
               color: adaptive(context, Colors.white, AppDarkColors.surface),
               borderRadius: BorderRadius.circular(999),
@@ -1207,6 +1478,10 @@ class _FamilyInput extends StatelessWidget {
                   child: TextField(
                     controller: controller,
                     textInputAction: TextInputAction.send,
+                    keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.sentences,
+                    minLines: 1,
+                    maxLines: 4,
                     onSubmitted: (_) => onSend(),
                     decoration: InputDecoration(
                       border: InputBorder.none,
@@ -1218,7 +1493,7 @@ class _FamilyInput extends StatelessWidget {
                           const Color(0xFFC4CDD1),
                           AppDarkColors.textMuted,
                         ),
-                        fontSize: 11,
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1228,13 +1503,13 @@ class _FamilyInput extends StatelessWidget {
                         const Color(0xFF22343B),
                         AppDarkColors.textPrimary,
                       ),
-                      fontSize: 12,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Audio',
+                  tooltip: 'Áudio',
                   onPressed: () {},
                   icon: const Icon(
                     Icons.mic_none_rounded,
@@ -1254,12 +1529,12 @@ class _FamilyInput extends StatelessWidget {
             onTap: onSend,
             customBorder: const CircleBorder(),
             child: const SizedBox(
-              width: 42,
-              height: 42,
+              width: 48,
+              height: 48,
               child: Icon(
                 Icons.send_rounded,
                 color: Color(0xFF007C8A),
-                size: 22,
+                size: 24,
               ),
             ),
           ),
@@ -1275,6 +1550,12 @@ class FamiliaChatPeer {
     required this.name,
     required this.role,
     this.photoUrl,
+    this.status,
+    this.online = false,
+    this.lastSeenAt,
+    this.unreadCount = 0,
+    this.lastMessagePreview,
+    this.lastMessageAt,
   });
 
   factory FamiliaChatPeer.fromMembro(MembroFicha membro) {
@@ -1283,6 +1564,12 @@ class FamiliaChatPeer {
       name: membro.nome,
       role: membro.funcao ?? 'cuidador',
       photoUrl: membro.urlFoto,
+      status: membro.status,
+      online: membro.online,
+      lastSeenAt: membro.ultimoVistoEm,
+      unreadCount: membro.mensagensNaoLidas,
+      lastMessagePreview: membro.ultimaMensagemPreview,
+      lastMessageAt: membro.ultimaMensagemEm,
     );
   }
 
@@ -1290,9 +1577,19 @@ class FamiliaChatPeer {
   final String name;
   final String role;
   final String? photoUrl;
+  final String? status;
+  final bool online;
+  final DateTime? lastSeenAt;
+  final int unreadCount;
+  final String? lastMessagePreview;
+  final DateTime? lastMessageAt;
 
   String get roleLabel => _roleLabel(role);
+  String get displayName => _shortName(name);
+  bool get removedFromFicha => _statusIndicaRemocaoDaFicha(status);
 }
+
+enum _MessageStatus { pending, delivered, read }
 
 class _FamilyChatMessage {
   const _FamilyChatMessage({
@@ -1301,16 +1598,18 @@ class _FamilyChatMessage {
     required this.fromMe,
     required this.createdAt,
     this.imageDataUrl,
+    this.status = _MessageStatus.delivered,
   });
 
   factory _FamilyChatMessage.fromJson(Map<String, dynamic> json) {
     return _FamilyChatMessage(
       id: json['id']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
-      fromMe: json['fromMe'] == true,
+      fromMe: _boolValue(json['fromMe']),
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
       imageDataUrl: json['imageDataUrl']?.toString(),
+      status: _messageStatusFromJson(json['status']),
     );
   }
 
@@ -1318,12 +1617,16 @@ class _FamilyChatMessage {
     FamiliaChatMensagem message,
     String usuarioId,
   ) {
+    final fromMe = message.fromMe(usuarioId);
     return _FamilyChatMessage(
       id: message.id,
       text: message.conteudo,
-      fromMe: message.fromMe(usuarioId),
+      fromMe: fromMe,
       createdAt: message.criadoEm,
       imageDataUrl: message.imageDataUrl,
+      status: fromMe && message.lidoEm != null
+          ? _MessageStatus.read
+          : _MessageStatus.delivered,
     );
   }
 
@@ -1332,6 +1635,7 @@ class _FamilyChatMessage {
   final bool fromMe;
   final DateTime createdAt;
   final String? imageDataUrl;
+  final _MessageStatus status;
 
   Map<String, dynamic> toJson() {
     return {
@@ -1340,19 +1644,28 @@ class _FamilyChatMessage {
       'fromMe': fromMe,
       'createdAt': createdAt.toIso8601String(),
       if (imageDataUrl != null) 'imageDataUrl': imageDataUrl,
+      'status': status.name,
     };
   }
 }
 
+_MessageStatus _messageStatusFromJson(Object? value) {
+  final normalized = value?.toString();
+  return _MessageStatus.values.firstWhere(
+    (status) => status.name == normalized,
+    orElse: () => _MessageStatus.delivered,
+  );
+}
+
+bool _boolValue(Object? value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final normalized = value?.toString().trim().toLowerCase();
+  return normalized == 'true' || normalized == '1' || normalized == 'sim';
+}
+
 class _ChatSummary {
   const _ChatSummary({required this.preview, required this.updatedAt});
-
-  factory _ChatSummary.fromMessage(_FamilyChatMessage message) {
-    return _ChatSummary(
-      preview: message.text.isNotEmpty ? message.text : 'Foto enviada',
-      updatedAt: message.createdAt,
-    );
-  }
 
   final String preview;
   final DateTime updatedAt;
@@ -1407,6 +1720,15 @@ class _FamilyChatStore {
     );
   }
 
+  static Future<void> clearMessages({
+    required String ownerId,
+    required String idosoId,
+    required String peerId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_key(ownerId, idosoId, peerId));
+  }
+
   static Future<_ChatSummary> summary({
     required String ownerId,
     required String idosoId,
@@ -1436,14 +1758,49 @@ class _FamilyChatStore {
 String _fallbackPreview(FamiliaChatPeer peer) {
   final firstName = peer.name.split(' ').first;
   return peer.role == 'familiar'
-      ? '$firstName acompanha a ficha com voce.'
-      : '$firstName tambem cuida desta ficha.';
+      ? '$firstName acompanha a ficha com você.'
+      : '$firstName também cuida desta ficha.';
+}
+
+String _shortName(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.length <= 2) return parts.join(' ');
+  return '${parts.first} ${parts.last}';
+}
+
+String _presenceText(FamiliaChatPeer peer) {
+  if (peer.online) return 'Online';
+  final lastMessageAt = peer.lastSeenAt;
+  if (lastMessageAt == null) return 'Visto por último indisponível';
+
+  final now = DateTime.now();
+  final sameDay = lastMessageAt.year == now.year &&
+      lastMessageAt.month == now.month &&
+      lastMessageAt.day == now.day;
+  final time = _formatTime(lastMessageAt);
+  return sameDay
+      ? 'Visto por último às $time'
+      : 'Visto por último ${_formatDate(lastMessageAt)} às $time';
 }
 
 String _roleLabel(String? role) {
   final normalized = role?.toLowerCase().trim();
   if (normalized == 'familiar') return 'Familiar';
   return 'Cuidador';
+}
+
+bool _statusIndicaRemocaoDaFicha(String? status) {
+  final normalized = status?.trim().toLowerCase();
+  if (normalized == null || normalized.isEmpty) return false;
+
+  return normalized == 'removido' ||
+      normalized == 'revogado' ||
+      normalized == 'recusado' ||
+      normalized == 'inativo';
 }
 
 String _initials(String name) {
@@ -1461,6 +1818,11 @@ String _initials(String name) {
 String _formatTime(DateTime date) {
   return '${date.hour.toString().padLeft(2, '0')}:'
       '${date.minute.toString().padLeft(2, '0')}';
+}
+
+String _formatDate(DateTime date) {
+  return '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}';
 }
 
 String _mimeTypeFromPath(String path) {

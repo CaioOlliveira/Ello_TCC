@@ -8,12 +8,14 @@ class ApiEndpoints {
   static const cadastro = '/auth/cadastro';
   static const alterarSenha = '/auth/senha';
   static const chatFamiliaMensagens = '/chat-familia/mensagens';
+  static const chatFamiliaConversas = '/chat-familia/conversas';
   static const idosos = '/idosos';
   static const idososAdministrados = '/idosos/administrados';
   static const convites = '/convites';
   static const convitesAceitar = '/convites/aceitar';
   static const membrosParticipantes = '/membros/participantes';
   static const membrosPendentes = '/membros/pendentes';
+  static const membrosPresenca = '/membros/presenca';
   static const humores = '/registros/humores';
   static const hidratacoes = '/registros/hidratacoes';
   static const agenda = '/agenda';

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -344,7 +345,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       return;
     }
     if (idoso == null || idoso.id.isEmpty) {
-      _addErrorMessage('Selecione uma pessoa idosa para gerar o relatorio.');
+      _addErrorMessage('Selecione uma pessoa idosa para gerar o relatório.');
       return;
     }
 
@@ -373,7 +374,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       _addErrorMessage(error.message);
     } catch (_) {
       if (!mounted) return;
-      _addErrorMessage('Não foi possível carregar o relatorio da IA.');
+      _addErrorMessage('Não foi possível carregar o relatório da IA.');
     } finally {
       if (mounted) setState(() => _loadingReport = false);
     }
@@ -425,6 +426,15 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
     );
   }
 
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+
+    context.go('/dashboard');
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<IdosoResumo?>(selectedIdosoProvider, (previous, next) {
@@ -466,6 +476,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
                   _ChatHeader(
                     title: title,
                     loading: _loadingHistory || _openingConversation,
+                    onBack: _goBack,
                     onHistory: _showHistory,
                     onNewChat: _startNewChat,
                   ),
@@ -557,7 +568,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
     final name = idoso == null || idoso.nome.trim().isEmpty
         ? idoso?.elderText.selectedWithArticle ?? 'a pessoa idosa selecionada'
         : idoso.nome.trim();
-    return 'Ola, cuidador! Analisei os dados de $name nos ultimos dias e preparei o relatorio de saude geral. Quer dar uma olhada?';
+    return 'Olá, cuidador! Analisei os dados de $name nos últimos dias e preparei o relatório de saúde geral. Quer dar uma olhada?';
   }
 }
 
@@ -578,6 +589,7 @@ bool _isAffirmative(String text) {
       normalized.contains('mostrar resumo') ||
       normalized.contains('ver resumo') ||
       normalized.contains('ver relatorio') ||
+      normalized.contains('ver relatório') ||
       normalized.contains('ver relatório');
 }
 
@@ -604,12 +616,14 @@ class _ChatHeader extends StatelessWidget {
   const _ChatHeader({
     required this.title,
     required this.loading,
+    required this.onBack,
     required this.onHistory,
     required this.onNewChat,
   });
 
   final String title;
   final bool loading;
+  final VoidCallback onBack;
   final VoidCallback onHistory;
   final VoidCallback onNewChat;
 
@@ -629,6 +643,8 @@ class _ChatHeader extends StatelessWidget {
       ),
       child: AppPageHeader(
         title: title,
+        onBack: onBack,
+        trailingWidth: 96,
         leading: IconButton(
           tooltip: 'Histórico',
           onPressed: loading ? null : onHistory,
@@ -834,7 +850,7 @@ class _InitialAnalysisPrompt extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Text(
-                    'Ola, cuidador! Analisei os dados de $name nos ultimos dias e preparei o relatorio de saude geral. Quer dar uma olhada?',
+                    'Olá, cuidador! Analisei os dados de $name nos últimos dias e preparei o relatório de saúde geral. Quer dar uma olhada?',
                     style: TextStyle(
                       color: adaptive(context, const Color(0xFF101820),
                           AppDarkColors.textPrimary),
@@ -1117,7 +1133,7 @@ class _PendingImagePreview extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Imagem anexada para analise',
+              'Imagem anexada para análise',
               style: TextStyle(
                 color: adaptive(context, const Color(0xFF003B4F),
                     AppDarkColors.textPrimary),

@@ -242,7 +242,7 @@ class _AgendaFormPageState extends State<AgendaFormPage> {
                     decoration: _fieldDecoration(context),
                     items: const [
                       DropdownMenuItem(
-                        value: 'Nao repetir',
+                        value: 'Não repetir',
                         child: Text('Não repetir'),
                       ),
                       DropdownMenuItem(

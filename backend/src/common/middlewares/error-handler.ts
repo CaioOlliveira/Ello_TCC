@@ -40,7 +40,7 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
       return res.status(503).json({
         codigo: "BANCO_AUTENTICACAO_INVALIDA",
         mensagem:
-          "Falha ao autenticar no banco de dados. Revise usuario, senha e encode da DATABASE_URL no .env.",
+          "Falha ao autenticar no banco de dados. Revise usuário, senha e encode da DATABASE_URL no .env.",
       });
     }
 
@@ -51,12 +51,12 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
       return res.status(503).json({
         codigo: "BANCO_INDISPONIVEL",
         mensagem:
-          "Nao foi possivel conectar ao banco de dados. Verifique a DATABASE_URL, a rede e se o Supabase esta ativo.",
+          "Não foi possível conectar ao banco de dados. Verifique a DATABASE_URL, a rede e se o Supabase está ativo.",
       });
     }
   }
 
-  console.error("Erro nao tratado na API:", error);
+  console.error("Erro não tratado na API:", error);
 
   return res.status(500).json({
     codigo: "ERRO_INTERNO",

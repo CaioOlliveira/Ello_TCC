@@ -14,7 +14,7 @@ import type {
 } from "./ia.schemas.js";
 
 const personalidade = `
-Voce e a assistente auxiliar do app Ello, um aplicativo de cuidado e monitoramento de idosos. Sua funcao e ajudar cuidadores e familiares a organizar rotinas, entender registros basicos, lembrar tarefas e explicar informacoes do app de forma simples. Voce nao e medica e nao deve substituir atendimento profissional. Em situacoes de emergencia, sintomas graves ou duvidas clinicas importantes, oriente procurar um medico, hospital ou servico de emergencia. Responda sempre com linguagem clara, acolhedora e objetiva.
+Você é a assistente auxiliar do app Ello, um aplicativo de cuidado e monitoramento de idosos. Sua função é ajudar cuidadores e familiares a organizar rotinas, entender registros básicos, lembrar tarefas e explicar informações do app de forma simples. Você não é médica e não deve substituir atendimento profissional. Em situações de emergência, sintomas graves ou dúvidas clínicas importantes, oriente procurar um médico, hospital ou serviço de emergência. Responda sempre com linguagem clara, acolhedora e objetiva.
 `.trim();
 
 type ConversaIaRow = {
@@ -50,6 +50,8 @@ export const iaService = {
 
   async listarConversas(input: ListarConversasIaInput) {
     await garantirTabelasIa();
+    await validarAcessoContextoIdoso(input.idosoId, input.usuarioId);
+
     const params: unknown[] = [input.usuarioId];
     const idosoFilter = input.idosoId
       ? `and idoso_id = $${params.push(input.idosoId)}`
@@ -71,6 +73,8 @@ export const iaService = {
 
   async criarConversa(input: CriarConversaIaInput) {
     await garantirTabelasIa();
+    await validarAcessoContextoIdoso(input.idosoId, input.usuarioId);
+
     const result = await getPool().query<ConversaIaRow>(
       `
         insert into conversas_ia (id, usuario_id, idoso_id, titulo)
@@ -87,6 +91,7 @@ export const iaService = {
     await garantirTabelasIa();
     const conversa = await buscarConversaDoUsuario(conversaId, input.usuarioId);
     validarConversaDoIdoso(conversa, input.idosoId);
+    await validarAcessoContextoIdoso(conversa.idoso_id, input.usuarioId);
 
     const result = await getPool().query<MensagemIaRow>(
       `
@@ -107,7 +112,7 @@ export const iaService = {
     if (!isGeminiKeyConfigured(env.GEMINI_API_KEY)) {
       throw new AppError(
         "GEMINI_API_KEY_AUSENTE",
-        "A IA ainda nao foi configurada. Adicione a chave do Gemini no .env do backend.",
+        "A IA ainda não foi configurada. Adicione a chave do Gemini no .env do backend.",
         503,
       );
     }
@@ -123,6 +128,9 @@ export const iaService = {
         ).dados;
     validarConversaDoIdoso(conversa, input.idosoId);
 
+    const idosoId = input.idosoId ?? conversa.idoso_id;
+    await validarAcessoContextoIdoso(idosoId, input.usuarioId);
+
     const conteudoUsuario = input.anexos?.length
       ? `${input.mensagem || "Analise esta imagem."}\n[imagem anexada]`
       : input.mensagem;
@@ -135,17 +143,20 @@ export const iaService = {
     );
 
     const historico = await buscarMensagens(conversa.id);
-    const idosoId = input.idosoId ?? conversa.idoso_id;
     const [usuarioNome, idosoNome, contextoIdoso] = await Promise.all([
       buscarNomeUsuario(input.usuarioId),
       idosoId ? buscarNomeIdoso(idosoId) : Promise.resolve(null),
-      obterContextoInternoComFallback(idosoId, 2500),
+      obterContextoInternoComFallback(idosoId, 2500, input.usuarioId),
     ]);
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
     try {
       const response = await ai.models.generateContent({
         model: env.GEMINI_MODEL,
+        config: {
+          maxOutputTokens: 260,
+          temperature: 0.4,
+        },
         contents: [
           {
             role: "user",
@@ -169,7 +180,7 @@ export const iaService = {
       if (!resposta) {
         throw new AppError(
           "IA_RESPOSTA_VAZIA",
-          "A IA nao conseguiu gerar uma resposta agora.",
+          "A IA não conseguiu gerar uma resposta agora.",
           502,
         );
       }
@@ -204,14 +215,20 @@ export const iaService = {
 
       throw new AppError(
         "IA_INDISPONIVEL",
-        "Nao foi possivel falar com a IA agora. Tente novamente em instantes.",
+        "Não foi possível falar com a IA agora. Tente novamente em instantes.",
         502,
       );
     }
   },
 
   async obterRelatorioInicial(input: RelatorioInicialIaInput) {
-    const contexto = await obterContextoInternoComFallback(input.idosoId, 8000);
+    await validarAcessoContextoIdoso(input.idosoId, input.usuarioId);
+
+    const contexto = await obterContextoInternoComFallback(
+      input.idosoId,
+      8000,
+      input.usuarioId,
+    );
     return montarRelatorioInicial(contexto);
   },
 };
@@ -322,6 +339,41 @@ async function buscarNomeIdoso(idosoId: string) {
   return result.rows[0]?.nome ?? null;
 }
 
+async function validarAcessoContextoIdoso(
+  idosoId?: string | null,
+  usuarioId?: string | null,
+) {
+  if (!idosoId || !usuarioId || !isDatabaseEnabled) return;
+
+  const result = await getPool().query<{ permitido: boolean }>(
+    `
+      select (
+        exists (
+          select 1
+          from fichas_idosos
+          where id = $1 and criado_por_id = $2
+        )
+        or exists (
+          select 1
+          from membros_ficha
+          where idoso_id = $1
+            and usuario_id = $2
+            and status = 'ativo'
+        )
+      ) as permitido
+    `,
+    [idosoId, usuarioId],
+  );
+
+  if (!result.rows[0]?.permitido) {
+    throw new AppError(
+      "IA_SEM_ACESSO_FICHA",
+      "Usuário sem acesso a esta ficha.",
+      403,
+    );
+  }
+}
+
 async function buscarConversaDoUsuario(conversaId: string, usuarioId: string) {
   const result = await getPool().query<ConversaIaRow>(
     `
@@ -337,7 +389,7 @@ async function buscarConversaDoUsuario(conversaId: string, usuarioId: string) {
   if (!conversa) {
     throw new AppError(
       "CONVERSA_IA_NAO_ENCONTRADA",
-      "Conversa de IA nao encontrada.",
+      "Conversa de IA não encontrada.",
       404,
     );
   }
@@ -459,20 +511,23 @@ function montarPrompt(
 
   return [
     personalidade,
-    "Responda em portugues do Brasil.",
-    "Nao comece toda resposta com 'Ola'. Cumprimente apenas quando fizer sentido natural no inicio de uma conversa.",
+    "Responda em português do Brasil.",
+    "Não comece toda resposta com 'Olá'. Cumprimente apenas quando fizer sentido natural no início de uma conversa.",
+    "Seja breve: responda em até 5 linhas curtas, com no máximo 3 bullets quando listar pontos. Só ultrapasse isso se o usuário pedir detalhes, relatório ou passo a passo.",
+    "Priorize orientação prática e direta. Evite repetir muitos dados do contexto; cite apenas o que for essencial para responder.",
     usuarioNome
-      ? `Voce esta conversando com o cuidador/familiar chamado ${usuarioNome}. Trate-o pelo primeiro nome quando fizer sentido, nunca por um identificador tecnico ou codigo.`
-      : "Nao foi informado o nome do cuidador/familiar; nao invente um nome nem use codigos ou identificadores para se referir a ele.",
+      ? `Você está conversando com o cuidador/familiar chamado ${usuarioNome}. Trate-o pelo primeiro nome quando fizer sentido, nunca por um identificador técnico ou código.`
+      : "Não foi informado o nome do cuidador/familiar; não invente um nome nem use códigos ou identificadores para se referir a ele.",
     pessoaRelacionada,
     temImagem
-      ? "A mensagem atual tem uma imagem anexada. Analise visualmente apenas o que for visivel, descreva com cautela e nao de diagnostico por imagem. Se houver risco, oriente procurar um profissional."
+      ? "A mensagem atual tem uma imagem anexada. Analise visualmente apenas o que for visível, descreva com cautela e não dê diagnóstico por imagem. Se houver risco, oriente procurar um profissional."
       : "",
     contextoInterno
       ? [
-          "Contexto interno do app Ello, em JSON. Use estes dados para responder perguntas do cuidador, mas nao diga que recebeu um JSON e nao exponha IDs internos.",
-          "Nao invente dados ausentes. Quando os registros forem insuficientes, diga isso com naturalidade.",
-          "Para dados clinicos, explique tendencias basicas e recomende acompanhamento profissional quando houver risco, duvida clinica ou valores preocupantes.",
+          "Contexto interno do app Ello, em JSON. Use estes dados para responder perguntas do cuidador, mas não diga que recebeu um JSON e não exponha IDs internos.",
+          "Não invente dados ausentes. Quando os registros forem insuficientes, diga isso com naturalidade.",
+          "Sobre chat da família: use somente mensagens presentes no contexto. Se o usuário perguntar sobre conversa privada entre outras pessoas que não aparece no contexto, diga que não tem acesso a essa conversa.",
+          "Para dados clínicos, explique tendências básicas e recomende acompanhamento profissional quando houver risco, dúvida clínica ou valores preocupantes.",
           JSON.stringify(contextoInterno),
         ].join("\n")
       : "",
@@ -491,12 +546,12 @@ function descreverPessoaRelacionada(
   const sexo = textoOuPadrao(idoso?.sexo, "").toLowerCase();
 
   if (sexo === "feminino") {
-    return `A conversa esta relacionada a idosa chamada ${idosoNome}.`;
+    return `A conversa está relacionada à idosa chamada ${idosoNome}.`;
   }
   if (sexo === "masculino") {
-    return `A conversa esta relacionada ao idoso chamado ${idosoNome}.`;
+    return `A conversa está relacionada ao idoso chamado ${idosoNome}.`;
   }
-  return `A conversa esta relacionada a pessoa idosa chamada ${idosoNome}.`;
+  return `A conversa está relacionada à pessoa idosa chamada ${idosoNome}.`;
 }
 
 function montarPartesImagem(
@@ -524,18 +579,20 @@ function limparMarkdownResposta(texto: string) {
 async function obterContextoInternoComFallback(
   idosoId?: string | null,
   timeoutMs = 4000,
+  usuarioId?: string | null,
 ) {
   if (!idosoId || !isDatabaseEnabled) return null;
 
-  const cached = contextoCache.get(idosoId);
+  const cacheKey = `${idosoId}:${usuarioId ?? "anonimo"}`;
+  const cached = contextoCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
   try {
     const contexto = await withTimeout(
-      montarContextoInternoIdoso(idosoId),
+      montarContextoInternoIdoso(idosoId, usuarioId),
       timeoutMs,
     );
-    contextoCache.set(idosoId, {
+    contextoCache.set(cacheKey, {
       value: contexto,
       expiresAt: Date.now() + contextoTtlMs,
     });
@@ -585,7 +642,7 @@ function montarRelatorioInicial(contexto: Record<string, unknown> | null) {
   const equipamentosCadastrados = lerArray(equipamentos?.cadastrados);
 
   return {
-    mensagemInicial: `Ola, cuidador! Analisei os dados de ${nome} nos ultimos dias e preparei um relatorio geral. Quer dar uma olhada?`,
+    mensagemInicial: `Olá, cuidador! Analisei os dados de ${nome} nos últimos dias e preparei um relatório geral. Quer dar uma olhada?`,
     secoes: [
       {
         tipo: "glicemia",
@@ -640,18 +697,18 @@ function montarRespostaFallbackIa(
     normalizada.includes("aliment")
   ) {
     return [
-      "Consegui consultar os registros do app, mas a resposta completa da IA ficou indisponivel por alguns instantes. Pelo resumo recente:",
+      "Consegui consultar os registros do app, mas a resposta completa da IA ficou indisponível por alguns instantes. Pelo resumo recente:",
       textoRelatorio,
       normalizada.includes("glicemia") || normalizada.includes("aliment")
-        ? "Sobre alimentacao e glicemia, registre a refeicao e acompanhe as proximas medicoes. Se houver sintomas ou valores fora da faixa com frequencia, procure orientacao profissional."
-        : "Use isso como apoio de acompanhamento, nao como diagnostico. Em caso de sintomas ou mudancas importantes, procure um profissional de saude.",
+        ? "Sobre alimentação e glicemia, registre a refeição e acompanhe as próximas medições. Se houver sintomas ou valores fora da faixa com frequência, procure orientação profissional."
+        : "Use isso como apoio de acompanhamento, não como diagnóstico. Em caso de sintomas ou mudanças importantes, procure um profissional de saúde.",
     ].join("\n\n");
   }
 
   return [
-    "Consegui consultar os registros recentes, mas a resposta completa da IA ficou indisponivel por alguns instantes.",
+    "Consegui consultar os registros recentes, mas a resposta completa da IA ficou indisponível por alguns instantes.",
     textoRelatorio,
-    "Pode tentar perguntar de novo em seguida; se for algo urgente ou clinico, procure orientacao profissional.",
+    "Pode tentar perguntar de novo em seguida; se for algo urgente ou clínico, procure orientação profissional.",
   ].join("\n\n");
 }
 
@@ -733,7 +790,7 @@ function compactarContextoParaPrompt(contexto: Record<string, unknown> | null) {
 function montarTextoGlicemia(resumo: Record<string, unknown> | null) {
   const total = numeroOuZero(resumo?.total);
   if (total === 0) {
-    return "Ainda nao ha registros recentes suficientes para avaliar a glicemia. Registrar medicoes com frequencia ajuda a identificar tendencias.";
+    return "Ainda não há registros recentes suficientes para avaliar a glicemia. Registrar medições com frequência ajuda a identificar tendências.";
   }
 
   const media = numeroOuZero(resumo?.media);
@@ -746,10 +803,10 @@ function montarTextoGlicemia(resumo: Record<string, unknown> | null) {
   );
 
   if (foraDaFaixa === 0) {
-    return `O controle recente parece estavel: foram ${total} medicao(oes), media de ${media} mg/dL e nenhuma fora da faixa padrao registrada.`;
+    return `O controle recente parece estável: foram ${total} medição(ões), média de ${media} mg/dL e nenhuma fora da faixa padrão registrada.`;
   }
 
-  return `Foram ${total} medicao(oes), media de ${media} mg/dL e ${estabilidade}% dentro da faixa padrao. Observe ${foraDaFaixa} registro(s) fora da faixa e acompanhe com um profissional se persistir.`;
+  return `Foram ${total} medição(ões), média de ${media} mg/dL e ${estabilidade}% dentro da faixa padrão. Observe ${foraDaFaixa} registro(s) fora da faixa e acompanhe com um profissional se persistir.`;
 }
 
 function montarTextoHumor(
@@ -757,11 +814,11 @@ function montarTextoHumor(
   agenda: Record<string, unknown>[],
 ) {
   if (humores.length === 0) {
-    return "Ainda nao ha registros recentes de humor. Registrar mudancas de comportamento ajuda a cruzar informacoes com consultas, medicacoes e rotina.";
+    return "Ainda não há registros recentes de humor. Registrar mudanças de comportamento ajuda a cruzar informações com consultas, medicações e rotina.";
   }
 
   const ultimo = humores[0];
-  const humorAtual = textoOuPadrao(ultimo.humor, "nao informado");
+  const humorAtual = textoOuPadrao(ultimo.humor, "não informado");
   const observacao = textoOuPadrao(ultimo.observacoes, "");
   const compromisso = agenda.find(
     (item) => textoOuPadrao(item.titulo, "").length > 0,
@@ -769,9 +826,9 @@ function montarTextoHumor(
   const extra = compromisso
     ? ` Ha compromisso registrado: ${textoOuPadrao(compromisso.titulo, "agenda")}.`
     : "";
-  const obs = observacao ? ` Observacao recente: ${observacao}.` : "";
+  const obs = observacao ? ` Observação recente: ${observacao}.` : "";
 
-  return `O humor mais recente foi "${humorAtual}".${obs}${extra} Continue observando padroes entre rotina, descanso, alimentacao e medicacoes.`;
+  return `O humor mais recente foi "${humorAtual}".${obs}${extra} Continue observando padrões entre rotina, descanso, alimentação e medicações.`;
 }
 
 function montarTextoDica({
@@ -793,18 +850,18 @@ function montarTextoDica({
   });
 
   if (ultimaInsulina) {
-    return `Mantenha os registros de glicemia e insulina alinhados. Confira horarios, alimentacao e sintomas de ${nome} antes de tirar conclusoes.`;
+    return `Mantenha os registros de glicemia e insulina alinhados. Confira horários, alimentação e sintomas de ${nome} antes de tirar conclusões.`;
   }
 
   if (ultimaRefeicao) {
-    return `Acompanhe se ${nome} esta se alimentando e hidratando bem ao longo do dia. Pequenos registros consistentes deixam a rotina mais segura.`;
+    return `Acompanhe se ${nome} está se alimentando e hidratando bem ao longo do dia. Pequenos registros consistentes deixam a rotina mais segura.`;
   }
 
   if (equipamentoAtencao) {
-    return `Revise os equipamentos de apoio e mantenha manutencoes em dia, principalmente os marcados com alerta ou fora de uso.`;
+    return `Revise os equipamentos de apoio e mantenha manutenções em dia, principalmente os marcados com alerta ou fora de uso.`;
   }
 
-  return `Continue registrando a rotina de ${nome}. Quanto mais completo o historico, melhores ficam as analises do cuidado diario.`;
+  return `Continue registrando a rotina de ${nome}. Quanto mais completo o histórico, melhores ficam as análises do cuidado diário.`;
 }
 
 function lerObjeto(value: unknown) {
@@ -833,6 +890,7 @@ function numeroOuZero(value: unknown) {
 
 async function montarContextoInternoIdoso(
   idosoId?: string | null,
+  usuarioId?: string | null,
 ): Promise<Record<string, unknown> | null> {
   if (!idosoId || !isDatabaseEnabled) return null;
 
@@ -859,6 +917,7 @@ async function montarContextoInternoIdoso(
     equipamentos,
     manutencoesEquipamentos,
     historicoAlteracoes,
+    conversasFamiliaDoUsuario,
   ] = await Promise.all([
     consultarLinhas(
       `
@@ -1108,6 +1167,31 @@ async function montarContextoInternoIdoso(
       `,
       [idosoId, desde14Dias.toISOString()],
     ),
+    usuarioId
+      ? consultarLinhas(
+          `
+            select
+              case
+                when m.remetente_id = $2 then destinatario.nome
+                else remetente.nome
+              end as conversa_com,
+              case
+                when m.remetente_id = $2 then 'usuario_atual'
+                else 'outro_participante'
+              end as remetente,
+              m.conteudo,
+              m.criado_em
+            from mensagens_chat_familia m
+            join usuarios remetente on remetente.id = m.remetente_id
+            join usuarios destinatario on destinatario.id = m.destinatario_id
+            where m.idoso_id = $1
+              and (m.remetente_id = $2 or m.destinatario_id = $2)
+            order by m.criado_em desc
+            limit 24
+          `,
+          [idosoId, usuarioId],
+        )
+      : Promise.resolve([]),
   ]);
 
   const glicemias = sanitizarLinhas(glicemia);
@@ -1118,7 +1202,7 @@ async function montarContextoInternoIdoso(
   return sanitizarObjeto({
     geradoEm: now.toISOString(),
     janelaPrincipal:
-      "ultimos 30 dias; alimentacao, hidratacao e historico em janelas menores quando indicado",
+      "últimos 30 dias; alimentação, hidratação e histórico em janelas menores quando indicado",
     idoso: sanitizarLinhas(idoso)[0] ?? null,
     glicemia: {
       resumo: resumirGlicemia(valoresGlicemia),
@@ -1160,6 +1244,11 @@ async function montarContextoInternoIdoso(
       manutencoesRecentes: sanitizarLinhas(manutencoesEquipamentos),
     },
     historicoAlteracoesRecentes: sanitizarLinhas(historicoAlteracoes),
+    conversasFamiliaDoUsuario: {
+      regraPrivacidade:
+        "Somente mensagens de conversas em que o usuário atual participa. Não há acesso a conversas privadas entre outras pessoas.",
+      mensagensRecentes: sanitizarLinhas(conversasFamiliaDoUsuario),
+    },
   }) as Record<string, unknown>;
 }
 

@@ -21,7 +21,7 @@ import type {
 const table = "registros_oxigenacao";
 const notFound = [
   "OXIGENACAO_NAO_ENCONTRADA",
-  "Registro de oxigenacao nao encontrado.",
+  "Registro de oxigenação não encontrado.",
 ] as const;
 
 const faixaPadrao = {
@@ -110,8 +110,8 @@ const classificarOxigenacao = (saturacao?: number | null) => {
   if (saturacao == null) {
     return {
       status: "sem_registro",
-      titulo: "Sem medicao registrada",
-      mensagem: "Registre a primeira oxigenacao para gerar alertas.",
+      titulo: "Sem medição registrada",
+      mensagem: "Registre a primeira oxigenação para gerar alertas.",
       cor: "neutro",
     };
   }
@@ -120,7 +120,7 @@ const classificarOxigenacao = (saturacao?: number | null) => {
     return {
       status: "dentro",
       titulo: "Dentro da faixa configurada",
-      mensagem: "Dentro da faixa configurada pelo profissional de saude.",
+      mensagem: "Dentro da faixa configurada pelo profissional de saúde.",
       cor: "ok",
     };
   }
@@ -128,18 +128,18 @@ const classificarOxigenacao = (saturacao?: number | null) => {
   if (saturacao >= 91) {
     return {
       status: "leve",
-      titulo: "Saturacao levemente baixa",
+      titulo: "Saturação levemente baixa",
       mensagem:
-        "Valor abaixo de 95%. Acompanhe a evolucao e registre sintomas.",
+        "Valor abaixo de 95%. Acompanhe a evolução e registre sintomas.",
       cor: "atencao",
     };
   }
 
   return {
     status: "baixa",
-    titulo: "Saturacao baixa",
+    titulo: "Saturação baixa",
     mensagem:
-      "Valor igual ou abaixo de 90%. Considere buscar orientacao profissional.",
+      "Valor igual ou abaixo de 90%. Considere buscar orientação profissional.",
     cor: "critico",
   };
 };
@@ -272,15 +272,15 @@ const montarAnalise = (registros: RegistroOxigenacao[]) => {
       totalMedicoes: 0,
       totalForaDaFaixa: 0,
       texto:
-        "Ainda nao ha medicoes suficientes para gerar uma analise da oxigenacao.",
+        "Ainda não há medições suficientes para gerar uma análise da oxigenação.",
     };
   }
 
-  const textoBase = `A media de ${mediaSaturacao}% de saturacao nos ultimos 7 dias`;
+  const textoBase = `A média de ${mediaSaturacao}% de saturação nos últimos 7 dias`;
   const textoFaixa =
     foraDaFaixa === 0
-      ? "permanece dentro da faixa ideal e bastante estavel. Continue assim!"
-      : `teve ${foraDaFaixa} medicao(oes) fora da faixa.`;
+      ? "permanece dentro da faixa ideal e bastante estável. Continue assim!"
+      : `teve ${foraDaFaixa} medição(ões) fora da faixa.`;
 
   return {
     mediaUltimos7Dias: mediaSaturacao,

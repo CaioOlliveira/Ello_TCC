@@ -317,6 +317,7 @@ class FamiliaChatMensagem {
     required this.conteudo,
     required this.criadoEm,
     this.imageDataUrl,
+    this.lidoEm,
   });
 
   factory FamiliaChatMensagem.fromJson(Map<String, dynamic> json) {
@@ -346,6 +347,9 @@ class FamiliaChatMensagem {
           ) ??
           DateTime.now(),
       imageDataUrl: imageDataUrl,
+      lidoEm: DateTime.tryParse(
+        json['lidoEm']?.toString() ?? json['lido_em']?.toString() ?? '',
+      )?.toLocal(),
     );
   }
 
@@ -356,6 +360,7 @@ class FamiliaChatMensagem {
   final String conteudo;
   final DateTime criadoEm;
   final String? imageDataUrl;
+  final DateTime? lidoEm;
 
   bool fromMe(String usuarioId) => remetenteId == usuarioId;
 }
@@ -593,7 +598,7 @@ class GlicemiaAlerta {
   factory GlicemiaAlerta.fromJson(Map<String, dynamic>? json) {
     return GlicemiaAlerta(
       status: json?['status']?.toString() ?? 'sem_registro',
-      titulo: json?['titulo']?.toString() ?? 'Sem medicao registrada',
+      titulo: json?['titulo']?.toString() ?? 'Sem medição registrada',
       mensagem: json?['mensagem']?.toString() ??
           'Registre a primeira glicemia para gerar alertas.',
       cor: json?['cor']?.toString() ?? 'neutro',
@@ -820,7 +825,7 @@ class PressaoAlerta {
   factory PressaoAlerta.fromJson(Map<String, dynamic>? json) {
     return PressaoAlerta(
       status: json?['status']?.toString() ?? 'sem_registro',
-      titulo: json?['titulo']?.toString() ?? 'Sem medicao registrada',
+      titulo: json?['titulo']?.toString() ?? 'Sem medição registrada',
       mensagem: json?['mensagem']?.toString() ??
           'Registre a primeira pressão para gerar alertas.',
       cor: json?['cor']?.toString() ?? 'neutro',
@@ -1043,7 +1048,7 @@ class OxigenacaoAlerta {
   factory OxigenacaoAlerta.fromJson(Map<String, dynamic>? json) {
     return OxigenacaoAlerta(
       status: json?['status']?.toString() ?? 'sem_registro',
-      titulo: json?['titulo']?.toString() ?? 'Sem medicao registrada',
+      titulo: json?['titulo']?.toString() ?? 'Sem medição registrada',
       mensagem: json?['mensagem']?.toString() ??
           'Registre a primeira oxigenação para gerar alertas.',
       cor: json?['cor']?.toString() ?? 'neutro',
@@ -1256,7 +1261,7 @@ class TemperaturaAlerta {
   factory TemperaturaAlerta.fromJson(Map<String, dynamic>? json) {
     return TemperaturaAlerta(
       status: json?['status']?.toString() ?? 'sem_registro',
-      titulo: json?['titulo']?.toString() ?? 'Sem medicao registrada',
+      titulo: json?['titulo']?.toString() ?? 'Sem medição registrada',
       mensagem: json?['mensagem']?.toString() ??
           'Registre a primeira temperatura para gerar alertas.',
       cor: json?['cor']?.toString() ?? 'neutro',
@@ -1406,6 +1411,8 @@ class MedicamentoResumo {
     required this.nome,
     this.dosagem,
     this.formato,
+    this.dataInicio,
+    this.dataFim,
     this.quantidadeEstoque,
     this.unidadeEstoque,
     this.alertaEstoqueBaixo,
@@ -1428,6 +1435,12 @@ class MedicamentoResumo {
       nome: json['nome']?.toString() ?? 'Sem nome',
       dosagem: json['dosagem']?.toString(),
       formato: json['formato']?.toString(),
+      dataInicio: DateTime.tryParse(
+        (json['dataInicio'] ?? json['data_inicio'])?.toString() ?? '',
+      )?.toLocal(),
+      dataFim: DateTime.tryParse(
+        (json['dataFim'] ?? json['data_fim'])?.toString() ?? '',
+      )?.toLocal(),
       quantidadeEstoque: estoque is num ? estoque.toDouble() : null,
       unidadeEstoque: json['unidadeEstoque']?.toString(),
       alertaEstoqueBaixo: alerta is num ? alerta.toDouble() : null,
@@ -1456,6 +1469,8 @@ class MedicamentoResumo {
   final String nome;
   final String? dosagem;
   final String? formato;
+  final DateTime? dataInicio;
+  final DateTime? dataFim;
   final double? quantidadeEstoque;
   final String? unidadeEstoque;
   final double? alertaEstoqueBaixo;
@@ -1476,6 +1491,8 @@ class MedicamentoResumo {
     String? nome,
     String? dosagem,
     String? formato,
+    DateTime? dataInicio,
+    DateTime? dataFim,
     double? quantidadeEstoque,
     String? unidadeEstoque,
     double? alertaEstoqueBaixo,
@@ -1492,6 +1509,8 @@ class MedicamentoResumo {
       nome: nome ?? this.nome,
       dosagem: dosagem ?? this.dosagem,
       formato: formato ?? this.formato,
+      dataInicio: dataInicio ?? this.dataInicio,
+      dataFim: dataFim ?? this.dataFim,
       quantidadeEstoque: quantidadeEstoque ?? this.quantidadeEstoque,
       unidadeEstoque: unidadeEstoque ?? this.unidadeEstoque,
       alertaEstoqueBaixo: alertaEstoqueBaixo ?? this.alertaEstoqueBaixo,
@@ -1930,6 +1949,12 @@ class MembroFicha {
     this.telefone,
     this.funcao,
     this.relacao,
+    this.status,
+    this.online = false,
+    this.ultimoVistoEm,
+    this.mensagensNaoLidas = 0,
+    this.ultimaMensagemPreview,
+    this.ultimaMensagemEm,
   });
 
   factory MembroFicha.fromJson(Map<String, dynamic> json) {
@@ -1945,8 +1970,23 @@ class MembroFicha {
       telefone: json['usuario_telefone']?.toString(),
       funcao: json['funcao']?.toString(),
       relacao: json['relacao']?.toString(),
-      eAdministrador: json['e_administrador'] == true,
-      eCriador: json['e_criador'] == true,
+      status: json['status']?.toString(),
+      online: _boolValue(json['online']),
+      ultimoVistoEm:
+          DateTime.tryParse(json['ultimo_visto_em']?.toString() ?? '')
+              ?.toLocal(),
+      mensagensNaoLidas: _intOrNull(
+              json['mensagens_nao_lidas'] ?? json['mensagensNaoLidas']) ??
+          0,
+      ultimaMensagemPreview:
+          (json['ultima_mensagem_preview'] ?? json['ultimaMensagemPreview'])
+              ?.toString(),
+      ultimaMensagemEm: DateTime.tryParse(
+        (json['ultima_mensagem_em'] ?? json['ultimaMensagemEm'])?.toString() ??
+            '',
+      )?.toLocal(),
+      eAdministrador: _boolValue(json['e_administrador']),
+      eCriador: _boolValue(json['e_criador']),
       permissoesVisualizar: visualizar is List
           ? visualizar.map((item) => item.toString()).toList()
           : <String>[],
@@ -1963,6 +2003,12 @@ class MembroFicha {
   final String? telefone;
   final String? funcao;
   final String? relacao;
+  final String? status;
+  final bool online;
+  final DateTime? ultimoVistoEm;
+  final int mensagensNaoLidas;
+  final String? ultimaMensagemPreview;
+  final DateTime? ultimaMensagemEm;
   final bool eAdministrador;
   final bool eCriador;
   final List<String> permissoesVisualizar;
@@ -2399,6 +2445,17 @@ class ApiClient {
     }
   }
 
+  Future<void> registrarPresenca({required String usuarioId}) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.membrosPresenca,
+        data: {'usuarioId': usuarioId},
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao atualizar presença.');
+    }
+  }
+
   Future<List<SolicitacaoPendente>> listarSolicitacoesPendentes({
     required String idosoId,
   }) async {
@@ -2832,7 +2889,38 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel abrir este chat.',
+        fallback: 'Não foi possível abrir este chat.',
+      );
+    }
+  }
+
+  Future<List<MembroFicha>> listarConversasFamilia({
+    required String idosoId,
+    required String usuarioId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.chatFamiliaConversas,
+        queryParameters: {
+          'idosoId': idosoId,
+          'usuarioId': usuarioId,
+        },
+      );
+      final data = response.data?['dados'];
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(MembroFicha.fromJson)
+            .toList();
+      }
+      return const [];
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) {
+        return listarParticipantes(idosoId: idosoId);
+      }
+      throw _toApiException(
+        error,
+        fallback: 'Não foi possível listar as conversas.',
       );
     }
   }
@@ -2859,11 +2947,33 @@ class ApiClient {
       if (dados is Map<String, dynamic>) {
         return FamiliaChatMensagem.fromJson(dados);
       }
-      throw const ApiException('Nao foi possivel enviar a mensagem.');
+      throw const ApiException('Não foi possível enviar a mensagem.');
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel enviar a mensagem.',
+        fallback: 'Não foi possível enviar a mensagem.',
+      );
+    }
+  }
+
+  Future<void> apagarConversaFamilia({
+    required String idosoId,
+    required String usuarioId,
+    required String outroUsuarioId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        ApiEndpoints.chatFamiliaConversas,
+        queryParameters: {
+          'idosoId': idosoId,
+          'usuarioId': usuarioId,
+          'outroUsuarioId': outroUsuarioId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Não foi possível apagar esta conversa.',
       );
     }
   }
@@ -4209,6 +4319,13 @@ int? _intOrNull(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   return int.tryParse(value?.toString() ?? '');
+}
+
+bool _boolValue(Object? value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final normalized = value?.toString().trim().toLowerCase();
+  return normalized == 'true' || normalized == '1' || normalized == 'sim';
 }
 
 DateTime? _dateOnlyOrNull(Object? value) {

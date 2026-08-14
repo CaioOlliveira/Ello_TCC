@@ -138,7 +138,7 @@ export const convitesService = {
     if (!convite) {
       throw new AppError(
         "CONVITE_NAO_ENCONTRADO",
-        "Codigo de convite nao encontrado.",
+        "Código de convite não encontrado.",
         404,
       );
     }

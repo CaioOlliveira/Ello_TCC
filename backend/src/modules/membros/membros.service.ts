@@ -11,6 +11,7 @@ import {
 import type {
   AtualizarMembroInput,
   CriarMembroInput,
+  RegistrarPresencaInput,
 } from "./membros.schemas.js";
 
 const table = "membros_ficha";
@@ -34,6 +35,20 @@ const defaultPermissoes = (monitoramentos: string[]) => ({
   visualizar: ["Ficha", ...monitoramentos],
   editar: [],
 });
+
+async function garantirTabelaPresenca() {
+  await getPool().query(`
+    create table if not exists usuarios_presenca (
+      usuario_id uuid primary key references usuarios(id) on delete cascade,
+      ultimo_visto_em timestamptz not null default now()
+    )
+  `);
+
+  await getPool().query(`
+    create index if not exists idx_usuarios_presenca_ultimo_visto
+      on usuarios_presenca (ultimo_visto_em desc)
+  `);
+}
 
 export const membrosService = {
   async listar(limit: number, offset: number, idosoId?: string) {
@@ -79,11 +94,20 @@ export const membrosService = {
   },
 
   async listarParticipantes(idosoId: string) {
+    await garantirTabelaPresenca();
+
     const ficha = await getPool().query<Record<string, unknown>>(
       `
-        select f.criado_por_id, u.nome, u.url_foto, u.telefone
+        select
+          f.criado_por_id,
+          u.nome,
+          u.url_foto,
+          u.telefone,
+          up.ultimo_visto_em,
+          (up.ultimo_visto_em is not null and up.ultimo_visto_em >= now() - interval '75 seconds') as online
         from fichas_idosos f
         join usuarios u on u.id = f.criado_por_id
+        left join usuarios_presenca up on up.usuario_id = u.id
         where f.id = $1
         limit 1
       `,
@@ -102,6 +126,8 @@ export const membrosService = {
             usuario_telefone: criador.telefone,
             funcao: null,
             relacao: null,
+            ultimo_visto_em: criador.ultimo_visto_em,
+            online: criador.online,
             e_administrador: true,
             e_criador: true,
             permissoes: { visualizar: [], editar: [] },
@@ -124,9 +150,12 @@ export const membrosService = {
           mf.criado_em,
           u.nome as usuario_nome,
           u.url_foto as usuario_foto,
-          u.telefone as usuario_telefone
+          u.telefone as usuario_telefone,
+          up.ultimo_visto_em,
+          (up.ultimo_visto_em is not null and up.ultimo_visto_em >= now() - interval '75 seconds') as online
         from membros_ficha mf
         join usuarios u on u.id = mf.usuario_id
+        left join usuarios_presenca up on up.usuario_id = u.id
         where mf.idoso_id = $1
           and mf.status = 'ativo'
           and mf.usuario_id != $2
@@ -142,6 +171,21 @@ export const membrosService = {
       ...responsavel,
       ...membros.rows.map((row) => ({ ...row, e_criador: false })),
     ];
+  },
+
+  async registrarPresenca(input: RegistrarPresencaInput) {
+    await garantirTabelaPresenca();
+    await getPool().query(
+      `
+        insert into usuarios_presenca (usuario_id, ultimo_visto_em)
+        values ($1, now())
+        on conflict (usuario_id)
+        do update set ultimo_visto_em = excluded.ultimo_visto_em
+      `,
+      [input.usuarioId],
+    );
+
+    return { usuarioId: input.usuarioId, ultimoVistoEm: new Date() };
   },
 
   async listarPendentes(idosoId: string) {

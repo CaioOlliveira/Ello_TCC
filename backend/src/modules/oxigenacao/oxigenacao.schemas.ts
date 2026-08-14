@@ -7,23 +7,23 @@ const dataNaoFuturaSchema = z
   .datetime("Data deve estar em formato ISO.")
   .refine(
     (value) => !isFutureInstant(value),
-    "Nao e permitido registrar uma data futura.",
+    "Não é permitido registrar uma data futura.",
   );
 
 const valorSaturacaoSchema = z
   .number()
-  .int("Valor deve ser um numero inteiro.")
-  .min(0, "Valor minimo permitido e 0%.")
-  .max(100, "Valor maximo permitido e 100%.");
+  .int("Valor deve ser um número inteiro.")
+  .min(0, "Valor mínimo permitido é 0%.")
+  .max(100, "Valor máximo permitido é 100%.");
 
 const valorPulsoSchema = z
   .number()
-  .int("Valor deve ser um numero inteiro.")
-  .min(20, "Valor minimo permitido e 20 bpm.")
-  .max(250, "Valor maximo permitido e 250 bpm.");
+  .int("Valor deve ser um número inteiro.")
+  .min(20, "Valor mínimo permitido é 20 bpm.")
+  .max(250, "Valor máximo permitido é 250 bpm.");
 
 export const criarOxigenacaoSchema = z.object({
-  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
   saturacao: valorSaturacaoSchema,
   pulso: valorPulsoSchema.optional(),
   medidoEm: dataNaoFuturaSchema,
@@ -34,7 +34,7 @@ export const criarOxigenacaoSchema = z.object({
 export const atualizarOxigenacaoSchema = criarOxigenacaoSchema.partial();
 
 export const resumoOxigenacaoQuerySchema = z.object({
-  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
   dataReferencia: z.string().date().optional(),
   periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
 });

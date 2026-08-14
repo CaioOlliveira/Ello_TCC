@@ -21,7 +21,7 @@ import type {
 const table = "registros_pressao";
 const notFound = [
   "PRESSAO_NAO_ENCONTRADA",
-  "Registro de pressao nao encontrado.",
+  "Registro de pressão não encontrado.",
 ] as const;
 
 const faixaPadrao = {
@@ -115,8 +115,8 @@ const classificarPressao = (
   if (sistolica == null || diastolica == null) {
     return {
       status: "sem_registro",
-      titulo: "Sem medicao registrada",
-      mensagem: "Registre a primeira pressao para gerar alertas.",
+      titulo: "Sem medição registrada",
+      mensagem: "Registre a primeira pressão para gerar alertas.",
       cor: "neutro",
     };
   }
@@ -127,9 +127,9 @@ const classificarPressao = (
   ) {
     return {
       status: "baixa",
-      titulo: "Pressao abaixo da faixa",
+      titulo: "Pressão abaixo da faixa",
       mensagem:
-        "Valores abaixo do esperado. Observe sintomas e siga a orientacao profissional.",
+        "Valores abaixo do esperado. Observe sintomas e siga a orientação profissional.",
       cor: "alerta",
     };
   }
@@ -141,7 +141,7 @@ const classificarPressao = (
     return {
       status: "dentro",
       titulo: "Dentro da faixa configurada",
-      mensagem: "Dentro da faixa configurada pelo profissional de saude.",
+      mensagem: "Dentro da faixa configurada pelo profissional de saúde.",
       cor: "ok",
     };
   }
@@ -149,18 +149,18 @@ const classificarPressao = (
   if (sistolica <= 139 && diastolica <= 89) {
     return {
       status: "elevada",
-      titulo: "Pressao levemente elevada",
+      titulo: "Pressão levemente elevada",
       mensagem:
-        "Valores acima da faixa ideal. Acompanhe a evolucao e registre sintomas.",
+        "Valores acima da faixa ideal. Acompanhe a evolução e registre sintomas.",
       cor: "atencao",
     };
   }
 
   return {
     status: "alta",
-    titulo: "Pressao alta",
+    titulo: "Pressão alta",
     mensagem:
-      "Valores indicam pressao alta. Considere buscar orientacao profissional.",
+      "Valores indicam pressão alta. Considere buscar orientação profissional.",
     cor: "critico",
   };
 };
@@ -299,15 +299,15 @@ const montarAnalise = (registros: RegistroPressao[]) => {
       totalMedicoes: 0,
       totalForaDaFaixa: 0,
       texto:
-        "Ainda nao ha medicoes suficientes para gerar uma analise da pressao.",
+        "Ainda não há medições suficientes para gerar uma análise da pressão.",
     };
   }
 
-  const textoBase = `A media de ${mediaSistolica}/${mediaDiastolica} mmHg nos ultimos 7 dias`;
+  const textoBase = `A média de ${mediaSistolica}/${mediaDiastolica} mmHg nos últimos 7 dias`;
   const textoFaixa =
     foraDaFaixa === 0
-      ? "permanece dentro da faixa ideal e bastante estavel. Continue assim!"
-      : `teve ${foraDaFaixa} medicao(oes) fora da faixa.`;
+      ? "permanece dentro da faixa ideal e bastante estável. Continue assim!"
+      : `teve ${foraDaFaixa} medição(ões) fora da faixa.`;
 
   return {
     mediaUltimos7Dias: mediaSistolica,

@@ -7,23 +7,23 @@ const dataNaoFuturaSchema = z
   .datetime("Data deve estar em formato ISO.")
   .refine(
     (value) => !isFutureInstant(value),
-    "Nao e permitido registrar uma data futura.",
+    "Não é permitido registrar uma data futura.",
   );
 
 const valorGlicemiaSchema = z
   .number()
-  .int("Valor deve ser um numero inteiro.")
+  .int("Valor deve ser um número inteiro.")
   .refine((value) => value > 0, "Valor deve ser positivo.")
   .refine(
     (value) => value <= 0 || value >= 20,
-    "Valor minimo permitido e 20 mg/dL.",
+    "Valor mínimo permitido é 20 mg/dL.",
   )
-  .refine((value) => value <= 600, "Valor maximo permitido e 600 mg/dL.");
+  .refine((value) => value <= 600, "Valor máximo permitido é 600 mg/dL.");
 
 export const criarGlicemiaSchema = z.object({
-  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
   valor: valorGlicemiaSchema,
-  contexto: z.string().min(1, "Contexto e obrigatorio."),
+  contexto: z.string().min(1, "Contexto é obrigatório."),
   medidoEm: dataNaoFuturaSchema,
   observacoes: z.string().optional(),
   sintomas: z.string().optional(),
@@ -33,7 +33,7 @@ export const criarGlicemiaSchema = z.object({
 export const atualizarGlicemiaSchema = criarGlicemiaSchema.partial();
 
 export const resumoGlicemiaQuerySchema = z.object({
-  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
   dataReferencia: z.string().date().optional(),
   periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
 });
@@ -41,14 +41,14 @@ export const resumoGlicemiaQuerySchema = z.object({
 export const historicoGlicemiaQuerySchema = resumoGlicemiaQuerySchema;
 
 export const criarInsulinaSchema = z.object({
-  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
   glicemiaId: z.string().uuid().optional(),
   nomeInsulina: z.string().optional(),
-  tipoInsulina: z.string().min(1, "Tipo de insulina e obrigatorio."),
+  tipoInsulina: z.string().min(1, "Tipo de insulina é obrigatório."),
   doseUnidades: z
     .number()
     .positive("Dose deve ser positiva.")
-    .max(200, "Dose maxima permitida e 200 unidades."),
+    .max(200, "Dose máxima permitida é 200 unidades."),
   aplicadoEm: dataNaoFuturaSchema,
   localAplicacao: z.string().optional(),
   observacoes: z.string().optional(),

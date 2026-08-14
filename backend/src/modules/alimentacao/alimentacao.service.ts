@@ -11,7 +11,7 @@ import type {
 const table = "registros_alimentacao";
 const notFound = [
   "REFEICAO_NAO_ENCONTRADA",
-  "Refeicao nao encontrada.",
+  "Refeição não encontrada.",
 ] as const;
 
 type RefeicaoRow = Record<string, unknown> & {

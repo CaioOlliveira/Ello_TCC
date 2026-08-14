@@ -162,10 +162,10 @@ async function gerarDicaDiaria(idosoId: string) {
           parts: [
             {
               text: [
-                "Voce gera uma dica diaria curta para cuidadores no app Ello.",
-                "A dica nao deve parecer conversa de chat e nao deve mencionar IA.",
-                "Nao de diagnostico, prescricao ou orientacao medica individual.",
-                "Escreva em portugues do Brasil, em uma frase de ate 110 caracteres.",
+                "Você gera uma dica diária curta para cuidadores no app Ello.",
+                "A dica não deve parecer conversa de chat e não deve mencionar IA.",
+                "Não dê diagnóstico, prescrição ou orientação médica individual.",
+                "Escreva em português do Brasil, em uma frase de até 110 caracteres.",
                 contexto,
               ].join("\n"),
             },
@@ -207,10 +207,10 @@ async function buscarContextoIdoso(idosoId: string) {
   );
 
   const idoso = result.rows[0];
-  if (!idoso) return "Contexto: idoso nao encontrado.";
+  if (!idoso) return "Contexto: idoso não encontrado.";
 
   return [
-    `Nome: ${idoso.nome ?? "nao informado"}.`,
+    `Nome: ${idoso.nome ?? "não informado"}.`,
     idoso.idade ? `Idade: ${idoso.idade}.` : "",
     idoso.sexo ? `Sexo: ${idoso.sexo}.` : "",
     idoso.condicoes ? `Condicoes: ${JSON.stringify(idoso.condicoes)}.` : "",

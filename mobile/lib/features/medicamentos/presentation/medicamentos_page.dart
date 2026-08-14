@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
@@ -101,18 +103,22 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   void _ensureResumo(String idosoId) {
     if (_resumoLoadedIdosoId == idosoId && _resumoFuture != null) return;
     _resumoLoadedIdosoId = idosoId;
-    _resumoFuture = ref
-        .read(apiClientProvider)
-        .getResumoMedicamentosConsolidado(idosoId: idosoId);
+    _resumoFuture = _loadResumo(idosoId);
   }
 
   void _reloadResumo(String idosoId) {
     setState(() {
       _resumoLoadedIdosoId = idosoId;
-      _resumoFuture = ref
-          .read(apiClientProvider)
-          .getResumoMedicamentosConsolidado(idosoId: idosoId);
+      _resumoFuture = _loadResumo(idosoId);
     });
+  }
+
+  Future<MedicamentosResumo> _loadResumo(String idosoId) async {
+    final resumo = await ref
+        .read(apiClientProvider)
+        .getResumoMedicamentosConsolidado(idosoId: idosoId);
+    await _syncMedicationReminders(idosoId, resumo);
+    return resumo;
   }
 
   void _ensureHistorico(String idosoId) {
@@ -196,6 +202,9 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       _showNoEditPermission();
       return;
     }
+    final lembretesAtivos = await _medicationReminderEnabled(medicamento.id);
+    if (!mounted) return;
+
     setState(() {
       _resetForm();
       _editando = true;
@@ -206,6 +215,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       _estoqueController.text = medicamento.quantidadeEstoque == null
           ? ''
           : _formatNumber(medicamento.quantidadeEstoque!);
+      _lembretesAtivos = lembretesAtivos;
       _mode = _Mode.form;
     });
 
@@ -228,7 +238,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         }
       });
     } catch (_) {
-      // Segue com o formulario mesmo se os horarios nao carregarem.
+      // Segue com o formulário mesmo se os horários não carregarem.
     }
   }
 
@@ -356,6 +366,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         diasSemana: _frequenciaTipo == 'semanal' ? _diasSemana : null,
         registradoPorId: usuarioId,
       );
+      await _setMedicationReminderEnabled(medicamentoId, _lembretesAtivos);
 
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
@@ -424,6 +435,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         resumo,
         medicamentoRegistrado,
       );
+      await _syncMedicationReminders(idoso.id, resumoAtualizado);
       setState(() {
         _resumoLoadedIdosoId = idoso.id;
         _resumoFuture = Future.value(resumoAtualizado);
@@ -478,6 +490,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
             medicamento.id,
             usuarioId: ref.read(authSessionProvider)?.id,
           );
+      await _setMedicationReminderEnabled(medicamento.id, true);
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();
@@ -1708,10 +1721,10 @@ class _FrequenciaEscolha {
 }
 
 /// Bottom sheet com as 3 frequencias mutuamente exclusivas ("Todos os
-/// dias", "Dias especificos" e "Dia sim, dia nao"). Quando "Dias
+/// dias", "Dias específicos" e "Dia sim, dia não"). Quando "Dias
 /// especificos" e escolhido, os chips de dia da semana aparecem para
 /// selecao multipla; as outras duas opcoes fecham a folha na hora, ja
-/// que nao precisam de mais nenhuma escolha.
+/// que não precisam de mais nenhuma escolha.
 class _FrequenciaSheet extends StatefulWidget {
   const _FrequenciaSheet({
     required this.tipoInicial,
@@ -2720,4 +2733,141 @@ String _toIsoDate(DateTime date) {
   return '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
+}
+
+const _medicationReminderDisabledKey = 'ello_disabled_medication_reminders';
+const _medicationReminderLookaheadDays = 14;
+const _medicationReminderLead = Duration(minutes: 5);
+
+String _medicationReminderGroup(String idosoId) => 'medicamentos:$idosoId';
+
+Future<Set<String>> _disabledMedicationReminderIds() async {
+  final prefs = await SharedPreferences.getInstance();
+  return (prefs.getStringList(_medicationReminderDisabledKey) ??
+          const <String>[])
+      .where((id) => id.isNotEmpty)
+      .toSet();
+}
+
+Future<bool> _medicationReminderEnabled(String medicamentoId) async {
+  if (medicamentoId.isEmpty) return false;
+  return !(await _disabledMedicationReminderIds()).contains(medicamentoId);
+}
+
+Future<void> _setMedicationReminderEnabled(
+  String medicamentoId,
+  bool enabled,
+) async {
+  if (medicamentoId.isEmpty) return;
+
+  final prefs = await SharedPreferences.getInstance();
+  final disabled = await _disabledMedicationReminderIds();
+  if (enabled) {
+    disabled.remove(medicamentoId);
+  } else {
+    disabled.add(medicamentoId);
+  }
+
+  final ordered = disabled.toList()..sort();
+  await prefs.setStringList(_medicationReminderDisabledKey, ordered);
+}
+
+Future<void> _syncMedicationReminders(
+  String idosoId,
+  MedicamentosResumo resumo,
+) async {
+  final disabled = await _disabledMedicationReminderIds();
+  final requests = <LocalNotificationRequest>[];
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+
+  for (final medicamento in resumo.medicamentos) {
+    if (medicamento.id.isEmpty || disabled.contains(medicamento.id)) {
+      continue;
+    }
+
+    for (final horario in medicamento.horarios) {
+      for (var offset = 0;
+          offset <= _medicationReminderLookaheadDays;
+          offset++) {
+        final date = today.add(Duration(days: offset));
+        if (!_medicamentoAtivoNaData(medicamento, date) ||
+            !_horarioMedicamentoValeNaData(horario, medicamento, date)) {
+          continue;
+        }
+
+        final doseAt = _dataHorarioNaData(horario.horario, date);
+        if (doseAt == null) continue;
+
+        final scheduledAt = doseAt.subtract(_medicationReminderLead);
+        if (!scheduledAt.isAfter(now)) continue;
+
+        requests.add(
+          LocalNotificationRequest(
+            id: stableNotificationId(
+              'med:$idosoId:${medicamento.id}:${doseAt.toIso8601String()}',
+            ),
+            scheduledAt: scheduledAt,
+            title: 'Remédio em 5 minutos',
+            body: '${medicamento.nome} às ${horario.horario}',
+            payload: 'medicamento:${medicamento.id}',
+          ),
+        );
+      }
+    }
+  }
+
+  await LocalNotificationService.instance.replaceGroup(
+    _medicationReminderGroup(idosoId),
+    requests,
+  );
+}
+
+bool _medicamentoAtivoNaData(MedicamentoResumo medicamento, DateTime date) {
+  final data = _dateOnly(date)!;
+  final inicio = _dateOnly(medicamento.dataInicio);
+  final fim = _dateOnly(medicamento.dataFim);
+
+  if (inicio != null && data.isBefore(inicio)) return false;
+  if (fim != null && data.isAfter(fim)) return false;
+
+  return true;
+}
+
+bool _horarioMedicamentoValeNaData(
+  MedicamentoHorario horario,
+  MedicamentoResumo medicamento,
+  DateTime date,
+) {
+  if (horario.frequenciaTipo == 'semanal' && horario.diasSemana.isNotEmpty) {
+    final dia = _kDiasSemana[date.weekday % 7].toLowerCase();
+    return horario.diasSemana.any((item) => item.trim().toLowerCase() == dia);
+  }
+
+  if (horario.frequenciaTipo == 'alternado') {
+    final inicio = _dateOnly(medicamento.dataInicio);
+    if (inicio == null) return true;
+
+    final diff = _dateOnly(date)!.difference(inicio).inDays;
+    return diff >= 0 && diff.isEven;
+  }
+
+  return true;
+}
+
+DateTime? _dataHorarioNaData(String horario, DateTime data) {
+  final parts = horario.split(':');
+  if (parts.length < 2) return null;
+
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  return DateTime(data.year, data.month, data.day, hour, minute);
+}
+
+DateTime? _dateOnly(DateTime? date) {
+  if (date == null) return null;
+  return DateTime(date.year, date.month, date.day);
 }

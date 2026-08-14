@@ -726,7 +726,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _FieldLabel('Condições de saude'),
+        const _FieldLabel('Condições de saúde'),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -800,7 +800,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
           ],
         ),
         const SizedBox(height: 10),
-        const _FieldLabel('Parentesco ou observacao'),
+        const _FieldLabel('Parentesco ou observação'),
         _InputBox(
           controller: _contatoParentescoController,
           hintText: 'Ex: filha, vizinho',

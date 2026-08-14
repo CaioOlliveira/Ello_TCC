@@ -14,7 +14,7 @@ import type {
 const table = "registros_temperatura";
 const notFound = [
   "TEMPERATURA_NAO_ENCONTRADA",
-  "Registro de temperatura nao encontrado.",
+  "Registro de temperatura não encontrado.",
 ] as const;
 
 const faixaPadrao = {
@@ -106,7 +106,7 @@ const classificarTemperatura = (temperatura?: number | null) => {
   if (temperatura == null) {
     return {
       status: "sem_registro",
-      titulo: "Sem medicao registrada",
+      titulo: "Sem medição registrada",
       mensagem: "Registre a primeira temperatura para gerar alertas.",
       cor: "neutro",
     };
@@ -117,7 +117,7 @@ const classificarTemperatura = (temperatura?: number | null) => {
       status: "baixa",
       titulo: "Temperatura abaixo da faixa",
       mensagem:
-        "Valor abaixo do esperado. Acompanhe a evolucao e registre sintomas.",
+        "Valor abaixo do esperado. Acompanhe a evolução e registre sintomas.",
       cor: "atencao",
     };
   }
@@ -126,7 +126,7 @@ const classificarTemperatura = (temperatura?: number | null) => {
     return {
       status: "dentro",
       titulo: "Dentro da faixa configurada",
-      mensagem: "Dentro da faixa configurada pelo profissional de saude.",
+      mensagem: "Dentro da faixa configurada pelo profissional de saúde.",
       cor: "ok",
     };
   }
@@ -136,7 +136,7 @@ const classificarTemperatura = (temperatura?: number | null) => {
       status: "febril_leve",
       titulo: "Febre baixa (estado febril)",
       mensagem:
-        "Valores acima da faixa ideal. Caso ocorram sintomas, acompanhe a evolucao.",
+        "Valores acima da faixa ideal. Caso ocorram sintomas, acompanhe a evolução.",
       cor: "atencao",
     };
   }
@@ -145,7 +145,7 @@ const classificarTemperatura = (temperatura?: number | null) => {
     status: "febre",
     titulo: "Febre",
     mensagem:
-      "Valores indicam febre. Considere buscar orientacao profissional.",
+      "Valores indicam febre. Considere buscar orientação profissional.",
     cor: "critico",
   };
 };
@@ -246,7 +246,8 @@ const criarSerie = (
   dataReferencia: Date,
   periodo: PeriodoTemperatura,
 ) => {
-  if (periodo === "semanal") return criarSerieSemanal(registros, dataReferencia);
+  if (periodo === "semanal")
+    return criarSerieSemanal(registros, dataReferencia);
   if (periodo === "mes") return criarSerieMensal(registros, dataReferencia);
   return criarSerieDiaria(registros, dataReferencia);
 };
@@ -274,15 +275,15 @@ const montarAnalise = (registros: RegistroTemperatura[]) => {
       totalMedicoes: 0,
       totalForaDaFaixa: 0,
       texto:
-        "Ainda nao ha medicoes suficientes para gerar uma analise da temperatura.",
+        "Ainda não há medições suficientes para gerar uma análise da temperatura.",
     };
   }
 
-  const textoBase = `A media de ${mediaTemperatura}°C nos ultimos 7 dias`;
+  const textoBase = `A média de ${mediaTemperatura}°C nos últimos 7 dias`;
   const textoFaixa =
     foraDaFaixa === 0
       ? "permanece dentro da faixa esperada. Continue assim!"
-      : `teve ${foraDaFaixa} medicao(oes) fora da faixa. Caso ocorram febre persistente ou outros sintomas, registre as novas medicoes e acompanhe a evolucao.`;
+      : `teve ${foraDaFaixa} medição(ões) fora da faixa. Caso ocorram febre persistente ou outros sintomas, registre as novas medições e acompanhe a evolução.`;
 
   return {
     mediaUltimos7Dias: mediaTemperatura,
@@ -386,7 +387,9 @@ const dadosDoRegistro = (dados: Record<string, unknown> | null | undefined) => {
   const temperatura = dados.temperatura ?? dados.temperatura_celsius;
   return {
     temperatura:
-      typeof temperatura === "number" ? temperatura : Number(temperatura) || null,
+      typeof temperatura === "number"
+        ? temperatura
+        : Number(temperatura) || null,
   };
 };
 

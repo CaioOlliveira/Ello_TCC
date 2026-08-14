@@ -120,7 +120,7 @@ const validarGoogleToken = async (idToken: string) => {
   if (audiences.length === 0) {
     throw new AppError(
       "GOOGLE_OAUTH_NAO_CONFIGURADO",
-      "Login com Google ainda nao foi configurado no servidor.",
+      "Login com Google ainda não foi configurado no servidor.",
       500,
     );
   }
@@ -134,7 +134,7 @@ const validarGoogleToken = async (idToken: string) => {
   if (!payload?.email) {
     throw new AppError(
       "GOOGLE_TOKEN_INVALIDO",
-      "Nao foi possivel validar a conta Google.",
+      "Não foi possível validar a conta Google.",
       401,
     );
   }
@@ -271,7 +271,7 @@ export const authService = {
     if (!usuario) {
       throw new AppError(
         "USUARIO_NAO_ENCONTRADO",
-        "Usuario nao encontrado.",
+        "Usuário não encontrado.",
         404,
       );
     }

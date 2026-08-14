@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'providers.dart';
+import '../core/notifications/local_notification_service.dart';
 import '../features/agenda/presentation/agenda_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
@@ -353,10 +356,27 @@ class _ModuleAccessGate extends ConsumerWidget {
   }
 }
 
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({required this.child, super.key});
 
   final Widget child;
+
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  Timer? _chatNotificationTimer;
+  String? _chatNotificationKey;
+  String _currentLocation = '/';
+  var _hasUnreadBaseline = false;
+  final _unreadByPeer = <String, int>{};
+
+  @override
+  void dispose() {
+    _chatNotificationTimer?.cancel();
+    super.dispose();
+  }
 
   int _currentIndex(String location) {
     if (location == '/monitoramento' ||
@@ -379,9 +399,97 @@ class AppShell extends StatelessWidget {
     return 0;
   }
 
+  void _configureChatNotificationPolling(String? usuarioId, String? idosoId) {
+    final key = usuarioId != null &&
+            usuarioId.isNotEmpty &&
+            idosoId != null &&
+            idosoId.isNotEmpty
+        ? '$usuarioId:$idosoId'
+        : null;
+
+    if (_chatNotificationKey == key) return;
+
+    _chatNotificationTimer?.cancel();
+    _chatNotificationKey = key;
+    _hasUnreadBaseline = false;
+    _unreadByPeer.clear();
+
+    if (key == null) return;
+
+    _refreshPresenceAndChatNotifications();
+    _chatNotificationTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshPresenceAndChatNotifications(),
+    );
+  }
+
+  Future<void> _refreshPresenceAndChatNotifications() async {
+    final usuario = ref.read(authSessionProvider);
+    if (usuario != null && usuario.id.isNotEmpty) {
+      try {
+        await ref.read(apiClientProvider).registrarPresenca(
+              usuarioId: usuario.id,
+            );
+      } catch (_) {}
+    }
+
+    await _pollChatNotifications();
+  }
+
+  Future<void> _pollChatNotifications() async {
+    final usuario = ref.read(authSessionProvider);
+    final idoso = ref.read(selectedIdosoProvider);
+    if (usuario == null ||
+        usuario.id.isEmpty ||
+        idoso == null ||
+        idoso.id.isEmpty) {
+      return;
+    }
+
+    try {
+      final conversas = await ref
+          .read(apiClientProvider)
+          .listarConversasFamilia(idosoId: idoso.id, usuarioId: usuario.id);
+
+      final peersAtualizados = <String>{};
+      for (final conversa in conversas) {
+        final peerId = conversa.usuarioId;
+        if (peerId.isEmpty || peerId == usuario.id) continue;
+
+        peersAtualizados.add(peerId);
+        final unread = conversa.mensagensNaoLidas;
+        final previous = _unreadByPeer[peerId] ?? 0;
+
+        if (_hasUnreadBaseline &&
+            unread > previous &&
+            !_currentLocation.startsWith('/chat')) {
+          final novas = unread - previous;
+          await LocalNotificationService.instance.showNow(
+            id: stableNotificationId('chat:${idoso.id}:$peerId'),
+            title: 'Nova mensagem no Chat da Família',
+            body: novas > 1
+                ? '${conversa.nome} enviou $novas mensagens.'
+                : '${conversa.nome} enviou uma mensagem.',
+            payload: 'chat:$peerId',
+          );
+        }
+
+        _unreadByPeer[peerId] = unread;
+      }
+
+      _unreadByPeer
+          .removeWhere((peerId, _) => !peersAtualizados.contains(peerId));
+      _hasUnreadBaseline = true;
+    } catch (_) {
+      // A tela de chat continua responsável por mostrar erros de rede ao usuário.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
+    final usuario = ref.watch(authSessionProvider);
+    final idoso = ref.watch(selectedIdosoProvider);
     final selectedIndex = _currentIndex(location);
     final hideBottomNav = location == '/agenda' ||
         location == '/agenda/historico' ||
@@ -397,8 +505,14 @@ class AppShell extends StatelessWidget {
     final showCoraFab =
         location == '/dashboard' || location == '/monitoramento';
 
+    _currentLocation = location;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _configureChatNotificationPolling(usuario?.id, idoso?.id);
+    });
+
     return Scaffold(
-      body: child,
+      body: widget.child,
       floatingActionButton: showCoraFab
           ? _CoraFloatingButton(onTap: () => context.go('/corgia'))
           : null,

@@ -9,6 +9,7 @@ import {
   atualizarMembroSchema,
   criarMembroSchema,
   listarParticipantesQuerySchema,
+  registrarPresencaSchema,
 } from "./membros.schemas.js";
 import { membrosService } from "./membros.service.js";
 
@@ -33,6 +34,13 @@ export const listarPendentes: RequestHandler = asyncHandler(
     const { idosoId } = listarParticipantesQuerySchema.parse(req.query);
     const dados = await membrosService.listarPendentes(idosoId);
     res.json({ dados, meta: { total: dados.length } });
+  },
+);
+
+export const registrarPresenca: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const input = registrarPresencaSchema.parse(req.body);
+    res.json({ dados: await membrosService.registrarPresenca(input) });
   },
 );
 

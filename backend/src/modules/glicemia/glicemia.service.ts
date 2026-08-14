@@ -23,7 +23,7 @@ const table = "registros_glicemia";
 const insulinaTable = "registros_insulina";
 const notFound = [
   "GLICEMIA_NAO_ENCONTRADA",
-  "Registro de glicemia nao encontrado.",
+  "Registro de glicemia não encontrado.",
 ] as const;
 
 const faixaPadrao = {
@@ -151,7 +151,7 @@ const classificarGlicemia = (valor?: number | null) => {
   if (valor == null) {
     return {
       status: "sem_registro",
-      titulo: "Sem medicao registrada",
+      titulo: "Sem medição registrada",
       mensagem: "Registre a primeira glicemia para gerar alertas.",
       cor: "neutro",
     };
@@ -162,7 +162,7 @@ const classificarGlicemia = (valor?: number | null) => {
       status: "baixa",
       titulo: "Glicemia abaixo da faixa",
       mensagem:
-        "Valor abaixo de 70 mg/dL. Observe sintomas e siga a orientacao profissional.",
+        "Valor abaixo de 70 mg/dL. Observe sintomas e siga a orientação profissional.",
       cor: "alerta",
     };
   }
@@ -171,7 +171,7 @@ const classificarGlicemia = (valor?: number | null) => {
     return {
       status: "dentro",
       titulo: "Dentro da faixa configurada",
-      mensagem: "Dentro da faixa configurada pelo profissional de saude.",
+      mensagem: "Dentro da faixa configurada pelo profissional de saúde.",
       cor: "ok",
     };
   }
@@ -181,7 +181,7 @@ const classificarGlicemia = (valor?: number | null) => {
       status: "alta",
       titulo: "Glicemia acima da faixa",
       mensagem:
-        "Valor acima de 180 mg/dL. Acompanhe a evolucao e registre sintomas.",
+        "Valor acima de 180 mg/dL. Acompanhe a evolução e registre sintomas.",
       cor: "atencao",
     };
   }
@@ -190,7 +190,7 @@ const classificarGlicemia = (valor?: number | null) => {
     status: "muito_alta",
     titulo: "Glicemia muito alta",
     mensagem:
-      "Valor acima de 250 mg/dL. Considere buscar orientacao profissional.",
+      "Valor acima de 250 mg/dL. Considere buscar orientação profissional.",
     cor: "critico",
   };
 };
@@ -320,15 +320,15 @@ const montarAnalise = (registros: RegistroGlicemia[]) => {
       totalMedicoes: 0,
       totalForaDaFaixa: 0,
       texto:
-        "Ainda nao ha medicoes suficientes para gerar uma analise da glicemia.",
+        "Ainda não há medições suficientes para gerar uma análise da glicemia.",
     };
   }
 
-  const textoBase = `A media de ${mediaUltimos7Dias} mg/dL nos ultimos 7 dias`;
+  const textoBase = `A média de ${mediaUltimos7Dias} mg/dL nos últimos 7 dias`;
   const textoFaixa =
     foraDaFaixa === 0
       ? "permanece dentro da faixa configurada."
-      : `teve ${foraDaFaixa} medicao(oes) fora da faixa.`;
+      : `teve ${foraDaFaixa} medição(ões) fora da faixa.`;
 
   return {
     mediaUltimos7Dias,

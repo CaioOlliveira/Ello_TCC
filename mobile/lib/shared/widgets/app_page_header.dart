@@ -13,6 +13,7 @@ class AppPageHeader extends StatelessWidget {
     this.onBack,
     this.leading,
     this.trailing,
+    this.trailingWidth = 48,
     this.backTooltip = 'Voltar',
     super.key,
   });
@@ -24,10 +25,13 @@ class AppPageHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final Widget? leading;
   final Widget? trailing;
+  final double trailingWidth;
   final String backTooltip;
 
   @override
   Widget build(BuildContext context) {
+    final showBackWithLeading = onBack != null && leading != null;
+
     return SizedBox(
       height: height,
       width: double.infinity,
@@ -57,16 +61,17 @@ class AppPageHeader extends StatelessWidget {
                 width: 48,
                 height: 48,
                 child: Center(
-                  child: leading ??
-                      IconButton(
-                        onPressed: onBack,
-                        tooltip: backTooltip,
-                        icon: const Icon(
-                          Icons.chevron_left_rounded,
-                          color: AppColors.primary,
-                          size: 30,
-                        ),
-                      ),
+                  child: onBack != null
+                      ? IconButton(
+                          onPressed: onBack,
+                          tooltip: backTooltip,
+                          icon: const Icon(
+                            Icons.chevron_left_rounded,
+                            color: AppColors.primary,
+                            size: 30,
+                          ),
+                        )
+                      : leading,
                 ),
               ),
             ),
@@ -74,9 +79,21 @@ class AppPageHeader extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: SizedBox(
-                width: 48,
+                width: showBackWithLeading && trailingWidth < 96
+                    ? 96
+                    : trailingWidth,
                 height: 48,
-                child: Center(child: trailing),
+                child: Center(
+                  child: showBackWithLeading
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            leading!,
+                            trailing!,
+                          ],
+                        )
+                      : trailing,
+                ),
               ),
             ),
         ],

@@ -92,6 +92,35 @@ class LocalNotificationService {
     await prefs.setString(_idsKey, jsonEncode(groups));
   }
 
+  Future<void> showNow({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (kIsWeb) return;
+    await initialize();
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'ello_messages',
+        'Mensagens do Ello',
+        channelDescription: 'Mensagens recebidas no Chat da Família',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(),
+    );
+
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
+      payload: payload,
+    );
+  }
+
   Future<void> _schedule(LocalNotificationRequest request) {
     const details = NotificationDetails(
       android: AndroidNotificationDetails(

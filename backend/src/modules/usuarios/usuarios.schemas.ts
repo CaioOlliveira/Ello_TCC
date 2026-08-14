@@ -6,16 +6,16 @@ const fotoUsuarioSchema = z
     (value) =>
       z.string().url().safeParse(value).success ||
       /^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/]+={0,2}$/i.test(value),
-    "URL da foto invalida.",
+    "URL da foto inválida.",
   )
   .nullable();
 
 export const criarUsuarioSchema = z.object({
-  nome: z.string().min(1, "Nome e obrigatorio."),
-  email: z.string().email("E-mail invalido."),
+  nome: z.string().min(1, "Nome é obrigatório."),
+  email: z.string().email("E-mail inválido."),
   telefone: z.string().optional(),
   urlFoto: fotoUsuarioSchema.optional(),
-  tipoUsuario: z.string().min(1, "Tipo de usuario e obrigatorio."),
+  tipoUsuario: z.string().min(1, "Tipo de usuário é obrigatório."),
   senha: z.string().optional(),
 });
 

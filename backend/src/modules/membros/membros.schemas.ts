@@ -25,6 +25,11 @@ export const listarParticipantesQuerySchema = z.object({
   idosoId: z.string().uuid("Idoso inválido."),
 });
 
+export const registrarPresencaSchema = z.object({
+  usuarioId: z.string().uuid("Usuário inválido."),
+});
+
 export type CriarMembroInput = z.infer<typeof criarMembroSchema>;
 export type AtualizarMembroInput = z.infer<typeof atualizarMembroSchema>;
 export type PermissoesInput = z.infer<typeof permissoesSchema>;
+export type RegistrarPresencaInput = z.infer<typeof registrarPresencaSchema>;

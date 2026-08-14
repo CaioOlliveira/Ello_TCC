@@ -12,7 +12,7 @@ import type {
 
 const table = "tarefas";
 const occurrencesTable = "tarefas_ocorrencias_status";
-const notFound = ["TAREFA_NAO_ENCONTRADA", "Tarefa nao encontrada."] as const;
+const notFound = ["TAREFA_NAO_ENCONTRADA", "Tarefa não encontrada."] as const;
 
 const fields = {
   idosoId: "idoso_id",

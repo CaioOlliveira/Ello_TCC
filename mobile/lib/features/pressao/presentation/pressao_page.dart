@@ -708,7 +708,7 @@ class _MediaPressaoCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   ultima == null
-                      ? 'Sem medicao'
+                      ? 'Sem medição'
                       : 'Última medição: ${_formatTime(ultima.medidoEm)} · ${ultima.sistolica}/${ultima.diastolica} mmHg',
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF808080),
@@ -1025,7 +1025,7 @@ class _AnalysisCard extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'A analise detalhada por IA ainda está em treinamento.',
+                'A análise detalhada por IA ainda está em treinamento.',
               ),
             ),
           );
@@ -1170,7 +1170,7 @@ class _HistoricoVazio extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Altere o período ou registre uma nova medicao.',
+              'Altere o período ou registre uma nova medição.',
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: adaptive(context, const Color(0xFF607178),

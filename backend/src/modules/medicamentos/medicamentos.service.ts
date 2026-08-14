@@ -104,8 +104,9 @@ const diaEhValidoNaData = (
     if (!dataAncora) return true;
     const [ano, mes, dia] = dataChave.split("-").map(Number);
     const diaCandidataUtc = Date.UTC(ano, (mes || 1) - 1, dia || 1);
-    const [anoAncora, mesAncora, diaAncora] =
-      dataDateColumnChave(dataAncora).split("-").map(Number);
+    const [anoAncora, mesAncora, diaAncora] = dataDateColumnChave(dataAncora)
+      .split("-")
+      .map(Number);
     const diaAncoraUtc = Date.UTC(
       anoAncora,
       (mesAncora || 1) - 1,
@@ -280,12 +281,7 @@ const proximaOcorrencia = (
     const candidata = dataHoraCuidadoParaDate(dataCandidata, horaMinuto);
 
     if (
-      !diaEhValidoNaData(
-        dataCandidata,
-        tipoFrequencia,
-        diasSemana,
-        dataAncora,
-      )
+      !diaEhValidoNaData(dataCandidata, tipoFrequencia, diasSemana, dataAncora)
     ) {
       continue;
     }
@@ -645,6 +641,8 @@ export const medicamentosService = {
         nome: medicamento.nome,
         dosagem: medicamento.dosagem,
         formato: medicamento.formato,
+        dataInicio: medicamento.data_inicio,
+        dataFim: medicamento.data_fim,
         quantidadeEstoque:
           medicamento.quantidade_estoque == null
             ? null
@@ -874,7 +872,7 @@ export const medicamentosService = {
       if (!medicamento || medicamento.idoso_id !== input.idosoId) {
         throw new AppError(
           "MEDICAMENTO_NAO_ENCONTRADO",
-          "Medicamento nao encontrado para esta ficha.",
+          "Medicamento não encontrado para esta ficha.",
           404,
         );
       }

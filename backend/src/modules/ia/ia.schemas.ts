@@ -2,15 +2,15 @@ import { z } from "zod";
 
 export const perguntarIaSchema = z
   .object({
-    usuarioId: z.string().uuid("Usuario invalido."),
-    conversaId: z.string().uuid("Conversa invalida.").optional(),
-    idosoId: z.string().uuid("Idoso invalido.").nullable().optional(),
+    usuarioId: z.string().uuid("Usuário inválido."),
+    conversaId: z.string().uuid("Conversa inválida.").optional(),
+    idosoId: z.string().uuid("Idoso inválido.").nullable().optional(),
     anexos: z
       .array(
         z.object({
           mimeType: z
             .string()
-            .regex(/^image\/(png|jpe?g|webp)$/i, "Imagem invalida."),
+            .regex(/^image\/(png|jpe?g|webp)$/i, "Imagem inválida."),
           base64: z
             .string()
             .min(1, "Imagem vazia.")
@@ -23,28 +23,28 @@ export const perguntarIaSchema = z
   })
   .refine(
     (input) => input.mensagem.length > 0 || (input.anexos?.length ?? 0) > 0,
-    "Mensagem ou imagem e obrigatoria.",
+    "Mensagem ou imagem é obrigatória.",
   );
 
 export const listarConversasIaSchema = z.object({
-  usuarioId: z.string().uuid("Usuario invalido."),
-  idosoId: z.string().uuid("Idoso invalido.").optional(),
+  usuarioId: z.string().uuid("Usuário inválido."),
+  idosoId: z.string().uuid("Idoso inválido.").optional(),
 });
 
 export const criarConversaIaSchema = z.object({
-  usuarioId: z.string().uuid("Usuario invalido."),
-  idosoId: z.string().uuid("Idoso invalido.").nullable().optional(),
+  usuarioId: z.string().uuid("Usuário inválido."),
+  idosoId: z.string().uuid("Idoso inválido.").nullable().optional(),
   titulo: z.string().trim().min(1).max(80).default("Novo chat"),
 });
 
 export const listarMensagensIaSchema = z.object({
-  usuarioId: z.string().uuid("Usuario invalido."),
-  idosoId: z.string().uuid("Idoso invalido.").optional(),
+  usuarioId: z.string().uuid("Usuário inválido."),
+  idosoId: z.string().uuid("Idoso inválido.").optional(),
 });
 
 export const relatorioInicialIaSchema = z.object({
-  usuarioId: z.string().uuid("Usuario invalido."),
-  idosoId: z.string().uuid("Idoso invalido."),
+  usuarioId: z.string().uuid("Usuário inválido."),
+  idosoId: z.string().uuid("Idoso inválido."),
 });
 
 export type PerguntarIaInput = z.infer<typeof perguntarIaSchema>;
