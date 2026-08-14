@@ -7,6 +7,7 @@ class ApiEndpoints {
   static const cadastroGoogle = '/auth/google/cadastro';
   static const cadastro = '/auth/cadastro';
   static const alterarSenha = '/auth/senha';
+  static const chatFamiliaMensagens = '/chat-familia/mensagens';
   static const idosos = '/idosos';
   static const idososAdministrados = '/idosos/administrados';
   static const convites = '/convites';

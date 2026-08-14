@@ -3,6 +3,7 @@ import { Router } from "express";
 import { agendaRoutes } from "../modules/agenda/agenda.routes.js";
 import { alimentacaoRoutes } from "../modules/alimentacao/alimentacao.routes.js";
 import { authRoutes } from "../modules/auth/auth.routes.js";
+import { chatFamiliaRoutes } from "../modules/chat-familia/chat-familia.routes.js";
 import { convitesRoutes } from "../modules/convites/convites.routes.js";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes.js";
 import { equipamentosRoutes } from "../modules/equipamentos/equipamentos.routes.js";
@@ -32,6 +33,7 @@ routes.get("/health", (_req, res) => {
 });
 
 routes.use("/auth", authRoutes);
+routes.use("/chat-familia", chatFamiliaRoutes);
 routes.use("/usuarios", usuariosRoutes);
 routes.use("/convites", convitesRoutes);
 routes.use("/dashboard", dashboardRoutes);

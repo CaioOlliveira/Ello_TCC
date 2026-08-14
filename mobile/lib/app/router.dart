@@ -6,6 +6,7 @@ import 'providers.dart';
 import '../features/agenda/presentation/agenda_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
+import '../features/chat/presentation/familia_chat_page.dart';
 import '../features/coraia/presentation/coraia_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
@@ -153,6 +154,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/monitoramento',
             builder: (context, state) => const MonitoramentoPage(),
+          ),
+          GoRoute(
+            path: '/chat',
+            builder: (context, state) => const FamiliaChatPage(),
+          ),
+          GoRoute(
+            path: '/chat/:peerId',
+            builder: (context, state) {
+              final extra = state.extra;
+              final query = state.uri.queryParameters;
+              return FamiliaChatDetailPage(
+                peerId: state.pathParameters['peerId'] ?? '',
+                initialPeer: extra is FamiliaChatPeer
+                    ? extra
+                    : FamiliaChatPeer(
+                        id: state.pathParameters['peerId'] ?? '',
+                        name: query['nome'] ?? 'Contato',
+                        role: query['funcao'] ?? 'cuidador',
+                      ),
+              );
+            },
           ),
           GoRoute(
             path: '/corgia',
@@ -351,7 +373,7 @@ class AppShell extends StatelessWidget {
         location == '/temperatura') {
       return 1;
     }
-    if (location == '/corgia' || location == '/coraia') return 2;
+    if (location == '/chat' || location.startsWith('/chat/')) return 2;
     if (location == '/relatorios') return 3;
     if (location == '/idoso/perfil') return 3;
     return 0;
@@ -368,10 +390,19 @@ class AppShell extends StatelessWidget {
         location == '/alimentacao' ||
         location == '/insumos' ||
         location == '/humor' ||
+        location == '/corgia' ||
+        location == '/coraia' ||
+        location.startsWith('/chat/') ||
         location.startsWith('/historico/');
+    final showCoraFab =
+        location == '/dashboard' || location == '/monitoramento';
 
     return Scaffold(
       body: child,
+      floatingActionButton: showCoraFab
+          ? _CoraFloatingButton(onTap: () => context.go('/corgia'))
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: hideBottomNav
           ? null
           : SafeArea(
@@ -394,10 +425,10 @@ class AppShell extends StatelessWidget {
                       onTap: () => context.go('/monitoramento'),
                     ),
                     _NavItemData(
-                      icon: Icons.auto_awesome_outlined,
-                      activeIcon: Icons.auto_awesome_rounded,
-                      label: 'CoraIA',
-                      onTap: () => context.go('/corgia'),
+                      icon: Icons.chat_bubble_outline_rounded,
+                      activeIcon: Icons.chat_bubble_rounded,
+                      label: 'Chat',
+                      onTap: () => context.go('/chat'),
                     ),
                     _NavItemData(
                       icon: Icons.person_outline_rounded,
@@ -409,6 +440,42 @@ class AppShell extends StatelessWidget {
                 ),
               ),
             ),
+    );
+  }
+}
+
+class _CoraFloatingButton extends StatelessWidget {
+  const _CoraFloatingButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 76, right: 2),
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 7,
+        shadowColor: const Color(0xFF0E6F7E).withValues(alpha: 0.35),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 58,
+            height: 58,
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF9BDDE8), width: 1.5),
+            ),
+            child: Image.asset(
+              'assets/images/cora_avatar.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

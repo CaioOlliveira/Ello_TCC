@@ -308,6 +308,58 @@ class AiMensagem {
   bool get fromUser => remetente == 'usuario';
 }
 
+class FamiliaChatMensagem {
+  const FamiliaChatMensagem({
+    required this.id,
+    required this.idosoId,
+    required this.remetenteId,
+    required this.destinatarioId,
+    required this.conteudo,
+    required this.criadoEm,
+    this.imageDataUrl,
+  });
+
+  factory FamiliaChatMensagem.fromJson(Map<String, dynamic> json) {
+    final anexo = json['anexo'];
+    String? imageDataUrl;
+    if (anexo is Map<String, dynamic>) {
+      final mimeType = anexo['mimeType']?.toString();
+      final base64 = anexo['base64']?.toString();
+      if (mimeType != null && base64 != null) {
+        imageDataUrl = 'data:$mimeType;base64,$base64';
+      }
+    }
+
+    return FamiliaChatMensagem(
+      id: json['id']?.toString() ?? '',
+      idosoId:
+          json['idosoId']?.toString() ?? json['idoso_id']?.toString() ?? '',
+      remetenteId: json['remetenteId']?.toString() ??
+          json['remetente_id']?.toString() ??
+          '',
+      destinatarioId: json['destinatarioId']?.toString() ??
+          json['destinatario_id']?.toString() ??
+          '',
+      conteudo: json['conteudo']?.toString() ?? '',
+      criadoEm: DateTime.tryParse(
+            json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
+          ) ??
+          DateTime.now(),
+      imageDataUrl: imageDataUrl,
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final String remetenteId;
+  final String destinatarioId;
+  final String conteudo;
+  final DateTime criadoEm;
+  final String? imageDataUrl;
+
+  bool fromMe(String usuarioId) => remetenteId == usuarioId;
+}
+
 class AiPerguntaResposta {
   const AiPerguntaResposta({
     required this.resposta,
@@ -2749,6 +2801,69 @@ class ApiClient {
       throw _toApiException(
         error,
         fallback: 'Não foi possível abrir este chat.',
+      );
+    }
+  }
+
+  Future<List<FamiliaChatMensagem>> listarMensagensFamilia({
+    required String idosoId,
+    required String usuarioId,
+    required String outroUsuarioId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.chatFamiliaMensagens,
+        queryParameters: {
+          'idosoId': idosoId,
+          'usuarioId': usuarioId,
+          'outroUsuarioId': outroUsuarioId,
+        },
+      );
+      final data = response.data?['dados'];
+
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(FamiliaChatMensagem.fromJson)
+            .toList();
+      }
+
+      return const [];
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel abrir este chat.',
+      );
+    }
+  }
+
+  Future<FamiliaChatMensagem> criarMensagemFamilia({
+    required String idosoId,
+    required String usuarioId,
+    required String destinatarioId,
+    required String mensagem,
+    Map<String, String>? imagem,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.chatFamiliaMensagens,
+        data: {
+          'idosoId': idosoId,
+          'usuarioId': usuarioId,
+          'destinatarioId': destinatarioId,
+          'mensagem': mensagem,
+          if (imagem != null) 'anexo': imagem,
+        },
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) {
+        return FamiliaChatMensagem.fromJson(dados);
+      }
+      throw const ApiException('Nao foi possivel enviar a mensagem.');
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel enviar a mensagem.',
       );
     }
   }
