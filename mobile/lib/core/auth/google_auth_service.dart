@@ -74,13 +74,11 @@ class GoogleAuthService {
     if (_initialized) return;
 
     final clientId = _config.googleClientId.trim();
-    final serverClientId = _config.googleServerClientId.trim().isNotEmpty
-        ? _config.googleServerClientId.trim()
-        : clientId;
+    final serverClientId = _config.googleServerClientId.trim();
 
     await GoogleSignIn.instance.initialize(
       clientId: kIsWeb && clientId.isNotEmpty ? clientId : null,
-      serverClientId: serverClientId.isNotEmpty ? serverClientId : null,
+      serverClientId: serverClientId,
     );
 
     _initialized = true;
