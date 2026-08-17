@@ -646,7 +646,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  'toque para adicionar',
+                  'Toque na foto para adicionar ou alterar',
                   style: TextStyle(
                     color: adaptive(context, const Color(0xFF9B9B9B),
                         AppDarkColors.textMuted),
@@ -805,41 +805,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
           controller: _contatoParentescoController,
           hintText: 'Ex: filha, vizinho',
         ),
-        if (_isEditing) ...[
-          const SizedBox(height: 10),
-          InkWell(
-            onTap: () => context.go('/idoso/acessos'),
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.link_rounded,
-                    color: Color(0xFF2BA8BA),
-                    size: 22,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Acessos',
-                      style: TextStyle(
-                        color: adaptive(context, const Color(0xFF073248),
-                            AppDarkColors.textPrimary),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: adaptive(context, const Color(0xFF6E7C83),
-                        AppDarkColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
         const SizedBox(height: 10),
         const _FieldLabel('Observações'),
         _InputBox(
@@ -1104,7 +1069,7 @@ class _CadastroHeader extends StatelessWidget {
         children: [
           AppPageHeader(
             title: editing
-                ? 'Editar ${personText.singular}'
+                ? 'Editar ficha ${personText.of}'
                 : 'Cadastro ${personText.of}',
             onBack: onBack,
           ),

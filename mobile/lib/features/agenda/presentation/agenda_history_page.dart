@@ -129,7 +129,7 @@ class _AgendaHistoryPageState extends ConsumerState<AgendaHistoryPage> {
                                       icon: Icons.history_rounded,
                                       title: 'Sem histórico',
                                       message:
-                                          'Nenhuma alteracao encontrada neste periodo.',
+                                          'Nenhuma alteração encontrada neste período.',
                                     )
                                   : RefreshIndicator(
                                       color: _accent,
@@ -191,7 +191,7 @@ class _HistorySwitch extends StatelessWidget {
             onTap: () => onChanged(_AgendaHistoryPeriod.semanal),
           ),
           _HistorySwitchOption(
-            label: 'Mes',
+            label: 'Mês',
             selected: value == _AgendaHistoryPeriod.mes,
             onTap: () => onChanged(_AgendaHistoryPeriod.mes),
           ),

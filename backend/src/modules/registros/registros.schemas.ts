@@ -19,6 +19,15 @@ export const humorSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Horário inválido."),
   dataHumor: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
+}).superRefine((value, context) => {
+  const registradoEm = new Date(`${value.dataHumor}T${value.horarioRegi}:00`);
+  if (!Number.isNaN(registradoEm.getTime()) && registradoEm > new Date()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["horarioRegi"],
+      message: "Não é permitido registrar humor em um horário futuro.",
+    });
+  }
 });
 
 export const sonoSchema = z.object({

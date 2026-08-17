@@ -131,7 +131,7 @@ class _EquipamentosHistoryPageState
                                       icon: Icons.history_rounded,
                                       title: 'Sem histórico',
                                       message:
-                                          'Nenhuma alteracao encontrada neste periodo.',
+                                          'Nenhuma alteração encontrada neste período.',
                                     )
                                   : RefreshIndicator(
                                       color: _accent,
@@ -189,7 +189,7 @@ class _HistorySwitch extends StatelessWidget {
             onTap: () => onChanged(_EquipamentosHistoryPeriod.semanal),
           ),
           _HistorySwitchOption(
-            label: 'Mes',
+            label: 'Mês',
             selected: value == _EquipamentosHistoryPeriod.mes,
             onTap: () => onChanged(_EquipamentosHistoryPeriod.mes),
           ),

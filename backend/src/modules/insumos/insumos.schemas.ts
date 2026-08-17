@@ -4,6 +4,10 @@ export const insumoParamsSchema = z.object({
   insumoId: z.string().min(1, "Insumo e obrigatorio."),
 });
 
+export const removerInsumoQuerySchema = z.object({
+  usuarioId: z.string().uuid("Usuário responsável inválido."),
+});
+
 export const listarInsumosQuerySchema = z.object({
   idosoId: z.string().uuid().optional(),
   filtro: z

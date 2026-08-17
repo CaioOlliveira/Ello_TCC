@@ -12,6 +12,7 @@ import '../features/autenticacao/presentation/login_page.dart';
 import '../features/chat/presentation/familia_chat_page.dart';
 import '../features/coraia/presentation/coraia_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
+import '../features/equipamentos/presentation/equipamentos_history_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
 import '../features/historico/presentation/historico_page.dart';
 import '../features/humor/presentation/humor_page.dart';
@@ -81,7 +82,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'historico',
             builder: (context, state) => const _ModuleAccessGate(
               moduleId: 'Equipamentos',
-              child: HistoricoPage(tipo: 'equipamentos'),
+              child: EquipamentosHistoryPage(),
             ),
           ),
         ],
@@ -219,7 +220,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final tipo = state.pathParameters['tipo'] ?? 'insumos';
               final moduleId = _moduleIdFromHistorico(tipo);
-              final page = HistoricoPage(tipo: tipo);
+              final page = tipo.toLowerCase() == 'equipamentos'
+                  ? const EquipamentosHistoryPage()
+                  : HistoricoPage(tipo: tipo);
               return moduleId == null
                   ? page
                   : _ModuleAccessGate(moduleId: moduleId, child: page);

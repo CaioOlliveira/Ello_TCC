@@ -127,10 +127,26 @@ export const insumosService = {
     return atualizado;
   },
 
-  async remover(id: string) {
+  async remover(id: string, usuarioId: string) {
     const anterior = await this.buscarPorId(id);
+    if (isDatabaseEnabled) {
+      const usuario = await getPool().query<{ id: string }>(
+        "select id from usuarios where id = $1 limit 1",
+        [usuarioId],
+      );
+
+      if (!usuario.rows[0]) {
+        throw new AppError(
+          "USUARIO_REGISTRO_INVALIDO",
+          "Não foi possível identificar o usuário responsável pela exclusão.",
+          400,
+        );
+      }
+    }
+
     await deleteRow(table, id, ...notFound);
     await registrarHistorico({
+      usuarioId,
       idosoId: String(anterior.idoso_id ?? ""),
       acao: "remover",
       tipoEntidade: table,

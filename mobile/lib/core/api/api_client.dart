@@ -3106,9 +3106,16 @@ class ApiClient {
     }
   }
 
-  Future<void> removerInsumo({required String id}) async {
+  Future<void> removerInsumo({
+    required String id,
+    required String usuarioId,
+  }) async {
     try {
-      await _dio.delete<void>(ApiEndpoints.insumo(id));
+      await _dio.delete<void>(
+        ApiEndpoints.insumo(id),
+        data: {'usuarioId': usuarioId},
+        queryParameters: {'usuarioId': usuarioId},
+      );
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao excluir insumo.');
     }
@@ -4289,8 +4296,20 @@ class ApiClient {
     if (data is Map<String, dynamic>) {
       final mensagem = data['mensagem'];
       if (mensagem is String && mensagem.isNotEmpty) {
+        final campos = data['campos'];
+        final detalhes = campos is Map
+            ? campos.entries
+                .map((entry) {
+                  final erro = entry.value.toString().trim();
+                  if (erro.isEmpty) return '';
+                  return '${_apiFieldLabel(entry.key.toString())}: $erro';
+                })
+                .where((value) => value.isNotEmpty)
+                .toSet()
+                .join(' ')
+            : '';
         return ApiException(
-          mensagem,
+          detalhes.isEmpty ? mensagem : '$mensagem $detalhes',
           statusCode: error.response?.statusCode,
         );
       }
@@ -4317,6 +4336,22 @@ String _toIsoDateOnly(DateTime date) {
   return '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
+}
+
+String _apiFieldLabel(String field) {
+  return switch (field) {
+    'valor' => 'Glicemia',
+    'doseUnidades' => 'Dose de insulina',
+    'temperatura' => 'Temperatura',
+    'sistolica' => 'Pressão sistólica',
+    'diastolica' => 'Pressão diastólica',
+    'batimentos' => 'Batimentos',
+    'saturacao' => 'Saturação',
+    'pulso' => 'Pulso',
+    'medidoEm' => 'Data e horário',
+    'aplicadoEm' => 'Data e horário',
+    _ => field,
+  };
 }
 
 double? _numOrNull(Object? value) {

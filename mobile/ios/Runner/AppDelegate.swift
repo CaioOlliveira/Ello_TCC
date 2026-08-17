@@ -1,6 +1,16 @@
 import Flutter
 import UIKit
 
+class HomeIndicatorFlutterViewController: FlutterViewController {
+  override var prefersHomeIndicatorAutoHidden: Bool {
+    true
+  }
+
+  override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
+    .bottom
+  }
+}
+
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   override func application(

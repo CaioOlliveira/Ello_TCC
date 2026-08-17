@@ -1,3 +1,4 @@
+import { AppError } from "../../common/errors/app-error.js";
 import { registrarHistorico } from "../../database/audit.js";
 import { getPool, isDatabaseEnabled } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
@@ -101,6 +102,12 @@ export const registrosService = {
 
   async criar(tipo: RegistroTipo, input: Record<string, unknown>) {
     const config = configs[tipo];
+    if (tipo === "hidratacao") {
+      await validarMetaDiariaDeHidratacao(
+        String(input.idosoId),
+        Number(input.quantidadeMl),
+      );
+    }
     const registradoPorId = await resolverUsuarioRegistroId(
       typeof input.registradoPorId === "string"
         ? input.registradoPorId
@@ -131,6 +138,46 @@ export const registrosService = {
     return registro;
   },
 };
+
+async function validarMetaDiariaDeHidratacao(
+  idosoId: string,
+  quantidadeMl: number,
+) {
+  if (!isDatabaseEnabled || !Number.isFinite(quantidadeMl)) return;
+
+  const result = await getPool().query<{
+    pesoKg: string | number | null;
+    totalHoje: string | number;
+  }>(
+    `
+      select
+        f.peso_kg as "pesoKg",
+        coalesce(sum(h.quantidade_ml), 0) as "totalHoje"
+      from fichas_idosos f
+      left join registros_hidratacao h
+        on h.idoso_id = f.id
+       and (h.registrado_em at time zone 'America/Sao_Paulo')::date =
+           (now() at time zone 'America/Sao_Paulo')::date
+      where f.id = $1
+      group by f.peso_kg
+    `,
+    [idosoId],
+  );
+
+  const row = result.rows[0];
+  const pesoKg = Number(row?.pesoKg);
+  const totalHoje = Number(row?.totalHoje ?? 0);
+  if (!Number.isFinite(pesoKg) || pesoKg <= 0) return;
+
+  const metaDiaria = Math.round(pesoKg * 30);
+  if (totalHoje + quantidadeMl > metaDiaria) {
+    throw new AppError(
+      "META_HIDRATACAO_ATINGIDA",
+      "A pessoa já tomou a quantidade de água recomendada.",
+      409,
+    );
+  }
+}
 
 async function notificarFamiliaSobreHumor({
   idosoId,

@@ -59,7 +59,7 @@ String formatAgendaTimeOfDay(TimeOfDay time) {
 }
 
 String agendaWeekdayShort(int weekday) {
-  const names = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
+  const names = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
   return names[weekday - 1];
 }
 
@@ -67,7 +67,7 @@ String agendaMonthName(int month) {
   const names = [
     'Janeiro',
     'Fevereiro',
-    'Marco',
+    'Março',
     'Abril',
     'Maio',
     'Junho',

@@ -63,7 +63,28 @@ class _HumorPageState extends ConsumerState<HumorPage> {
     );
 
     if (selected == null) return;
+    if (_selectedTimeIsInFuture(selected)) {
+      setState(() {
+        _errorMessage = 'Não é possível registrar humor em um horário futuro.';
+      });
+      return;
+    }
     setState(() => _horaController.text = _formatTime(selected));
+  }
+
+  bool _selectedTimeIsInFuture(TimeOfDay time) {
+    final date = _parseBrazilianDate(_dataController.text);
+    if (date == null) return false;
+
+    final now = DateTime.now();
+    if (date.year != now.year ||
+        date.month != now.month ||
+        date.day != now.day) {
+      return false;
+    }
+
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute)
+        .isAfter(now);
   }
 
   Future<void> _save() async {
@@ -94,6 +115,15 @@ class _HumorPageState extends ConsumerState<HumorPage> {
 
     if (dataHumor == null || horarioRegi == null) {
       setState(() => _errorMessage = 'Informe uma data e um horário válidos.');
+      return;
+    }
+
+    final selectedTime = _parseTime(horarioRegi);
+    if (selectedTime != null && _selectedTimeIsInFuture(selectedTime)) {
+      setState(
+        () => _errorMessage =
+            'Não é possível registrar humor em um horário futuro.',
+      );
       return;
     }
 

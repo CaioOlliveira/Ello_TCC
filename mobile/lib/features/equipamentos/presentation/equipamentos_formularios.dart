@@ -88,7 +88,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     final selected = await showDatePicker(
       context: Navigator.of(context, rootNavigator: true).context,
       firstDate: DateTime(now.year - 20),
-      lastDate: DateTime(now.year + 20),
+      lastDate: now,
       initialDate: now,
     );
     if (selected == null) return;
@@ -452,97 +452,83 @@ class _EquipamentoDetails extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Text(
-                'Detalhes do equipamento',
-                style: TextStyle(
-                  color: adaptive(context, const Color(0xFF073248),
-                      AppDarkColors.textPrimary),
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
+        Align(
+          alignment: Alignment.centerRight,
+          child: PopupMenuButton<String>(
+            enabled: !saving,
+            padding: EdgeInsets.zero,
+            icon: Icon(
+              Icons.more_vert_rounded,
+              color: adaptive(
+                  context, const Color(0xFF073248), AppDarkColors.textPrimary),
+              size: 28,
+            ),
+            onSelected: (value) {
+              if (value == 'manutencao') onRegister();
+              if (value == 'status') onStatusChanged();
+              if (value == 'editar') onEdit();
+              if (value == 'excluir') onDelete();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'manutencao',
+                child: Row(
+                  children: [
+                    Icon(Icons.build_rounded, size: 20),
+                    SizedBox(width: 10),
+                    Text('Registrar manutenção'),
+                  ],
                 ),
               ),
-            ),
-            PopupMenuButton<String>(
-              enabled: !saving,
-              padding: EdgeInsets.zero,
-              icon: Icon(
-                Icons.more_vert_rounded,
-                color: adaptive(context, const Color(0xFF073248),
-                    AppDarkColors.textPrimary),
-                size: 28,
+              PopupMenuItem(
+                value: 'status',
+                child: Row(
+                  children: [
+                    Icon(
+                      equipamento.status == 'Fora de uso'
+                          ? Icons.check_circle_rounded
+                          : Icons.block_rounded,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      equipamento.status == 'Fora de uso'
+                          ? 'Colocar em uso'
+                          : 'Marcar fora de uso',
+                    ),
+                  ],
+                ),
               ),
-              onSelected: (value) {
-                if (value == 'manutencao') onRegister();
-                if (value == 'status') onStatusChanged();
-                if (value == 'editar') onEdit();
-                if (value == 'excluir') onDelete();
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'manutencao',
-                  child: Row(
-                    children: [
-                      Icon(Icons.build_rounded, size: 20),
-                      SizedBox(width: 10),
-                      Text('Registrar manutenção'),
-                    ],
-                  ),
+              const PopupMenuItem(
+                value: 'editar',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_rounded, size: 20),
+                    SizedBox(width: 10),
+                    Text('Editar'),
+                  ],
                 ),
-                PopupMenuItem(
-                  value: 'status',
-                  child: Row(
-                    children: [
-                      Icon(
-                        equipamento.status == 'Fora de uso'
-                            ? Icons.check_circle_rounded
-                            : Icons.block_rounded,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        equipamento.status == 'Fora de uso'
-                            ? 'Colocar em uso'
-                            : 'Marcar fora de uso',
-                      ),
-                    ],
-                  ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'excluir',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      size: 20,
+                      color: Color(0xFFFF1744),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Excluir',
+                      style: TextStyle(color: Color(0xFFFF1744)),
+                    ),
+                  ],
                 ),
-                const PopupMenuItem(
-                  value: 'editar',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit_rounded, size: 20),
-                      SizedBox(width: 10),
-                      Text('Editar'),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'excluir',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.delete_outline_rounded,
-                        size: 20,
-                        color: Color(0xFFFF1744),
-                      ),
-                      SizedBox(width: 10),
-                      Text(
-                        'Excluir',
-                        style: TextStyle(color: Color(0xFFFF1744)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         _DetailsHeader(equipamento: equipamento),
@@ -652,8 +638,9 @@ class _ManutencaoFormState extends State<_ManutencaoForm> {
     final selected = await showDatePicker(
       context: Navigator.of(context, rootNavigator: true).context,
       firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 5),
-      initialDate: _dataValue ?? now,
+      lastDate: now,
+      initialDate:
+          _dataValue != null && _dataValue!.isBefore(now) ? _dataValue! : now,
     );
     if (selected == null) return;
     setState(() {

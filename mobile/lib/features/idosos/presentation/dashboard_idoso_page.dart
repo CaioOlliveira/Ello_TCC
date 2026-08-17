@@ -441,41 +441,44 @@ _MedicationAlertColors _medicationAlertColors(
   BuildContext context,
   _MedicationAlertTone tone,
 ) {
-  final darkSurface = adaptive(context, Colors.white, AppDarkColors.surfaceAlt);
-
   return switch (tone) {
     _MedicationAlertTone.late => _MedicationAlertColors(
         background: adaptive(
             context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
-        badgeBackground: darkSurface,
+        badgeBackground: adaptive(
+            context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
         accent: const Color(0xFFD73A3A),
         icon: Icons.warning_amber_rounded,
       ),
     _MedicationAlertTone.soon => _MedicationAlertColors(
         background: adaptive(
             context, const Color(0xFFFFF3E3), AppDarkColors.tintedWarn),
-        badgeBackground: darkSurface,
+        badgeBackground: adaptive(
+            context, const Color(0xFFFFF3E3), AppDarkColors.tintedWarn),
         accent: const Color(0xFFE47A00),
         icon: Icons.notifications_active_rounded,
       ),
     _MedicationAlertTone.later => _MedicationAlertColors(
         background: adaptive(
             context, const Color(0xFFE8F8FA), AppDarkColors.tintedInfo),
-        badgeBackground: darkSurface,
+        badgeBackground: adaptive(
+            context, const Color(0xFFE8F8FA), AppDarkColors.tintedInfo),
         accent: const Color(0xFF168FA1),
         icon: Icons.notifications_none_rounded,
       ),
     _MedicationAlertTone.done => _MedicationAlertColors(
         background: adaptive(
             context, const Color(0xFFEAF8EF), AppDarkColors.surfaceAlt),
-        badgeBackground: darkSurface,
+        badgeBackground: adaptive(
+            context, const Color(0xFFEAF8EF), AppDarkColors.surfaceAlt),
         accent: const Color(0xFF28A745),
         icon: Icons.check_circle_outline_rounded,
       ),
     _MedicationAlertTone.empty => _MedicationAlertColors(
         background: adaptive(
             context, const Color(0xFFF3F8F9), AppDarkColors.surfaceAlt),
-        badgeBackground: darkSurface,
+        badgeBackground: adaptive(
+            context, const Color(0xFFF3F8F9), AppDarkColors.surfaceAlt),
         accent: const Color(0xFF168FA1),
         icon: Icons.medication_outlined,
       ),
@@ -805,9 +808,7 @@ _MedicamentosDashboardInfo _medicamentosDashboardInfo(
   }
 
   final atrasados = pendentes.where(_medicamentoAtrasado).length;
-  final proximo = _medicamentoTemDosePendente(resumo.proximoMedicamento)
-      ? resumo.proximoMedicamento!
-      : pendentes.first;
+  final proximo = pendentes.first;
   final dosagem = proximo.dosagem?.trim();
   final minutosAteDose =
       proximo.proximoHorarioPrevisto?.difference(DateTime.now()).inMinutes;

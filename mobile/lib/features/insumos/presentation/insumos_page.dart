@@ -184,9 +184,21 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
     );
 
     if (confirmed != true) return;
+    if (!mounted) return;
+
+    final usuarioId = ref.read(authSessionProvider)?.id;
+    if (usuarioId == null || usuarioId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Entre novamente para excluir o insumo.')),
+      );
+      return;
+    }
 
     try {
-      await ref.read(apiClientProvider).removerInsumo(id: insumo.id);
+      await ref.read(apiClientProvider).removerInsumo(
+            id: insumo.id,
+            usuarioId: usuarioId,
+          );
       if (!mounted) return;
       _showList();
     } on ApiException catch (error) {

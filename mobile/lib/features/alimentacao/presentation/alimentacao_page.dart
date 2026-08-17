@@ -27,6 +27,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
   RefeicaoResumo? _editing;
   String _draftTipo = 'Café da manhã';
   bool _loading = true;
+  bool _addingWater = false;
   String? _error;
 
   @override
@@ -128,6 +129,8 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
   }
 
   Future<void> _addWater() async {
+    if (_addingWater) return;
+
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
     if (!idoso.podeEditarModulo('Alimentacao')) {
@@ -135,20 +138,34 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
       return;
     }
     final personText = idoso.elderText;
+    final peso = idoso.pesoKg;
+    if (peso == null || peso <= 0) return;
 
     final now = DateTime.now();
-    final last30 = _hidratacoes
-        .where((item) =>
-            now.difference(item.registradoEm.toLocal()).inMinutes <= 30)
+    final metaDiaria = (peso * 30).roundToDouble();
+    final totalHoje = _hidratacoes
+        .where((item) => _isToday(item.registradoEm.toLocal()))
         .fold<double>(0, (sum, item) => sum + item.quantidadeMl);
+    final restante = metaDiaria - totalHoje;
 
-    if (last30 + 200 > 600) {
+    if (restante <= 0) {
+      await _showWaterGoalReachedDialog();
+      return;
+    }
+
+    final quantidadeMl = restante.clamp(0.0, 200.0).toDouble();
+    final last30 = _hidratacoes.where((item) {
+      final minutos = now.difference(item.registradoEm.toLocal()).inMinutes;
+      return minutos >= 0 && minutos <= 30;
+    }).fold<double>(0, (sum, item) => sum + item.quantidadeMl);
+
+    if (last30 + quantidadeMl > 600) {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Atenção'),
           content: Text(
-            'Tomar muita água de uma vez pode ser prejudicial ${personText.to}. Continue adicionando apenas se esse consumo realmente aconteceu.',
+            'Já foram registrados ${last30.toInt()} ml de água nos últimos 30 minutos. Tomar muita água de uma vez pode ser prejudicial ${personText.to}. Continue apenas se esse consumo realmente aconteceu.',
           ),
           actions: [
             FilledButton(
@@ -160,19 +177,106 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
       );
     }
 
+    setState(() => _addingWater = true);
     try {
       await ref.read(apiClientProvider).criarHidratacao(
             idosoId: idoso.id,
-            quantidadeMl: 200,
+            quantidadeMl: quantidadeMl,
             registradoPorId: ref.read(authSessionProvider)?.id,
           );
       await _load();
     } on ApiException catch (error) {
       if (!mounted) return;
+      if (error.statusCode == 409 &&
+          error.message.contains('quantidade de água recomendada')) {
+        await _showWaterGoalReachedDialog();
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message)),
       );
+    } finally {
+      if (mounted) setState(() => _addingWater = false);
     }
+  }
+
+  Future<void> _showWaterGoalReachedDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 34),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 16),
+          decoration: BoxDecoration(
+            color: adaptive(
+              context,
+              const Color(0xFFF4FBFC),
+              const Color(0xFF12343B),
+            ),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF2BA8BA)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 54,
+                width: 54,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0C7E91),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.water_drop_rounded,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Meta de hidratação concluída',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: adaptive(
+                    context,
+                    const Color(0xFF073248),
+                    AppDarkColors.textPrimary,
+                  ),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'A quantidade de água recomendada para hoje já foi alcançada.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: adaptive(
+                    context,
+                    const Color(0xFF49636D),
+                    AppDarkColors.textSecondary,
+                  ),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0C7E91),
+                  ),
+                  child: const Text('Certo'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showDetails(RefeicaoResumo refeicao) {
@@ -458,7 +562,8 @@ class _AlimentacaoListView extends StatelessWidget {
           child: Column(
             children: [
               SizedBox(
-                height: 56,
+                height: 50,
+                width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_rounded, size: 27),
@@ -613,7 +718,8 @@ class _WaterCardState extends State<_WaterCard> {
     final target = (peso * 30).roundToDouble();
     final progress = target <= 0 ? 0.0 : (todayTotal / target).clamp(0.0, 1.0);
     final cupCount = (target / 200).ceil().clamp(1, 14);
-    final filledCups = (todayTotal / 200).floor().clamp(0, cupCount);
+    final lastCupFillLimit =
+        target.remainder(200) == 0 ? 1.0 : target.remainder(200) / 200;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
@@ -711,7 +817,12 @@ class _WaterCardState extends State<_WaterCard> {
             children: [
               for (var i = 0; i < cupCount; i++)
                 _WaterCup(
-                  filled: i < filledCups,
+                  fillLevel: ((todayTotal - (i * 200)) / 200)
+                      .clamp(
+                        0.0,
+                        i == cupCount - 1 ? lastCupFillLimit : 1.0,
+                      )
+                      .toDouble(),
                   onTap: widget.onAddWater,
                 ),
             ],
@@ -733,9 +844,9 @@ class _WaterCardState extends State<_WaterCard> {
 }
 
 class _WaterCup extends StatelessWidget {
-  const _WaterCup({required this.filled, required this.onTap});
+  const _WaterCup({required this.fillLevel, required this.onTap});
 
-  final bool filled;
+  final double fillLevel;
   final VoidCallback onTap;
 
   @override
@@ -744,20 +855,37 @@ class _WaterCup extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: AnimatedScale(
-        scale: filled ? 1.0 : 0.86,
+        scale: fillLevel > 0 ? 1.0 : 0.86,
         duration: const Duration(milliseconds: 360),
         curve: Curves.elasticOut,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          transitionBuilder: (child, animation) => ScaleTransition(
-            scale: animation,
-            child: FadeTransition(opacity: animation, child: child),
-          ),
-          child: Icon(
-            filled ? Icons.local_drink_rounded : Icons.local_drink_outlined,
-            key: ValueKey(filled),
-            color: const Color(0xFF098CA1),
-            size: 36,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(end: fillLevel),
+          duration: const Duration(milliseconds: 460),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, _) => SizedBox(
+            height: 36,
+            width: 36,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(
+                  Icons.local_drink_outlined,
+                  color: Color(0xFF098CA1),
+                  size: 36,
+                ),
+                ClipRect(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    heightFactor: value,
+                    child: const Icon(
+                      Icons.local_drink_rounded,
+                      color: Color(0xFF098CA1),
+                      size: 36,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1774,6 +1902,15 @@ class _AcceptanceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = isDarkMode(context);
+    final borderColor = selected
+        ? const Color(0xFF2BA8BA)
+        : adaptive(
+            context, const Color(0xFF2BA8BA), AppDarkColors.borderStrong);
+    final foregroundColor = selected
+        ? adaptive(context, const Color(0xFF167E8F), const Color(0xFFB9F3FA))
+        : adaptive(context, const Color(0xFF2A99AB), AppDarkColors.textPrimary);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -1783,22 +1920,26 @@ class _AcceptanceButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? adaptive(
-                  context, const Color(0xFFE3F5F8), AppDarkColors.tintedInfo)
-              : adaptive(context, Colors.white, AppDarkColors.surface),
+                  context, const Color(0xFFE3F5F8), const Color(0xFF0D5968))
+              : adaptive(
+                  context,
+                  Colors.white,
+                  dark ? const Color(0xFF24343A) : AppDarkColors.surface,
+                ),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFF2BA8BA)),
+          border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _AcceptanceIcon(option: option),
+            _AcceptanceIcon(option: option, color: foregroundColor),
             const SizedBox(height: 5),
             Text(
               option.label,
               textAlign: TextAlign.center,
               maxLines: 2,
-              style: const TextStyle(
-                color: Color(0xFF2A99AB),
+              style: TextStyle(
+                color: foregroundColor,
                 fontSize: 11,
                 height: 1.05,
                 fontWeight: FontWeight.w600,
@@ -1812,31 +1953,32 @@ class _AcceptanceButton extends StatelessWidget {
 }
 
 class _AcceptanceIcon extends StatelessWidget {
-  const _AcceptanceIcon({required this.option});
+  const _AcceptanceIcon({required this.option, required this.color});
 
   final _AcceptanceOption option;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     if (option.fraction == null) {
-      return const Icon(Icons.close, color: Color(0xFF2A99AB), size: 28);
+      return Icon(Icons.close, color: color, size: 28);
     }
 
     return CustomPaint(
       size: const Size.square(25),
-      painter: _AcceptanceIconPainter(option.fraction!),
+      painter: _AcceptanceIconPainter(option.fraction!, color),
     );
   }
 }
 
 class _AcceptanceIconPainter extends CustomPainter {
-  const _AcceptanceIconPainter(this.fraction);
+  const _AcceptanceIconPainter(this.fraction, this.color);
 
   final double fraction;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    const color = Color(0xFF2A99AB);
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.shortestSide / 2;
     final rect = Rect.fromCircle(center: center, radius: radius);
@@ -1866,7 +2008,7 @@ class _AcceptanceIconPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _AcceptanceIconPainter oldDelegate) {
-    return oldDelegate.fraction != fraction;
+    return oldDelegate.fraction != fraction || oldDelegate.color != color;
   }
 }
 

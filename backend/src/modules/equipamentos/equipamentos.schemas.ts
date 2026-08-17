@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { formatLocalDate } from "../../common/utils/date-utils.js";
+
 const textoOpcional = z.string().optional();
 const textoOpcionalNulo = z.string().nullable().optional();
 
@@ -23,6 +25,7 @@ const normalizarEquipamento = (value: unknown) => {
     localGuardado: input.localGuardado ?? input.local_guardado,
     responsavelId: input.responsavelId ?? input.responsavel_id,
     criadoPorId: input.criadoPorId ?? input.criado_por_id,
+    registradoPorId: input.registradoPorId ?? input.registrado_por_id,
     urlManual: input.urlManual ?? input.url_manual,
     urlFoto: Object.hasOwn(input, "urlFoto") ? input.urlFoto : input.url_foto,
     frequenciaManutencaoDias: toNumber(
@@ -34,6 +37,14 @@ const normalizarEquipamento = (value: unknown) => {
       input.observacoesSeguranca ?? input.observacoes_seguranca,
   };
 };
+
+const dataNaoFuturaSchema = z
+  .string()
+  .date("Data deve estar em formato ISO.")
+  .refine(
+    (value) => value <= formatLocalDate(new Date()),
+    "Não é permitido registrar uma data futura.",
+  );
 
 const normalizarManutencao = (value: unknown) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
@@ -63,12 +74,13 @@ const equipamentoSchema = z.object({
   marca: textoOpcional,
   modelo: textoOpcional,
   numeroSerie: textoOpcional,
-  dataAquisicao: z.string().date().optional(),
+  dataAquisicao: dataNaoFuturaSchema.optional(),
   validade: z.string().date().optional(),
-  ultimaManutencaoEm: z.string().date().optional(),
+  ultimaManutencaoEm: dataNaoFuturaSchema.optional(),
   localGuardado: textoOpcional,
   responsavelId: z.string().uuid().optional(),
   criadoPorId: z.string().uuid().optional(),
+  registradoPorId: z.string().uuid().optional(),
   urlManual: textoOpcional,
   urlFoto: textoOpcionalNulo,
   frequenciaManutencaoDias: z.number().int().positive().optional(),
@@ -88,7 +100,7 @@ export const atualizarEquipamentoSchema = z.preprocess(
 );
 
 const manutencaoSchema = z.object({
-  dataManutencao: z.string().date(),
+  dataManutencao: dataNaoFuturaSchema,
   tipoManutencao: textoOpcional,
   descricaoServico: textoOpcional,
   problemaRelatado: textoOpcional,

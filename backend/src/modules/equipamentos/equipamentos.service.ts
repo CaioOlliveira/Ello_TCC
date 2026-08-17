@@ -129,12 +129,15 @@ export const equipamentosService = {
 
   async atualizar(id: string, input: AtualizarEquipamentoInput) {
     const anterior = await this.buscarPorId(id);
+    const { registradoPorId, ...dadosEquipamento } = input;
     const atualizado = await updateRow<
-      AtualizarEquipamentoInput,
+      Omit<AtualizarEquipamentoInput, "registradoPorId">,
       Record<string, unknown>
-    >(table, id, input, fields, ...notFound);
+    >(table, id, dadosEquipamento, fields, ...notFound);
     await registrarHistorico({
-      usuarioId: input.criadoPorId,
+      usuarioId: await resolverUsuarioRegistroId(
+        registradoPorId ?? input.criadoPorId,
+      ),
       idosoId: String(atualizado.idoso_id ?? ""),
       acao: "atualizar",
       tipoEntidade: table,

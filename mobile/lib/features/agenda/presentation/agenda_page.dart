@@ -623,7 +623,7 @@ class _ViewSwitch extends StatelessWidget {
             onTap: () => onChanged(_AgendaView.dia),
           ),
           _SwitchOption(
-            label: 'Mes',
+            label: 'Mês',
             selected: value == _AgendaView.mes,
             onTap: () => onChanged(_AgendaView.mes),
           ),
@@ -1112,7 +1112,7 @@ class _MonthView extends StatelessWidget {
             _CalendarWeekday('Qua'),
             _CalendarWeekday('Qui'),
             _CalendarWeekday('Sex'),
-            _CalendarWeekday('Sab'),
+            _CalendarWeekday('Sáb'),
           ],
         ),
         const SizedBox(height: 8),

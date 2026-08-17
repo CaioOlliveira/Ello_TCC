@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+import { isFutureInstant } from "../../common/utils/date-utils.js";
+
+const dataNaoFuturaSchema = z
+  .string()
+  .datetime("Data deve estar em formato ISO.")
+  .refine(
+    (value) => !isFutureInstant(value),
+    "Não é permitido registrar uma data futura.",
+  );
+
 const valorTemperaturaSchema = z
   .number()
   .min(25, "Valor mínimo permitido é 25°C.")
@@ -8,7 +18,7 @@ const valorTemperaturaSchema = z
 export const criarTemperaturaSchema = z.object({
   idosoId: z.string().min(1, "Idoso é obrigatório."),
   temperatura: valorTemperaturaSchema,
-  medidoEm: z.string().datetime("Data deve estar em formato ISO."),
+  medidoEm: dataNaoFuturaSchema,
   observacoes: z.string().optional(),
   registradoPorId: z.string().uuid().optional(),
 });

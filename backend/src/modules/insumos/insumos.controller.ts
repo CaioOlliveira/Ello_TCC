@@ -11,6 +11,7 @@ import {
   criarMovimentacaoInsumoSchema,
   insumoParamsSchema,
   listarInsumosQuerySchema,
+  removerInsumoQuerySchema,
 } from "./insumos.schemas.js";
 import { insumosService } from "./insumos.service.js";
 
@@ -46,7 +47,11 @@ export const atualizarInsumo: RequestHandler = asyncHandler(
 
 export const removerInsumo: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = idParamSchema.parse(req.params);
-  await insumosService.remover(id);
+  const { usuarioId } = removerInsumoQuerySchema.parse({
+    ...req.query,
+    ...req.body,
+  });
+  await insumosService.remover(id, usuarioId);
   res.status(204).send();
 });
 

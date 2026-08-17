@@ -121,12 +121,15 @@ class EquipamentoFormData {
   Map<String, dynamic> toPayload({
     required String idosoId,
     String? criadoPorId,
+    String? registradoPorId,
     bool includeDefaultStatus = true,
   }) {
     return {
       'idosoId': idosoId,
       if (criadoPorId != null && criadoPorId.isNotEmpty)
         'criadoPorId': criadoPorId,
+      if (registradoPorId != null && registradoPorId.isNotEmpty)
+        'registradoPorId': registradoPorId,
       'nome': nome,
       if (marca.isNotEmpty) 'marca': marca,
       if (modelo.isNotEmpty) 'modelo': modelo,
