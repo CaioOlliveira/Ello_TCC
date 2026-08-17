@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api/api_client.dart';
 import '../core/auth/google_auth_service.dart';
@@ -48,6 +51,46 @@ class UsuarioSessao {
       sexo: sexo ?? this.sexo,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'nome': nome,
+        'email': email,
+        'telefone': telefone,
+        'urlFoto': urlFoto,
+        'sexo': sexo,
+      };
+}
+
+class SessaoUsuarioLocal {
+  static const _storageKey = 'sessao_usuario_v1';
+
+  Future<UsuarioSessao?> carregar() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_storageKey);
+      if (raw == null || raw.isEmpty) return null;
+
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+
+      final usuario = UsuarioSessao.fromJson(decoded);
+      if (usuario.id.isEmpty || usuario.email.isEmpty) return null;
+      return usuario;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> salvar(UsuarioSessao usuario) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storageKey, jsonEncode(usuario.toJson()));
+  }
+
+  Future<void> limpar() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
+  }
 }
 
 final appConfigProvider = Provider<AppConfig>((ref) => const AppConfig());
@@ -63,6 +106,10 @@ final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
 });
 
 final authSessionProvider = StateProvider<UsuarioSessao?>((ref) => null);
+
+final sessaoUsuarioLocalProvider = Provider<SessaoUsuarioLocal>(
+  (ref) => SessaoUsuarioLocal(),
+);
 
 final selectedIdosoProvider = StateProvider<IdosoResumo?>((ref) => null);
 

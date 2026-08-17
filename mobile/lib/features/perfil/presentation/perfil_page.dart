@@ -106,7 +106,11 @@ class PerfilPage extends ConsumerWidget {
                   child: SizedBox(
                     height: 52,
                     child: FilledButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
+                        try {
+                          await ref.read(sessaoUsuarioLocalProvider).limpar();
+                        } catch (_) {}
+                        if (!context.mounted) return;
                         ref.read(authSessionProvider.notifier).state = null;
                         ref.read(selectedIdosoProvider.notifier).state = null;
                         context.go('/login');
@@ -204,8 +208,11 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
           );
       final dados = response['dados'];
       if (dados is Map<String, dynamic>) {
-        ref.read(authSessionProvider.notifier).state =
-            UsuarioSessao.fromJson(dados);
+        final sessaoAtualizada = UsuarioSessao.fromJson(dados);
+        ref.read(authSessionProvider.notifier).state = sessaoAtualizada;
+        try {
+          await ref.read(sessaoUsuarioLocalProvider).salvar(sessaoAtualizada);
+        } catch (_) {}
       }
       if (mounted) context.go(profileRoute);
     } on ApiException catch (error) {

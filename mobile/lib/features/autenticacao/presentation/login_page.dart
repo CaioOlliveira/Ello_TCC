@@ -68,8 +68,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
 
       if (usuario is Map<String, dynamic>) {
-        ref.read(authSessionProvider.notifier).state =
-            UsuarioSessao.fromJson(usuario);
+        await _salvarSessao(UsuarioSessao.fromJson(usuario));
       }
 
       if (mounted) context.go('/idosos');
@@ -158,8 +157,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
 
       if (usuario is Map<String, dynamic>) {
-        ref.read(authSessionProvider.notifier).state =
-            UsuarioSessao.fromJson(usuario);
+        await _salvarSessao(UsuarioSessao.fromJson(usuario));
         if (mounted) context.go('/idosos');
         return;
       }
@@ -242,8 +240,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
 
       if (usuario is Map<String, dynamic>) {
-        ref.read(authSessionProvider.notifier).state =
-            UsuarioSessao.fromJson(usuario);
+        await _salvarSessao(UsuarioSessao.fromJson(usuario));
       }
 
       if (mounted) context.go('/idosos');
@@ -266,6 +263,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _view = view;
       _errorMessage = null;
     });
+  }
+
+  Future<void> _salvarSessao(UsuarioSessao usuario) async {
+    ref.read(authSessionProvider.notifier).state = usuario;
+    try {
+      await ref.read(sessaoUsuarioLocalProvider).salvar(usuario);
+    } catch (_) {
+      // O login continua disponível mesmo se o armazenamento local falhar.
+    }
   }
 
   String? _confirmarSenhaValidator(String? value) {

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/providers.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage>
+class _SplashPageState extends ConsumerState<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fade;
@@ -30,9 +32,24 @@ class _SplashPageState extends State<SplashPage>
     );
     _controller.forward();
 
-    Future<void>.delayed(const Duration(milliseconds: 1100), () {
-      if (mounted) context.go('/login');
-    });
+    _restaurarSessaoENavegar();
+  }
+
+  Future<void> _restaurarSessaoENavegar() async {
+    final results = await Future.wait<Object?>([
+      Future<void>.delayed(const Duration(milliseconds: 1100)),
+      ref.read(sessaoUsuarioLocalProvider).carregar(),
+    ]);
+    if (!mounted) return;
+
+    final usuario = results[1] as UsuarioSessao?;
+    if (usuario != null) {
+      ref.read(authSessionProvider.notifier).state = usuario;
+      context.go('/idosos');
+      return;
+    }
+
+    context.go('/login');
   }
 
   @override
@@ -44,7 +61,8 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: adaptive(context, AppColors.background, AppDarkColors.bg),
+      backgroundColor:
+          adaptive(context, AppColors.background, AppDarkColors.bg),
       body: Center(
         child: FadeTransition(
           opacity: _fade,
