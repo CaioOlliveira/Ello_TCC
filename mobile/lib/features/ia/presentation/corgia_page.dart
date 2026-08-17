@@ -450,7 +450,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       _loadConversations();
     });
 
-    final title = _activeConversation?.titulo ?? 'CoraIA';
+    const title = 'CoraIA';
     final idoso = ref.watch(selectedIdosoProvider);
     final showInitialPrompt = _shouldShowInitialPrompt;
     final showBusy = _loading || _openingConversation || _loadingReport;

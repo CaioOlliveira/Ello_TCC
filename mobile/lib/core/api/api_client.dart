@@ -1947,6 +1947,7 @@ class MembroFicha {
     this.id,
     this.urlFoto,
     this.telefone,
+    this.sexo,
     this.funcao,
     this.relacao,
     this.status,
@@ -1968,6 +1969,7 @@ class MembroFicha {
       nome: json['usuario_nome']?.toString() ?? 'Sem nome',
       urlFoto: json['usuario_foto']?.toString(),
       telefone: json['usuario_telefone']?.toString(),
+      sexo: json['usuario_sexo']?.toString(),
       funcao: json['funcao']?.toString(),
       relacao: json['relacao']?.toString(),
       status: json['status']?.toString(),
@@ -2001,6 +2003,7 @@ class MembroFicha {
   final String nome;
   final String? urlFoto;
   final String? telefone;
+  final String? sexo;
   final String? funcao;
   final String? relacao;
   final String? status;
@@ -2139,6 +2142,7 @@ class ApiClient {
     required String idToken,
     required String nome,
     required String telefone,
+    required String sexo,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -2147,6 +2151,7 @@ class ApiClient {
           'idToken': idToken,
           'nome': nome,
           'telefone': telefone,
+          'sexo': sexo,
         },
       );
       return response.data ?? <String, dynamic>{};
@@ -2163,6 +2168,7 @@ class ApiClient {
     required String email,
     required String telefone,
     required String senha,
+    required String sexo,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -2172,6 +2178,7 @@ class ApiClient {
           'email': email,
           'telefone': telefone,
           'senha': senha,
+          'sexo': sexo,
           'tipoUsuario': 'cuidador',
         },
       );
@@ -2208,6 +2215,7 @@ class ApiClient {
     String? nome,
     String? email,
     String? telefone,
+    String? sexo,
     Object? urlFoto = _omit,
   }) async {
     try {
@@ -2217,6 +2225,7 @@ class ApiClient {
           if (nome != null && nome.isNotEmpty) 'nome': nome,
           if (email != null && email.isNotEmpty) 'email': email,
           if (telefone != null) 'telefone': telefone,
+          if (sexo != null && sexo.isNotEmpty) 'sexo': sexo,
           if (urlFoto != _omit) 'urlFoto': urlFoto,
         },
       );

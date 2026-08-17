@@ -149,6 +149,7 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
   final _emailController = TextEditingController();
   final _telefoneController = TextEditingController();
   String? _urlFoto;
+  String? _sexo;
   bool _loading = false;
   String? _erro;
 
@@ -160,6 +161,7 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
     _emailController.text = usuario?.email ?? '';
     _telefoneController.text = usuario?.telefone ?? '';
     _urlFoto = usuario?.urlFoto;
+    _sexo = usuario?.sexo;
   }
 
   @override
@@ -198,6 +200,7 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
             email: _emailController.text.trim(),
             telefone: _telefoneController.text.trim(),
             urlFoto: _urlFoto,
+            sexo: _sexo,
           );
       final dados = response['dados'];
       if (dados is Map<String, dynamic>) {
@@ -266,6 +269,15 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
                   controller: _telefoneController,
                   label: 'Telefone',
                   keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 12),
+                _SexoInput(
+                  value: _sexo,
+                  onChanged: _loading
+                      ? null
+                      : (value) {
+                          setState(() => _sexo = value);
+                        },
                 ),
                 if (_erro != null) ...[
                   const SizedBox(height: 12),
@@ -725,6 +737,11 @@ void _showPersonalInfoSheet(
                 label: 'Telefone',
                 value: _valueOrNotInformed(usuario?.telefone),
               ),
+              _PersonalInfoLine(
+                icon: Icons.wc_rounded,
+                label: 'Sexo',
+                value: _valueOrNotInformed(usuario?.sexo),
+              ),
               const SizedBox(height: 16),
               SizedBox(
                 height: 46,
@@ -1046,6 +1063,45 @@ class _Input extends StatelessWidget {
           borderSide: const BorderSide(color: Color(0xFF238FA1)),
         ),
       ),
+    );
+  }
+}
+
+class _SexoInput extends StatelessWidget {
+  const _SexoInput({required this.value, required this.onChanged});
+
+  final String? value;
+  final ValueChanged<String?>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor =
+        adaptive(context, const Color(0xFFB8E6ED), AppDarkColors.border);
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: 'Sexo',
+        filled: true,
+        fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(9),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(9),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(9),
+          borderSide: const BorderSide(color: Color(0xFF238FA1)),
+        ),
+      ),
+      items: const [
+        DropdownMenuItem(value: 'Feminino', child: Text('Feminino')),
+        DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
+        DropdownMenuItem(value: 'Outro', child: Text('Outro')),
+      ],
     );
   }
 }

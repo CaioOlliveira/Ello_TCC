@@ -21,6 +21,7 @@ type UsuarioAuthRow = {
   nome: string;
   email: string;
   telefone?: string | null;
+  sexo?: string | null;
   url_foto?: string | null;
   tipo_usuario: string;
   senha: string;
@@ -40,6 +41,7 @@ const toUsuarioPublico = (usuario: UsuarioAuthRow) => ({
   nome: usuario.nome,
   email: usuario.email,
   telefone: usuario.telefone,
+  sexo: usuario.sexo,
   urlFoto: usuario.url_foto,
   tipoUsuario: usuario.tipo_usuario,
   criadoEm: usuario.criado_em,
@@ -190,13 +192,14 @@ export const authService = {
     }
 
     const result = await getPool().query<UsuarioAuthRow>(
-      `insert into usuarios (nome, email, telefone, tipo_usuario, senha)
-       values ($1, $2, $3, $4, $5)
+      `insert into usuarios (nome, email, telefone, sexo, tipo_usuario, senha)
+       values ($1, $2, $3, $4, $5, $6)
        returning *`,
       [
         input.nome.trim(),
         input.email.trim().toLowerCase(),
         input.telefone?.trim() || null,
+        input.sexo ?? null,
         input.tipoUsuario,
         criarHashSenha(input.senha),
       ],
@@ -247,13 +250,14 @@ export const authService = {
     }
 
     const result = await getPool().query<UsuarioAuthRow>(
-      `insert into usuarios (nome, email, telefone, url_foto, tipo_usuario, senha)
-       values ($1, $2, $3, $4, $5, $6)
+      `insert into usuarios (nome, email, telefone, sexo, url_foto, tipo_usuario, senha)
+       values ($1, $2, $3, $4, $5, $6, $7)
        returning *`,
       [
         input.nome.trim(),
         google.email,
         input.telefone?.trim() || null,
+        input.sexo ?? null,
         google.fotoUrl,
         "cuidador",
         "google-auth",

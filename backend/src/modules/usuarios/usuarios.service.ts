@@ -18,6 +18,7 @@ const fields = {
   nome: "nome",
   email: "email",
   telefone: "telefone",
+  sexo: "sexo",
   urlFoto: "url_foto",
   tipoUsuario: "tipo_usuario",
   senha: "senha",

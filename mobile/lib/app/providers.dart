@@ -11,6 +11,7 @@ class UsuarioSessao {
     required this.email,
     this.telefone,
     this.urlFoto,
+    this.sexo,
   });
 
   factory UsuarioSessao.fromJson(Map<String, dynamic> json) {
@@ -20,6 +21,7 @@ class UsuarioSessao {
       email: json['email']?.toString() ?? '',
       telefone: json['telefone']?.toString(),
       urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
+      sexo: json['sexo']?.toString(),
     );
   }
 
@@ -28,12 +30,14 @@ class UsuarioSessao {
   final String email;
   final String? telefone;
   final String? urlFoto;
+  final String? sexo;
 
   UsuarioSessao copyWith({
     String? nome,
     String? email,
     String? telefone,
     String? urlFoto,
+    String? sexo,
   }) {
     return UsuarioSessao(
       id: id,
@@ -41,6 +45,7 @@ class UsuarioSessao {
       email: email ?? this.email,
       telefone: telefone ?? this.telefone,
       urlFoto: urlFoto ?? this.urlFoto,
+      sexo: sexo ?? this.sexo,
     );
   }
 }

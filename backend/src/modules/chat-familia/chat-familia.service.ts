@@ -94,6 +94,7 @@ export const chatFamiliaService = {
           u.nome as usuario_nome,
           u.url_foto as usuario_foto,
           u.telefone as usuario_telefone,
+          u.sexo as usuario_sexo,
           coalesce(mr.funcao, 'cuidador') as funcao,
           mr.relacao,
           coalesce(mr.e_administrador, false) as e_administrador,

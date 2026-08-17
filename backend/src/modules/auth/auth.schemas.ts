@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const sexoSchema = z.enum(["Feminino", "Masculino", "Outro"]);
+
 export const loginSchema = z.object({
   email: z.string().email("E-mail inválido."),
   senha: z.string().min(1, "Senha é obrigatória."),
@@ -10,6 +12,7 @@ export const cadastroSchema = z.object({
   email: z.string().email("E-mail inválido."),
   senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
   telefone: z.string().optional(),
+  sexo: sexoSchema.optional(),
   tipoUsuario: z.string().min(1).default("cuidador"),
 });
 
@@ -20,6 +23,7 @@ export const googleLoginSchema = z.object({
 export const googleCadastroSchema = googleLoginSchema.extend({
   nome: z.string().min(1, "Nome é obrigatório."),
   telefone: z.string().optional(),
+  sexo: sexoSchema.optional(),
 });
 
 export const alterarSenhaSchema = z

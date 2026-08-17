@@ -10,10 +10,43 @@ const fotoUsuarioSchema = z
   )
   .nullable();
 
+const valoresSexo = ["Feminino", "Masculino", "Outro"] as const;
+
+const normalizarSexo = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+
+  if (!normalized) return undefined;
+  if (["f", "fem", "feminino", "mulher"].includes(normalized)) {
+    return "Feminino";
+  }
+  if (["m", "masc", "masculino", "homem"].includes(normalized)) {
+    return "Masculino";
+  }
+  if (
+    ["outro", "outra", "nao binario", "nao_binario", "nonbinary"].includes(
+      normalized,
+    )
+  ) {
+    return "Outro";
+  }
+  return value;
+};
+
+const sexoUsuarioSchema = z.preprocess(
+  normalizarSexo,
+  z.enum(valoresSexo, { invalid_type_error: "Sexo inválido." }),
+);
+
 export const criarUsuarioSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório."),
   email: z.string().email("E-mail inválido."),
   telefone: z.string().optional(),
+  sexo: sexoUsuarioSchema.optional(),
   urlFoto: fotoUsuarioSchema.optional(),
   tipoUsuario: z.string().min(1, "Tipo de usuário é obrigatório."),
   senha: z.string().optional(),

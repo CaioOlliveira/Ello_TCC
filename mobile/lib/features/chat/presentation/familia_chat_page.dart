@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
 
 class FamiliaChatPage extends ConsumerStatefulWidget {
@@ -26,6 +27,8 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
   var _summaries = <String, _ChatSummary>{};
   String? _error;
   Timer? _presenceTimer;
+  Timer? _refreshTimer;
+  var _isRefreshing = false;
 
   @override
   void initState() {
@@ -33,12 +36,14 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _load();
       _startPresenceTimer();
+      _startRefreshTimer();
     });
   }
 
   @override
   void dispose() {
     _presenceTimer?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -47,6 +52,13 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
     _presenceTimer?.cancel();
     _presenceTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _sendPresence();
+      _load(refreshingPresence: true);
+    });
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       _load(refreshingPresence: true);
     });
   }
@@ -62,6 +74,8 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
   }
 
   Future<void> _load({bool refreshingPresence = false}) async {
+    if (_isRefreshing) return;
+    _isRefreshing = true;
     final idoso = ref.read(selectedIdosoProvider);
     final usuario = ref.read(authSessionProvider);
 
@@ -72,6 +86,7 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
         _summaries = const {};
         _error = 'Selecione uma ficha para abrir o chat.';
       });
+      _isRefreshing = false;
       return;
     }
 
@@ -82,6 +97,7 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
         _summaries = const {};
         _error = 'Entre na sua conta para conversar.';
       });
+      _isRefreshing = false;
       return;
     }
 
@@ -101,9 +117,13 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
           .map(FamiliaChatPeer.fromMembro)
           .where((peer) => peer.id.isNotEmpty)
           .toList()
-        ..sort((a, b) => a.name.compareTo(b.name));
+        ..sort(_comparePeersByLastMessage);
       final summaries = <String, _ChatSummary>{};
       for (final peer in peers) {
+        if (peer.lastMessageAt == null && _summaries[peer.id] != null) {
+          summaries[peer.id] = _summaries[peer.id]!;
+          continue;
+        }
         summaries[peer.id] = await _loadSummary(
           ownerId: usuario.id,
           idosoId: idoso.id,
@@ -111,6 +131,9 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
         );
       }
       if (!mounted) return;
+      final contentChanged =
+          !_samePeers(_peers, peers) || !_sameSummaries(_summaries, summaries);
+      if (!contentChanged && refreshingPresence) return;
       setState(() {
         _peers = peers;
         _summaries = summaries;
@@ -128,6 +151,8 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
         if (!refreshingPresence) _loading = false;
         _error = 'Não foi possível carregar os contatos.';
       });
+    } finally {
+      _isRefreshing = false;
     }
   }
 
@@ -189,7 +214,7 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
                 child: Column(
                   children: [
                     const _FamiliaChatHeader(),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 8),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Row(
@@ -214,19 +239,6 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Chat da Família',
-                                  style: TextStyle(
-                                    color: adaptive(
-                                        context,
-                                        const Color(0xFF00808F),
-                                        AppDarkColors.textPrimary),
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
                                 Text(
                                   'Converse com as pessoas que cuidam junto com você',
                                   maxLines: 2,
@@ -322,6 +334,9 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
   _PendingImage? _pendingImage;
   late FamiliaChatPeer _peer;
   Timer? _presenceTimer;
+  Timer? _refreshTimer;
+  var _isLoadingMessages = false;
+  var _hasMessageBaseline = false;
 
   @override
   void initState() {
@@ -335,6 +350,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadMessages();
       _startPresenceTimer();
+      _startRefreshTimer();
     });
   }
 
@@ -343,6 +359,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
     _controller.dispose();
     _scrollController.dispose();
     _presenceTimer?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -352,6 +369,14 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
     _presenceTimer?.cancel();
     _presenceTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _sendPresence();
+      _refreshPeerPresence();
+    });
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _loadMessages();
       _refreshPeerPresence();
     });
   }
@@ -384,16 +409,25 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
       }
       if (membro == null || !mounted) return;
       final membroAtualizado = membro;
-      setState(() => _peer = FamiliaChatPeer.fromMembro(membroAtualizado));
+      final updatedPeer = FamiliaChatPeer.fromMembro(membroAtualizado);
+      if (!_samePeer(_peer, updatedPeer)) {
+        setState(() => _peer = updatedPeer);
+      }
     } catch (_) {}
   }
 
   Future<void> _loadMessages() async {
+    if (_isLoadingMessages) return;
+    _isLoadingMessages = true;
     final usuario = ref.read(authSessionProvider);
     final idoso = ref.read(selectedIdosoProvider);
-    if (usuario == null || idoso == null) return;
+    if (usuario == null || idoso == null) {
+      _isLoadingMessages = false;
+      return;
+    }
 
     var messages = <_FamilyChatMessage>[];
+    var loadedFromServer = false;
     try {
       final apiMessages =
           await ref.read(apiClientProvider).listarMensagensFamilia(
@@ -401,17 +435,12 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
                 usuarioId: usuario.id,
                 outroUsuarioId: _peer.id,
               );
-      messages = apiMessages
+      final remoteMessages = apiMessages
           .map((message) => _FamilyChatMessage.fromApi(message, usuario.id))
           .toList();
-      if (messages.isNotEmpty) {
-        await _FamilyChatStore.saveMessages(
-          ownerId: usuario.id,
-          idosoId: idoso.id,
-          peerId: _peer.id,
-          messages: messages,
-        );
-      } else {
+      messages = _mergeMessages(remoteMessages);
+      loadedFromServer = true;
+      if (remoteMessages.isEmpty && messages.isEmpty) {
         messages = await _FamilyChatStore.loadMessages(
           ownerId: usuario.id,
           idosoId: idoso.id,
@@ -426,10 +455,74 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
       );
     }
 
-    if (!mounted) return;
+    if (!mounted) {
+      _isLoadingMessages = false;
+      return;
+    }
+    final hasNewMessages = _hasNewMessages(messages);
+    final newIncomingMessages = _newIncomingMessages(messages);
+    final shouldNotify = loadedFromServer &&
+        _hasMessageBaseline &&
+        newIncomingMessages.isNotEmpty;
+    if (loadedFromServer) _hasMessageBaseline = true;
+
+    if (_sameMessages(_messages, messages)) {
+      _isLoadingMessages = false;
+      return;
+    }
+
     setState(() => _messages = messages);
-    await _persistMessages();
-    _scrollToEnd();
+    try {
+      await _persistMessages();
+    } catch (_) {}
+    if (hasNewMessages) _scrollToEnd();
+    if (shouldNotify) {
+      unawaited(_showMessageNotification(idoso.id, newIncomingMessages.last));
+    }
+    _isLoadingMessages = false;
+  }
+
+  List<_FamilyChatMessage> _mergeMessages(
+    List<_FamilyChatMessage> remoteMessages,
+  ) {
+    final remoteIds = remoteMessages.map((message) => message.id).toSet();
+    final pendingMessages = _messages.where(
+      (message) =>
+          message.status == _MessageStatus.pending &&
+          !remoteIds.contains(message.id),
+    );
+    return [...remoteMessages, ...pendingMessages]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  bool _hasNewMessages(List<_FamilyChatMessage> messages) {
+    final previousIds = _messages.map((message) => message.id).toSet();
+    return messages.any((message) => !previousIds.contains(message.id));
+  }
+
+  List<_FamilyChatMessage> _newIncomingMessages(
+    List<_FamilyChatMessage> messages,
+  ) {
+    final previousIds = _messages.map((message) => message.id).toSet();
+    return messages
+        .where(
+            (message) => !message.fromMe && !previousIds.contains(message.id))
+        .toList();
+  }
+
+  Future<void> _showMessageNotification(
+    String idosoId,
+    _FamilyChatMessage message,
+  ) async {
+    try {
+      await LocalNotificationService.instance.showNow(
+        id: stableNotificationId('chat:$idosoId:${_peer.id}'),
+        title: 'Nova mensagem no Chat do Cuidado',
+        body:
+            '${_peer.displayName}: ${message.text.isNotEmpty ? message.text : 'Foto enviada'}',
+        payload: 'chat:${_peer.id}',
+      );
+    } catch (_) {}
   }
 
   Future<void> _persistMessages() async {
@@ -766,8 +859,10 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
                           if (index == 0) {
                             return const Center(child: _DayPill(label: 'Hoje'));
                           }
+                          final message = _messages[index - 1];
                           return _FamilyMessageBubble(
-                            message: _messages[index - 1],
+                            key: ValueKey(message.id),
+                            message: message,
                           );
                         },
                       ),
@@ -828,13 +923,12 @@ class _FamiliaChatHeader extends StatelessWidget {
           ),
         ),
         Text(
-          'ello',
+          'Chat',
           style: TextStyle(
             color: adaptive(
-                context, const Color(0xFF007C8A), AppDarkColors.textPrimary),
-            fontSize: 28,
-            height: 1,
-            fontWeight: FontWeight.w400,
+                context, const Color(0xFF00808F), AppDarkColors.textPrimary),
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ],
@@ -1265,13 +1359,13 @@ class _DayPill extends StatelessWidget {
 }
 
 class _FamilyMessageBubble extends StatelessWidget {
-  const _FamilyMessageBubble({required this.message});
+  const _FamilyMessageBubble({required this.message, super.key});
 
   final _FamilyChatMessage message;
 
   @override
   Widget build(BuildContext context) {
-    final imageBytes = _decodeDataUrl(message.imageDataUrl);
+    final hasImage = message.imageDataUrl?.isNotEmpty == true;
     final isMine = message.fromMe;
     final bubbleColor = isMine
         ? adaptive(context, const Color(0xFFCBEFF3), AppDarkColors.tintedInfo)
@@ -1282,72 +1376,114 @@ class _FamilyMessageBubble extends StatelessWidget {
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 300),
-        padding: const EdgeInsets.fromLTRB(14, 11, 11, 8),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMine ? 16 : 4),
-            bottomRight: Radius.circular(isMine ? 4 : 16),
-          ),
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (imageBytes != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.memory(
-                  imageBytes,
-                  width: 222,
-                  height: 150,
-                  fit: BoxFit.cover,
-                ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 325),
+        child: IntrinsicWidth(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 11, 11, 8),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isMine ? 16 : 4),
+                bottomRight: Radius.circular(isMine ? 4 : 16),
               ),
-              if (message.text.isNotEmpty) const SizedBox(height: 8),
-            ],
-            if (message.text.isNotEmpty)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  message.text,
-                  style: TextStyle(
-                    color: adaptive(
-                      context,
-                      const Color(0xFF25363C),
-                      AppDarkColors.textPrimary,
-                    ),
-                    fontSize: 15,
-                    height: 1.28,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 2),
-            Row(
+              border: Border.all(color: borderColor),
+            ),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  _formatTime(message.createdAt),
-                  style: TextStyle(
-                    color: adaptive(context, const Color(0xFF9AA6AA),
-                        AppDarkColors.textMuted),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (isMine) ...[
-                  const SizedBox(width: 4),
-                  _MessageTicks(status: message.status),
+                if (hasImage) ...[
+                  _ChatMessageImage(dataUrl: message.imageDataUrl!),
+                  if (message.text.isNotEmpty) const SizedBox(height: 8),
                 ],
+                if (message.text.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      message.text,
+                      style: TextStyle(
+                        color: adaptive(
+                          context,
+                          const Color(0xFF25363C),
+                          AppDarkColors.textPrimary,
+                        ),
+                        fontSize: 15,
+                        height: 1.28,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatTime(message.createdAt),
+                      style: TextStyle(
+                        color: adaptive(context, const Color(0xFF9AA6AA),
+                            AppDarkColors.textMuted),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (isMine) ...[
+                      const SizedBox(width: 4),
+                      _MessageTicks(status: message.status),
+                    ],
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatMessageImage extends StatefulWidget {
+  const _ChatMessageImage({required this.dataUrl});
+
+  final String dataUrl;
+
+  @override
+  State<_ChatMessageImage> createState() => _ChatMessageImageState();
+}
+
+class _ChatMessageImageState extends State<_ChatMessageImage> {
+  late Uint8List? _imageBytes = _decodeDataUrl(widget.dataUrl);
+
+  @override
+  void didUpdateWidget(covariant _ChatMessageImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.dataUrl != widget.dataUrl) {
+      _imageBytes = _decodeDataUrl(widget.dataUrl);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imageBytes = _imageBytes;
+    if (imageBytes == null) return const SizedBox.shrink();
+
+    return Semantics(
+      button: true,
+      label: 'Abrir foto enviada',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _showFullScreenImage(context, imageBytes),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.memory(
+            imageBytes,
+            width: 222,
+            height: 150,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+          ),
         ),
       ),
     );
@@ -1551,6 +1687,8 @@ class FamiliaChatPeer {
     required this.role,
     this.photoUrl,
     this.status,
+    this.isFichaOwner = false,
+    this.sexo,
     this.online = false,
     this.lastSeenAt,
     this.unreadCount = 0,
@@ -1565,6 +1703,8 @@ class FamiliaChatPeer {
       role: membro.funcao ?? 'cuidador',
       photoUrl: membro.urlFoto,
       status: membro.status,
+      isFichaOwner: membro.eCriador,
+      sexo: membro.sexo,
       online: membro.online,
       lastSeenAt: membro.ultimoVistoEm,
       unreadCount: membro.mensagensNaoLidas,
@@ -1578,13 +1718,16 @@ class FamiliaChatPeer {
   final String role;
   final String? photoUrl;
   final String? status;
+  final bool isFichaOwner;
+  final String? sexo;
   final bool online;
   final DateTime? lastSeenAt;
   final int unreadCount;
   final String? lastMessagePreview;
   final DateTime? lastMessageAt;
 
-  String get roleLabel => _roleLabel(role);
+  String get roleLabel =>
+      isFichaOwner ? 'Responsável' : _roleLabel(role, sexo: sexo);
   String get displayName => _shortName(name);
   bool get removedFromFicha => _statusIndicaRemocaoDaFicha(status);
 }
@@ -1669,6 +1812,110 @@ class _ChatSummary {
 
   final String preview;
   final DateTime updatedAt;
+}
+
+bool _samePeers(List<FamiliaChatPeer> first, List<FamiliaChatPeer> second) {
+  if (first.length != second.length) return false;
+  for (var index = 0; index < first.length; index++) {
+    if (!_samePeer(first[index], second[index])) return false;
+  }
+  return true;
+}
+
+bool _samePeer(FamiliaChatPeer first, FamiliaChatPeer second) {
+  final sameLastSeen =
+      first.online && second.online || first.lastSeenAt == second.lastSeenAt;
+  return first.id == second.id &&
+      first.name == second.name &&
+      first.role == second.role &&
+      first.photoUrl == second.photoUrl &&
+      first.status == second.status &&
+      first.isFichaOwner == second.isFichaOwner &&
+      first.sexo == second.sexo &&
+      first.online == second.online &&
+      sameLastSeen &&
+      first.unreadCount == second.unreadCount &&
+      first.lastMessagePreview == second.lastMessagePreview &&
+      first.lastMessageAt == second.lastMessageAt;
+}
+
+bool _sameSummaries(
+  Map<String, _ChatSummary> first,
+  Map<String, _ChatSummary> second,
+) {
+  if (first.length != second.length) return false;
+  for (final entry in first.entries) {
+    final other = second[entry.key];
+    if (other == null ||
+        other.preview != entry.value.preview ||
+        other.updatedAt != entry.value.updatedAt) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool _sameMessages(
+  List<_FamilyChatMessage> first,
+  List<_FamilyChatMessage> second,
+) {
+  if (first.length != second.length) return false;
+  for (var index = 0; index < first.length; index++) {
+    final current = first[index];
+    final updated = second[index];
+    if (current.id != updated.id ||
+        current.text != updated.text ||
+        current.fromMe != updated.fromMe ||
+        current.createdAt != updated.createdAt ||
+        current.imageDataUrl != updated.imageDataUrl ||
+        current.status != updated.status) {
+      return false;
+    }
+  }
+  return true;
+}
+
+Future<void> _showFullScreenImage(BuildContext context, Uint8List imageBytes) {
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: SafeArea(
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 4,
+                child: Image.memory(imageBytes, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton.filled(
+                tooltip: 'Fechar foto',
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+int _comparePeersByLastMessage(FamiliaChatPeer first, FamiliaChatPeer second) {
+  final firstMessageAt = first.lastMessageAt;
+  final secondMessageAt = second.lastMessageAt;
+  if (firstMessageAt == null && secondMessageAt != null) return 1;
+  if (firstMessageAt != null && secondMessageAt == null) return -1;
+  if (firstMessageAt != null && secondMessageAt != null) {
+    final comparison = secondMessageAt.compareTo(firstMessageAt);
+    if (comparison != 0) return comparison;
+  }
+  return first.name.compareTo(second.name);
 }
 
 class _PendingImage {
@@ -1787,10 +2034,10 @@ String _presenceText(FamiliaChatPeer peer) {
       : 'Visto por último ${_formatDate(lastMessageAt)} às $time';
 }
 
-String _roleLabel(String? role) {
+String _roleLabel(String? role, {String? sexo}) {
   final normalized = role?.toLowerCase().trim();
   if (normalized == 'familiar') return 'Familiar';
-  return 'Cuidador';
+  return sexo?.trim().toLowerCase() == 'feminino' ? 'Cuidadora' : 'Cuidador';
 }
 
 bool _statusIndicaRemocaoDaFicha(String? status) {

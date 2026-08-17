@@ -34,6 +34,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   AuthView _view = AuthView.landing;
   bool _loading = false;
   bool _aceitouTermos = false;
+  String? _sexo;
   String? _errorMessage;
   GoogleAuthResult? _googleCadastro;
 
@@ -111,6 +112,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         email: _emailController.text.trim(),
         telefone: _telefoneController.text.trim(),
         senha: _senhaController.text,
+        sexo: _sexo ?? '',
       );
 
       if (!mounted) return;
@@ -173,6 +175,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         setState(() {
           _view = AuthView.cadastroGoogle;
           _aceitouTermos = false;
+          _sexo = null;
           _errorMessage =
               'Essa conta Google ainda não está cadastrada no Ello. Complete seu cadastro para continuar.';
         });
@@ -233,6 +236,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             idToken: google.idToken,
             nome: _nomeController.text.trim(),
             telefone: _telefoneController.text.trim(),
+            sexo: _sexo ?? '',
           );
       final dados = response['dados'];
       final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
@@ -318,11 +322,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     telefoneController: _telefoneController,
                     senhaController: _senhaController,
                     confirmarSenhaController: _confirmarSenhaController,
+                    sexo: _sexo,
                     loading: _loading,
                     errorMessage: _errorMessage,
                     aceitouTermos: _aceitouTermos,
                     onBack: () => _goTo(AuthView.landing),
                     onSubmit: _submitCadastro,
+                    onSexoChanged: (value) {
+                      setState(() => _sexo = value);
+                    },
                     onAceitouTermosChanged: (value) {
                       setState(() {
                         _aceitouTermos = value ?? false;
@@ -337,12 +345,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     nomeController: _nomeController,
                     emailController: _emailController,
                     telefoneController: _telefoneController,
+                    sexo: _sexo,
                     loading: _loading,
                     errorMessage: _errorMessage,
                     aceitouTermos: _aceitouTermos,
                     fotoUrl: _googleCadastro?.fotoUrl,
                     onBack: () => _goTo(AuthView.landing),
                     onSubmit: _submitGoogleCadastro,
+                    onSexoChanged: (value) {
+                      setState(() => _sexo = value);
+                    },
                     onAceitouTermosChanged: (value) {
                       setState(() {
                         _aceitouTermos = value ?? false;
@@ -574,10 +586,12 @@ class _CadastroFormView extends StatelessWidget {
     required this.telefoneController,
     required this.senhaController,
     required this.confirmarSenhaController,
+    required this.sexo,
     required this.loading,
     required this.aceitouTermos,
     required this.onBack,
     required this.onSubmit,
+    required this.onSexoChanged,
     required this.onAceitouTermosChanged,
     required this.confirmarSenhaValidator,
     this.errorMessage,
@@ -590,11 +604,13 @@ class _CadastroFormView extends StatelessWidget {
   final TextEditingController telefoneController;
   final TextEditingController senhaController;
   final TextEditingController confirmarSenhaController;
+  final String? sexo;
   final bool loading;
   final bool aceitouTermos;
   final String? errorMessage;
   final VoidCallback onBack;
   final VoidCallback onSubmit;
+  final ValueChanged<String?> onSexoChanged;
   final ValueChanged<bool?> onAceitouTermosChanged;
   final FormFieldValidator<String> confirmarSenhaValidator;
 
@@ -669,6 +685,11 @@ class _CadastroFormView extends StatelessWidget {
                       prefixIcon: Icons.person_outline,
                       autofillHints: const [AutofillHints.name],
                     ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _SexoCadastroField(
+                    value: sexo,
+                    onChanged: loading ? null : onSexoChanged,
                   ),
                   const SizedBox(height: AppSizes.md),
                   _InputWrapper(
@@ -788,10 +809,12 @@ class _GoogleCadastroView extends StatelessWidget {
     required this.nomeController,
     required this.emailController,
     required this.telefoneController,
+    required this.sexo,
     required this.loading,
     required this.aceitouTermos,
     required this.onBack,
     required this.onSubmit,
+    required this.onSexoChanged,
     required this.onAceitouTermosChanged,
     this.errorMessage,
     this.fotoUrl,
@@ -802,12 +825,14 @@ class _GoogleCadastroView extends StatelessWidget {
   final TextEditingController nomeController;
   final TextEditingController emailController;
   final TextEditingController telefoneController;
+  final String? sexo;
   final bool loading;
   final bool aceitouTermos;
   final String? errorMessage;
   final String? fotoUrl;
   final VoidCallback onBack;
   final VoidCallback onSubmit;
+  final ValueChanged<String?> onSexoChanged;
   final ValueChanged<bool?> onAceitouTermosChanged;
 
   @override
@@ -913,6 +938,11 @@ class _GoogleCadastroView extends StatelessWidget {
                         _PhoneInputFormatter(),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  _SexoCadastroField(
+                    value: sexo,
+                    onChanged: loading ? null : onSexoChanged,
                   ),
                   const SizedBox(height: AppSizes.sm),
                   CheckboxListTile(
@@ -1182,6 +1212,34 @@ class _InputWrapper extends StatelessWidget {
         ),
       ),
       child: child,
+    );
+  }
+}
+
+class _SexoCadastroField extends StatelessWidget {
+  const _SexoCadastroField({required this.value, required this.onChanged});
+
+  final String? value;
+  final ValueChanged<String?>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _InputWrapper(
+      child: DropdownButtonFormField<String>(
+        initialValue: value,
+        decoration: const InputDecoration(
+          labelText: 'Sexo',
+          prefixIcon: Icon(Icons.wc_rounded),
+        ),
+        hint: const Text('Selecione'),
+        validator: (selected) => selected == null ? 'Informe o sexo.' : null,
+        items: const [
+          DropdownMenuItem(value: 'Feminino', child: Text('Feminino')),
+          DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
+          DropdownMenuItem(value: 'Outro', child: Text('Outro')),
+        ],
+        onChanged: onChanged,
+      ),
     );
   }
 }

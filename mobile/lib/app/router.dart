@@ -418,7 +418,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     _refreshPresenceAndChatNotifications();
     _chatNotificationTimer = Timer.periodic(
-      const Duration(seconds: 30),
+      const Duration(seconds: 4),
       (_) => _refreshPresenceAndChatNotifications(),
     );
   }
@@ -466,10 +466,12 @@ class _AppShellState extends ConsumerState<AppShell> {
           final novas = unread - previous;
           await LocalNotificationService.instance.showNow(
             id: stableNotificationId('chat:${idoso.id}:$peerId'),
-            title: 'Nova mensagem no Chat da Família',
+            title: 'Nova mensagem no Chat do Cuidado',
             body: novas > 1
                 ? '${conversa.nome} enviou $novas mensagens.'
-                : '${conversa.nome} enviou uma mensagem.',
+                : (conversa.ultimaMensagemPreview?.trim().isNotEmpty == true
+                    ? '${conversa.nome}: ${conversa.ultimaMensagemPreview}'
+                    : '${conversa.nome} enviou uma mensagem.'),
             payload: 'chat:$peerId',
           );
         }

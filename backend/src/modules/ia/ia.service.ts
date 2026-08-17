@@ -142,7 +142,10 @@ export const iaService = {
       input.mensagem || "Imagem anexada",
     );
 
-    const historico = await buscarMensagens(conversa.id);
+    // Mantém o contexto da conversa útil sem deixar o prompt crescer sem
+    // limite. Um histórico muito longo reduz o espaço disponível para a
+    // resposta e pode fazer o modelo encerrar a frase antes de concluí-la.
+    const historico = (await buscarMensagens(conversa.id)).slice(-12);
     const [usuarioNome, idosoNome, contextoIdoso] = await Promise.all([
       buscarNomeUsuario(input.usuarioId),
       idosoId ? buscarNomeIdoso(idosoId) : Promise.resolve(null),
@@ -151,36 +154,64 @@ export const iaService = {
     const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
     try {
-      const response = await ai.models.generateContent({
-        model: env.GEMINI_MODEL,
-        config: {
-          maxOutputTokens: 260,
-          temperature: 0.4,
-        },
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: montarPrompt(
-                  historico,
-                  usuarioNome,
-                  idosoNome,
-                  compactarContextoParaPrompt(contextoIdoso),
-                  Boolean(input.anexos?.length),
-                ),
-              },
-              ...montarPartesImagem(input.anexos),
-            ],
-          },
-        ],
-      });
+      const prompt = montarPrompt(
+        historico,
+        usuarioNome,
+        idosoNome,
+        compactarContextoParaPrompt(contextoIdoso),
+        Boolean(input.anexos?.length),
+      );
+      const partesImagem = montarPartesImagem(input.anexos);
+      const configuracao = {
+        // Em Gemini 2.5 o orçamento de saída também pode ser gasto no
+        // raciocínio interno. Para este chat curto, desativamos esse
+        // raciocínio e preservamos tokens para a resposta visível.
+        maxOutputTokens: 1024,
+        temperature: 0.4,
+        ...(env.GEMINI_MODEL.startsWith("gemini-2.5")
+          ? { thinkingConfig: { thinkingBudget: 0 } }
+          : {}),
+      };
+      const gerarResposta = (instrucaoExtra = "") =>
+        ai.models.generateContent({
+          model: env.GEMINI_MODEL,
+          config: configuracao,
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: `${prompt}${instrucaoExtra}` },
+                ...partesImagem,
+              ],
+            },
+          ],
+        });
 
-      const resposta = limparMarkdownResposta(response.text?.trim() ?? "");
-      if (!resposta) {
+      let resposta = limparMarkdownResposta(
+        (await gerarResposta()).text?.trim() ?? "",
+      );
+
+      // Nunca salvamos uma frase pela metade. Se o modelo consumiu seu
+      // orçamento antes de terminar, repetimos a geração com uma instrução
+      // explícita de resposta completa. Caso ainda falhe, o fallback abaixo
+      // retorna uma orientação inteira em vez do trecho incompleto.
+      if (resposta && !respostaEstaConcluida(resposta)) {
+        const tentativaFinal = limparMarkdownResposta(
+          (
+            await gerarResposta(
+              "\n\nIMPORTANTE: responda novamente à última pergunta do começo. Use poucas frases, mas termine todas as frases e encerre a resposta com ponto, interrogação ou exclamação.",
+            )
+          ).text?.trim() ?? "",
+        );
+        if (respostaEstaConcluida(tentativaFinal)) {
+          resposta = tentativaFinal;
+        }
+      }
+
+      if (!resposta || !respostaEstaConcluida(resposta)) {
         throw new AppError(
-          "IA_RESPOSTA_VAZIA",
-          "A IA não conseguiu gerar uma resposta agora.",
+          "IA_RESPOSTA_INCOMPLETA",
+          "A IA não conseguiu concluir a resposta agora.",
           502,
         );
       }
@@ -513,7 +544,8 @@ function montarPrompt(
     personalidade,
     "Responda em português do Brasil.",
     "Não comece toda resposta com 'Olá'. Cumprimente apenas quando fizer sentido natural no início de uma conversa.",
-    "Seja breve: responda em até 5 linhas curtas, com no máximo 3 bullets quando listar pontos. Só ultrapasse isso se o usuário pedir detalhes, relatório ou passo a passo.",
+    "Seja breve: responda em 2 a 5 frases completas. Ao listar pontos, use no máximo 3 bullets completos. Só ultrapasse isso se o usuário pedir detalhes, relatório ou passo a passo.",
+    "Conclua sempre as frases e a resposta. Não interrompa a resposta no meio de uma explicação; se precisar ser breve, encerre com uma conclusão útil.",
     "Priorize orientação prática e direta. Evite repetir muitos dados do contexto; cite apenas o que for essencial para responder.",
     usuarioNome
       ? `Você está conversando com o cuidador/familiar chamado ${usuarioNome}. Trate-o pelo primeiro nome quando fizer sentido, nunca por um identificador técnico ou código.`
@@ -574,6 +606,10 @@ function limparMarkdownResposta(texto: string) {
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function respostaEstaConcluida(texto: string) {
+  return /[.!?…][\"')\]]*\s*$/.test(texto.trim());
 }
 
 async function obterContextoInternoComFallback(

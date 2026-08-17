@@ -30,6 +30,7 @@ class LocalNotificationService {
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _askedForExactAlarmPermission = false;
 
   Future<void> initialize() async {
     if (_initialized || kIsWeb) return;
@@ -65,9 +66,10 @@ class LocalNotificationService {
 
     final now = DateTime.now();
     final scheduledIds = <int>[];
+    final scheduleMode = await _getAndroidScheduleMode();
     for (final request in requests) {
       if (!request.scheduledAt.isAfter(now)) continue;
-      await _schedule(request);
+      await _schedule(request, scheduleMode: scheduleMode);
       scheduledIds.add(request.id);
     }
 
@@ -105,7 +107,7 @@ class LocalNotificationService {
       android: AndroidNotificationDetails(
         'ello_messages',
         'Mensagens do Ello',
-        channelDescription: 'Mensagens recebidas no Chat da Família',
+        channelDescription: 'Mensagens recebidas no Chat do Cuidado',
         importance: Importance.high,
         priority: Priority.high,
       ),
@@ -121,7 +123,33 @@ class LocalNotificationService {
     );
   }
 
-  Future<void> _schedule(LocalNotificationRequest request) {
+  Future<AndroidScheduleMode> _getAndroidScheduleMode() async {
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) return AndroidScheduleMode.exactAllowWhileIdle;
+
+    final canScheduleExactly =
+        await androidPlugin.canScheduleExactNotifications();
+    if (canScheduleExactly != false) {
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    }
+
+    if (!_askedForExactAlarmPermission) {
+      _askedForExactAlarmPermission = true;
+      await androidPlugin.requestExactAlarmsPermission();
+    }
+
+    final grantedAfterRequest =
+        await androidPlugin.canScheduleExactNotifications();
+    return grantedAfterRequest == false
+        ? AndroidScheduleMode.inexactAllowWhileIdle
+        : AndroidScheduleMode.exactAllowWhileIdle;
+  }
+
+  Future<void> _schedule(
+    LocalNotificationRequest request, {
+    required AndroidScheduleMode scheduleMode,
+  }) {
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
         'ello_reminders',
@@ -139,7 +167,7 @@ class LocalNotificationService {
       body: request.body,
       scheduledDate: tz.TZDateTime.from(request.scheduledAt, tz.local),
       notificationDetails: details,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: scheduleMode,
       payload: request.payload,
     );
   }
