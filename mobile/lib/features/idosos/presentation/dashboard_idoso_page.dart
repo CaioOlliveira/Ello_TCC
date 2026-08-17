@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -13,6 +14,9 @@ import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../agenda/presentation/agenda_models.dart';
+import '../../agenda/presentation/agenda_reminder_scheduler.dart';
+import '../../../core/notifications/medication_reminder_scheduler.dart';
 
 class DashboardIdosoPage extends ConsumerStatefulWidget {
   const DashboardIdosoPage({super.key});
@@ -72,6 +76,14 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
         updatedAt: DateTime.now(),
       );
 
+      // Recria os alarmes ao abrir o app, inclusive após reinicialização do
+      // aparelho ou quando a agenda foi alterada por outro cuidador.
+      unawaited(_syncReminders(
+        idosoId: idoso.id,
+        compromissos: results[0] as List<Map<String, dynamic>>,
+        medicamentos: results[4] as MedicamentosResumo,
+      ));
+
       _loadTip(api, idoso.id);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -101,6 +113,27 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
       );
     } catch (_) {
       // A dica da IA não deve atrasar o carregamento do resumo principal.
+    }
+  }
+
+  Future<void> _syncReminders({
+    required String idosoId,
+    required List<Map<String, dynamic>> compromissos,
+    required MedicamentosResumo medicamentos,
+  }) async {
+    try {
+      await Future.wait([
+        AgendaReminderScheduler.sync(
+          idosoId: idosoId,
+          compromissos: compromissos.map(AgendaCompromisso.fromJson),
+        ),
+        MedicationReminderScheduler.sync(
+          idosoId: idosoId,
+          resumo: medicamentos,
+        ),
+      ]);
+    } catch (_) {
+      // A falha de uma permissão local não pode impedir o dashboard.
     }
   }
 

@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/notifications/medication_reminder_scheduler.dart';
 import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/app_page_header.dart';
@@ -117,7 +120,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     final resumo = await ref
         .read(apiClientProvider)
         .getResumoMedicamentosConsolidado(idosoId: idosoId);
-    await _syncMedicationReminders(idosoId, resumo);
+    await MedicationReminderScheduler.sync(idosoId: idosoId, resumo: resumo);
     return resumo;
   }
 
@@ -202,7 +205,9 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       _showNoEditPermission();
       return;
     }
-    final lembretesAtivos = await _medicationReminderEnabled(medicamento.id);
+    final lembretesAtivos = await MedicationReminderScheduler.isEnabled(
+      medicamento.id,
+    );
     if (!mounted) return;
 
     setState(() {
@@ -366,7 +371,10 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         diasSemana: _frequenciaTipo == 'semanal' ? _diasSemana : null,
         registradoPorId: usuarioId,
       );
-      await _setMedicationReminderEnabled(medicamentoId, _lembretesAtivos);
+      await MedicationReminderScheduler.setEnabled(
+        medicamentoId,
+        _lembretesAtivos,
+      );
 
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
@@ -435,7 +443,10 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         resumo,
         medicamentoRegistrado,
       );
-      await _syncMedicationReminders(idoso.id, resumoAtualizado);
+      await MedicationReminderScheduler.sync(
+        idosoId: idoso.id,
+        resumo: resumoAtualizado,
+      );
       setState(() {
         _resumoLoadedIdosoId = idoso.id;
         _resumoFuture = Future.value(resumoAtualizado);

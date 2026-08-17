@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,7 @@ import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import 'agenda_form_page.dart';
 import 'agenda_models.dart';
+import 'agenda_reminder_scheduler.dart';
 import 'agenda_utils.dart';
 
 enum _AgendaView { dia, mes }
@@ -54,6 +57,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
           .listarCompromissos(idosoId: idoso.id);
       if (!mounted) return;
       final items = data.map(AgendaCompromisso.fromJson).toList();
+      unawaited(_syncReminders(idoso.id, items));
       setState(() {
         _items = items;
         for (final item in items) {
@@ -171,6 +175,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       if (serverItem != null) {
         setState(() => _upsertItem(serverItem, replaceId: localId));
       }
+      await _syncReminders(idoso.id, _items);
     } on ApiException {
       if (!mounted) return;
       setState(() => _items = previousItems);
@@ -187,6 +192,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       _showNoEditPermission();
       return;
     }
+    final idoso = ref.read(selectedIdosoProvider);
+    if (idoso == null) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -216,6 +223,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     });
     try {
       await ref.read(apiClientProvider).removerCompromisso(id: item.id);
+      await _syncReminders(idoso.id, _items);
       if (!mounted) return;
     } on ApiException {
       if (!mounted) return;
@@ -270,6 +278,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       if (serverItem != null) {
         setState(() => _upsertItem(serverItem));
       }
+      final idoso = ref.read(selectedIdosoProvider);
+      if (idoso != null) await _syncReminders(idoso.id, _items);
     } on ApiException {
       if (!mounted) return;
       setState(() => _items = previousItems);
@@ -334,6 +344,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       if (serverItem != null) {
         setState(() => _upsertItem(serverItem));
       }
+      final idoso = ref.read(selectedIdosoProvider);
+      if (idoso != null) await _syncReminders(idoso.id, _items);
     } on ApiException {
       if (!mounted) return;
       setState(() => _items = previousItems);
@@ -397,6 +409,20 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     final updated = [..._items];
     updated[index] = item;
     _items = updated..sort(_compareAgendaItems);
+  }
+
+  Future<void> _syncReminders(
+    String idosoId,
+    Iterable<AgendaCompromisso> items,
+  ) async {
+    try {
+      await AgendaReminderScheduler.sync(
+        idosoId: idosoId,
+        compromissos: items,
+      );
+    } catch (_) {
+      // Falhar ao agendar localmente não deve descartar uma alteração salva.
+    }
   }
 
   int _compareAgendaItems(AgendaCompromisso a, AgendaCompromisso b) {

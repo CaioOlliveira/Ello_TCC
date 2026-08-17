@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -36,7 +37,16 @@ class LocalNotificationService {
     if (_initialized || kIsWeb) return;
 
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
+    // Os horários escolhidos no app são horários locais. Usar um fuso fixo
+    // aqui deslocava lembretes quando o aparelho tinha outro fuso configurado.
+    try {
+      final deviceTimeZone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(deviceTimeZone.identifier));
+    } catch (_) {
+      // Mantém o comportamento esperado para a base atual caso a plataforma
+      // não informe um identificador IANA válido.
+      tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
+    }
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const darwin = DarwinInitializationSettings();

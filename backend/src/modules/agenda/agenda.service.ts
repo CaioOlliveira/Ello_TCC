@@ -182,15 +182,20 @@ export const agendaService = {
       dadosNovos: evento,
     });
 
-    if (
-      input.ativarLembrete &&
-      input.antecedenciaLembreteMinutos !== undefined
-    ) {
+    if (input.ativarLembrete) {
+      const antecedencia = input.antecedenciaLembreteMinutos ?? 30;
+      // Data e hora da agenda representam o horário civil brasileiro. Sem o
+      // offset, o Node interpreta a string no fuso do servidor (frequentemente
+      // UTC), deslocando o lembrete gravado em três horas.
+      const horaComSegundos =
+        input.horaCompromisso.length === 5
+          ? `${input.horaCompromisso}:00`
+          : input.horaCompromisso;
       const programadoPara = new Date(
-        `${input.dataCompromisso}T${input.horaCompromisso}`,
+        `${input.dataCompromisso}T${horaComSegundos}-03:00`,
       );
       programadoPara.setMinutes(
-        programadoPara.getMinutes() - input.antecedenciaLembreteMinutos,
+        programadoPara.getMinutes() - antecedencia,
       );
 
       await notificacoesService.criar({
