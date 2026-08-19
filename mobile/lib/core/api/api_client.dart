@@ -2924,7 +2924,8 @@ class ApiClient {
       }
       return const [];
     } on DioException catch (error) {
-      if (error.response?.statusCode == 404) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 404 || (statusCode != null && statusCode >= 500)) {
         return listarParticipantes(idosoId: idosoId);
       }
       throw _toApiException(

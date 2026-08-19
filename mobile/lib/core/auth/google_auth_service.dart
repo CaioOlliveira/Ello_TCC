@@ -20,6 +20,9 @@ class GoogleAuthResult {
 class GoogleAuthService {
   GoogleAuthService({required AppConfig config}) : _config = config;
 
+  static Future<void>? _initializeFuture;
+  static bool _googleSignInInitialized = false;
+
   final AppConfig _config;
   bool _initialized = false;
 
@@ -71,17 +74,50 @@ class GoogleAuthService {
   }
 
   Future<void> _initialize() async {
-    if (_initialized) return;
+    if (_initialized || _googleSignInInitialized) {
+      _initialized = true;
+      return;
+    }
 
+    final future = _initializeFuture ??= _initializeGoogleSignIn();
+    try {
+      await future;
+      _googleSignInInitialized = true;
+      _initialized = true;
+    } catch (error) {
+      if (_isAlreadyInitializedError(error)) {
+        _googleSignInInitialized = true;
+        _initialized = true;
+        return;
+      }
+
+      _initializeFuture = null;
+      rethrow;
+    }
+  }
+
+  Future<void> _initializeGoogleSignIn() async {
     final clientId = _config.googleClientId.trim();
     final serverClientId = _config.googleServerClientId.trim();
+    final effectiveServerClientId = serverClientId.isNotEmpty
+        ? serverClientId
+        : _config.googleWebClientId.trim();
+
+    if (!kIsWeb && effectiveServerClientId.isEmpty) {
+      throw const GoogleAuthException(
+        'Login Google indisponível: Web Client ID não configurado.',
+      );
+    }
 
     await GoogleSignIn.instance.initialize(
       clientId: kIsWeb && clientId.isNotEmpty ? clientId : null,
-      serverClientId: serverClientId,
+      serverClientId: kIsWeb ? null : effectiveServerClientId,
     );
+  }
 
-    _initialized = true;
+  bool _isAlreadyInitializedError(Object error) {
+    return error is StateError &&
+        error.message.contains('init() has already been called');
   }
 }
 

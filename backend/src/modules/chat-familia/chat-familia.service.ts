@@ -226,6 +226,8 @@ export const chatFamiliaService = {
 };
 
 async function garantirTabelaChatFamilia() {
+  await garantirCamposMembrosFicha();
+
   await getPool().query(`
     create table if not exists mensagens_chat_familia (
       id uuid primary key,
@@ -270,6 +272,24 @@ async function garantirTabelaChatFamilia() {
   await getPool().query(`
     create index if not exists idx_usuarios_presenca_ultimo_visto
       on usuarios_presenca (ultimo_visto_em desc)
+  `);
+}
+
+async function garantirCamposMembrosFicha() {
+  await getPool().query(`
+    alter table membros_ficha
+      add column if not exists e_administrador boolean not null default false,
+      add column if not exists permissoes jsonb not null default '{}'::jsonb
+  `);
+
+  await getPool().query(`
+    alter table membros_ficha
+      alter column funcao drop not null
+  `);
+
+  await getPool().query(`
+    create index if not exists idx_membros_ficha_idoso_status
+      on membros_ficha (idoso_id, status)
   `);
 }
 

@@ -715,9 +715,17 @@ function montarRespostaFallbackIa(
   mensagem: string,
   contexto: Record<string, unknown> | null,
 ) {
+  const normalizada = mensagem.toLowerCase();
+  if (mensagemIndicaUrgencia(normalizada)) {
+    return [
+      "Isso pode ser uma emergência. Procure atendimento imediato agora: chame o SAMU pelo 192, leve ao pronto-socorro ou acione o serviço de emergência da sua região.",
+      "Enquanto aguarda ajuda, não tente levantar ou movimentar a pessoa se houve queda, suspeita de fratura, desmaio ou dor forte. Mantenha-a em segurança, observe respiração e consciência, e informe aos profissionais o que aconteceu e quais medicamentos ela usa.",
+      "A resposta completa da IA ficou indisponível neste momento, mas nessa situação a prioridade é atendimento profissional urgente.",
+    ].join("\n\n");
+  }
+
   if (!contexto) return null;
 
-  const normalizada = mensagem.toLowerCase();
   const relatorio = montarRelatorioInicial(contexto);
   const secoes = Array.isArray(relatorio.secoes) ? relatorio.secoes : [];
   const textoRelatorio = secoes
@@ -746,6 +754,34 @@ function montarRespostaFallbackIa(
     textoRelatorio,
     "Pode tentar perguntar de novo em seguida; se for algo urgente ou clínico, procure orientação profissional.",
   ].join("\n\n");
+}
+
+function mensagemIndicaUrgencia(normalizada: string) {
+  const termosUrgentes = [
+    "desmai",
+    "desmaio",
+    "inconsciente",
+    "nao acorda",
+    "não acorda",
+    "caiu",
+    "queda",
+    "quebrou",
+    "fratura",
+    "bacia",
+    "quadril",
+    "sangramento",
+    "convuls",
+    "falta de ar",
+    "dor no peito",
+    "avc",
+    "derrame",
+    "infarto",
+    "emergencia",
+    "emergência",
+    "urgente",
+  ];
+
+  return termosUrgentes.some((termo) => normalizada.includes(termo));
 }
 
 function descreverErroIa(error: unknown) {
