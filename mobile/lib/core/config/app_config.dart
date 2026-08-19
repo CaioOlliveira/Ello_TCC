@@ -6,7 +6,7 @@ class AppConfig {
 
   String get apiBaseUrl => const String.fromEnvironment(
         'API_BASE_URL',
-        defaultValue: 'https://ello-tcc.onrender.com/api/v1',
+        defaultValue: 'https://ellotcc-production.up.railway.app/api/v1',
       );
 
   String get googleClientId {
