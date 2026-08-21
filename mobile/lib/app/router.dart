@@ -465,7 +465,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
         if (_hasUnreadBaseline &&
             unread > previous &&
-            !_currentLocation.startsWith('/chat')) {
+            !_isViewingChatConversation(peerId)) {
           final novas = unread - previous;
           await LocalNotificationService.instance.showNow(
             id: stableNotificationId('chat:${idoso.id}:$peerId'),
@@ -488,6 +488,12 @@ class _AppShellState extends ConsumerState<AppShell> {
     } catch (_) {
       // A tela de chat continua responsável por mostrar erros de rede ao usuário.
     }
+  }
+
+  bool _isViewingChatConversation(String peerId) {
+    final segments = Uri.parse(_currentLocation).pathSegments;
+    if (segments.length < 2 || segments.first != 'chat') return false;
+    return Uri.decodeComponent(segments[1]) == peerId;
   }
 
   @override

@@ -221,6 +221,11 @@ bool? _boolOrNull(Object? value) {
   return null;
 }
 
+DateTime? _parseLocalDateTime(Object? value) {
+  final parsed = DateTime.tryParse(value?.toString() ?? '');
+  return parsed?.toLocal();
+}
+
 class AiConversa {
   const AiConversa({
     required this.id,
@@ -238,16 +243,11 @@ class AiConversa {
           json['usuarioId']?.toString() ?? json['usuario_id']?.toString() ?? '',
       idosoId: json['idosoId']?.toString() ?? json['idoso_id']?.toString(),
       titulo: json['titulo']?.toString() ?? 'Novo chat',
-      criadoEm: DateTime.tryParse(
-            json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
-          ) ??
+      criadoEm: _parseLocalDateTime(json['criadoEm'] ?? json['criado_em']) ??
           DateTime.now(),
-      atualizadoEm: DateTime.tryParse(
-            json['atualizadoEm']?.toString() ??
-                json['atualizado_em']?.toString() ??
-                '',
-          ) ??
-          DateTime.now(),
+      atualizadoEm:
+          _parseLocalDateTime(json['atualizadoEm'] ?? json['atualizado_em']) ??
+              DateTime.now(),
     );
   }
 
@@ -290,9 +290,7 @@ class AiMensagem {
           '',
       remetente: json['remetente']?.toString() ?? 'ia',
       conteudo: json['conteudo']?.toString() ?? '',
-      criadoEm: DateTime.tryParse(
-            json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
-          ) ??
+      criadoEm: _parseLocalDateTime(json['criadoEm'] ?? json['criado_em']) ??
           DateTime.now(),
       imageDataUrl: imageDataUrl,
     );
@@ -342,14 +340,10 @@ class FamiliaChatMensagem {
           json['destinatario_id']?.toString() ??
           '',
       conteudo: json['conteudo']?.toString() ?? '',
-      criadoEm: DateTime.tryParse(
-            json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
-          ) ??
+      criadoEm: _parseLocalDateTime(json['criadoEm'] ?? json['criado_em']) ??
           DateTime.now(),
       imageDataUrl: imageDataUrl,
-      lidoEm: DateTime.tryParse(
-        json['lidoEm']?.toString() ?? json['lido_em']?.toString() ?? '',
-      )?.toLocal(),
+      lidoEm: _parseLocalDateTime(json['lidoEm'] ?? json['lido_em']),
     );
   }
 
@@ -1895,9 +1889,7 @@ class HistoricoRegistro {
       usuarioNome: json['usuarioNome']?.toString() ??
           json['usuario_nome']?.toString() ??
           'Usuário',
-      criadoEm: DateTime.tryParse(
-            json['criadoEm']?.toString() ?? json['criado_em']?.toString() ?? '',
-          ) ??
+      criadoEm: _parseLocalDateTime(json['criadoEm'] ?? json['criado_em']) ??
           DateTime.now(),
       itemNome: json['itemNome']?.toString() ??
           json['item_nome']?.toString() ??
@@ -1928,7 +1920,7 @@ class ConviteFicha {
         json['expira_em']?.toString() ?? json['expiraEm']?.toString();
     return ConviteFicha(
       codigo: json['codigo']?.toString() ?? '',
-      expiraEm: expira == null ? null : DateTime.tryParse(expira),
+      expiraEm: _parseLocalDateTime(expira),
     );
   }
 
@@ -1974,19 +1966,15 @@ class MembroFicha {
       relacao: json['relacao']?.toString(),
       status: json['status']?.toString(),
       online: _boolValue(json['online']),
-      ultimoVistoEm:
-          DateTime.tryParse(json['ultimo_visto_em']?.toString() ?? '')
-              ?.toLocal(),
+      ultimoVistoEm: _parseLocalDateTime(json['ultimo_visto_em']),
       mensagensNaoLidas: _intOrNull(
               json['mensagens_nao_lidas'] ?? json['mensagensNaoLidas']) ??
           0,
       ultimaMensagemPreview:
           (json['ultima_mensagem_preview'] ?? json['ultimaMensagemPreview'])
               ?.toString(),
-      ultimaMensagemEm: DateTime.tryParse(
-        (json['ultima_mensagem_em'] ?? json['ultimaMensagemEm'])?.toString() ??
-            '',
-      )?.toLocal(),
+      ultimaMensagemEm: _parseLocalDateTime(
+          json['ultima_mensagem_em'] ?? json['ultimaMensagemEm']),
       eAdministrador: _boolValue(json['e_administrador']),
       eCriador: _boolValue(json['e_criador']),
       permissoesVisualizar: visualizar is List
@@ -2035,8 +2023,7 @@ class SolicitacaoPendente {
       nome: json['usuario_nome']?.toString() ?? 'Sem nome',
       urlFoto: json['usuario_foto']?.toString(),
       funcao: json['funcao']?.toString(),
-      criadoEm: DateTime.tryParse(json['criado_em']?.toString() ?? '') ??
-          DateTime.now(),
+      criadoEm: _parseLocalDateTime(json['criado_em']) ?? DateTime.now(),
     );
   }
 

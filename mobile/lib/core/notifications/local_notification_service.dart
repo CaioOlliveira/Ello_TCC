@@ -58,6 +58,7 @@ class LocalNotificationService {
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.requestNotificationsPermission();
+    await _ensureExactAlarmPermission();
   }
 
   Future<void> replaceGroup(
@@ -134,6 +135,8 @@ class LocalNotificationService {
   }
 
   Future<AndroidScheduleMode> _getAndroidScheduleMode() async {
+    await _ensureExactAlarmPermission();
+
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin == null) return AndroidScheduleMode.exactAllowWhileIdle;
@@ -156,6 +159,19 @@ class LocalNotificationService {
         : AndroidScheduleMode.exactAllowWhileIdle;
   }
 
+  Future<void> _ensureExactAlarmPermission() async {
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null || _askedForExactAlarmPermission) return;
+
+    final canScheduleExactly =
+        await androidPlugin.canScheduleExactNotifications();
+    if (canScheduleExactly == false) {
+      _askedForExactAlarmPermission = true;
+      await androidPlugin.requestExactAlarmsPermission();
+    }
+  }
+
   Future<void> _schedule(
     LocalNotificationRequest request, {
     required AndroidScheduleMode scheduleMode,
@@ -175,7 +191,8 @@ class LocalNotificationService {
       id: request.id,
       title: request.title,
       body: request.body,
-      scheduledDate: tz.TZDateTime.from(request.scheduledAt, tz.local),
+      scheduledDate:
+          tz.TZDateTime.from(request.scheduledAt.toLocal(), tz.local),
       notificationDetails: details,
       androidScheduleMode: scheduleMode,
       payload: request.payload,

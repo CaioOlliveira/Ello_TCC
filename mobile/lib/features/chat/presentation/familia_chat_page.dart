@@ -11,7 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
-import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
 
 class FamiliaChatPage extends ConsumerStatefulWidget {
@@ -336,7 +335,6 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
   Timer? _presenceTimer;
   Timer? _refreshTimer;
   var _isLoadingMessages = false;
-  var _hasMessageBaseline = false;
 
   @override
   void initState() {
@@ -427,7 +425,6 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
     }
 
     var messages = <_FamilyChatMessage>[];
-    var loadedFromServer = false;
     try {
       final apiMessages =
           await ref.read(apiClientProvider).listarMensagensFamilia(
@@ -439,7 +436,6 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
           .map((message) => _FamilyChatMessage.fromApi(message, usuario.id))
           .toList();
       messages = _mergeMessages(remoteMessages);
-      loadedFromServer = true;
       if (remoteMessages.isEmpty && messages.isEmpty) {
         messages = await _FamilyChatStore.loadMessages(
           ownerId: usuario.id,
@@ -460,12 +456,6 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
       return;
     }
     final hasNewMessages = _hasNewMessages(messages);
-    final newIncomingMessages = _newIncomingMessages(messages);
-    final shouldNotify = loadedFromServer &&
-        _hasMessageBaseline &&
-        newIncomingMessages.isNotEmpty;
-    if (loadedFromServer) _hasMessageBaseline = true;
-
     if (_sameMessages(_messages, messages)) {
       _isLoadingMessages = false;
       return;
@@ -476,9 +466,6 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
       await _persistMessages();
     } catch (_) {}
     if (hasNewMessages) _scrollToEnd();
-    if (shouldNotify) {
-      unawaited(_showMessageNotification(idoso.id, newIncomingMessages.last));
-    }
     _isLoadingMessages = false;
   }
 
@@ -498,31 +485,6 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
   bool _hasNewMessages(List<_FamilyChatMessage> messages) {
     final previousIds = _messages.map((message) => message.id).toSet();
     return messages.any((message) => !previousIds.contains(message.id));
-  }
-
-  List<_FamilyChatMessage> _newIncomingMessages(
-    List<_FamilyChatMessage> messages,
-  ) {
-    final previousIds = _messages.map((message) => message.id).toSet();
-    return messages
-        .where(
-            (message) => !message.fromMe && !previousIds.contains(message.id))
-        .toList();
-  }
-
-  Future<void> _showMessageNotification(
-    String idosoId,
-    _FamilyChatMessage message,
-  ) async {
-    try {
-      await LocalNotificationService.instance.showNow(
-        id: stableNotificationId('chat:$idosoId:${_peer.id}'),
-        title: 'Nova mensagem no Chat do Cuidado',
-        body:
-            '${_peer.displayName}: ${message.text.isNotEmpty ? message.text : 'Foto enviada'}',
-        payload: 'chat:${_peer.id}',
-      );
-    } catch (_) {}
   }
 
   Future<void> _persistMessages() async {
