@@ -6,7 +6,9 @@ import {
   idParamSchema,
 } from "../../common/utils/request-query.js";
 import {
+  administracaoParamSchema,
   atualizarMedicamentoSchema,
+  cancelarAdministracaoSchema,
   criarHorarioMedicamentoSchema,
   criarMedicamentoSchema,
   historicoMedicamentosQuerySchema,
@@ -107,6 +109,21 @@ export const registrarAdministracaoMedicamento: RequestHandler = asyncHandler(
     const input = registrarAdministracaoSchema.parse(req.body);
     res.status(201).json({
       dados: await medicamentosService.registrarAdministracao(id, input),
+    });
+  },
+);
+
+export const cancelarAdministracaoMedicamento: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const { administracaoId } = administracaoParamSchema.parse(req.params);
+    const input = cancelarAdministracaoSchema.parse(req.body);
+    res.json({
+      dados: await medicamentosService.cancelarAdministracao(
+        id,
+        administracaoId,
+        input,
+      ),
     });
   },
 );

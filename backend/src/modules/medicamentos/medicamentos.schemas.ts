@@ -35,6 +35,15 @@ export const registrarAdministracaoSchema = z.object({
   observacoes: z.string().optional(),
 });
 
+export const cancelarAdministracaoSchema = z.object({
+  idosoId: z.string().uuid("Idoso inv\u00e1lido."),
+  registradoPorId: z.string().uuid().optional(),
+});
+
+export const administracaoParamSchema = z.object({
+  administracaoId: z.string().uuid("Administra\u00e7\u00e3o inv\u00e1lida."),
+});
+
 export const substituirHorariosMedicamentoSchema = z.object({
   frequenciaTipo: z.enum(["diaria", "semanal", "alternado"]).default("diaria"),
   diasSemana: z.array(z.string().min(1)).optional(),
@@ -67,6 +76,9 @@ export type CriarHorarioMedicamentoInput = z.infer<
 >;
 export type RegistrarAdministracaoInput = z.infer<
   typeof registrarAdministracaoSchema
+>;
+export type CancelarAdministracaoInput = z.infer<
+  typeof cancelarAdministracaoSchema
 >;
 export type SubstituirHorariosMedicamentoInput = z.infer<
   typeof substituirHorariosMedicamentoSchema

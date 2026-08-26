@@ -180,7 +180,6 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                     child: _MedicationAlert(
                       title: _resumo.proximoMedicamentoTitulo,
                       label: _resumo.proximoMedicamentoLabel,
-                      time: _resumo.proximoMedicamentoHora,
                       tone: _resumo.proximoMedicamentoTom,
                     ),
                   ),
@@ -459,13 +458,11 @@ enum _MedicationAlertTone { late, soon, later, done, empty }
 class _MedicationAlertColors {
   const _MedicationAlertColors({
     required this.background,
-    required this.badgeBackground,
     required this.accent,
     required this.icon,
   });
 
   final Color background;
-  final Color badgeBackground;
   final Color accent;
   final IconData icon;
 }
@@ -478,15 +475,11 @@ _MedicationAlertColors _medicationAlertColors(
     _MedicationAlertTone.late => _MedicationAlertColors(
         background: adaptive(
             context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
-        badgeBackground: adaptive(
-            context, const Color(0xFFFFF1F1), AppDarkColors.tintedWarn),
         accent: const Color(0xFFD73A3A),
         icon: Icons.warning_amber_rounded,
       ),
     _MedicationAlertTone.soon => _MedicationAlertColors(
         background: adaptive(
-            context, const Color(0xFFFFF3E3), AppDarkColors.tintedWarn),
-        badgeBackground: adaptive(
             context, const Color(0xFFFFF3E3), AppDarkColors.tintedWarn),
         accent: const Color(0xFFE47A00),
         icon: Icons.notifications_active_rounded,
@@ -494,23 +487,17 @@ _MedicationAlertColors _medicationAlertColors(
     _MedicationAlertTone.later => _MedicationAlertColors(
         background: adaptive(
             context, const Color(0xFFE8F8FA), AppDarkColors.tintedInfo),
-        badgeBackground: adaptive(
-            context, const Color(0xFFE8F8FA), AppDarkColors.tintedInfo),
         accent: const Color(0xFF168FA1),
         icon: Icons.notifications_none_rounded,
       ),
     _MedicationAlertTone.done => _MedicationAlertColors(
         background: adaptive(
             context, const Color(0xFFEAF8EF), AppDarkColors.surfaceAlt),
-        badgeBackground: adaptive(
-            context, const Color(0xFFEAF8EF), AppDarkColors.surfaceAlt),
         accent: const Color(0xFF28A745),
         icon: Icons.check_circle_outline_rounded,
       ),
     _MedicationAlertTone.empty => _MedicationAlertColors(
         background: adaptive(
-            context, const Color(0xFFF3F8F9), AppDarkColors.surfaceAlt),
-        badgeBackground: adaptive(
             context, const Color(0xFFF3F8F9), AppDarkColors.surfaceAlt),
         accent: const Color(0xFF168FA1),
         icon: Icons.medication_outlined,
@@ -522,13 +509,11 @@ class _MedicationAlert extends StatelessWidget {
   const _MedicationAlert({
     required this.title,
     required this.label,
-    required this.time,
     required this.tone,
   });
 
   final String title;
   final String label;
-  final String time;
   final _MedicationAlertTone tone;
 
   @override
@@ -566,21 +551,6 @@ class _MedicationAlert extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(
-              color: colors.badgeBackground,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              time,
-              style: TextStyle(
-                color: colors.accent,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
             ),
           ),
         ],
@@ -801,14 +771,12 @@ class _MedicamentosDashboardInfo {
     required this.resumoLabel,
     required this.proximoTitulo,
     required this.proximoLabel,
-    required this.proximoHorario,
     required this.proximoTom,
   });
 
   final String resumoLabel;
   final String proximoTitulo;
   final String proximoLabel;
-  final String proximoHorario;
   final _MedicationAlertTone proximoTom;
 }
 
@@ -820,7 +788,6 @@ _MedicamentosDashboardInfo _medicamentosDashboardInfo(
       resumoLabel: 'nenhum cadastrado',
       proximoTitulo: 'Medicamentos',
       proximoLabel: 'Cadastre medicamentos',
-      proximoHorario: '--:--',
       proximoTom: _MedicationAlertTone.empty,
     );
   }
@@ -835,7 +802,6 @@ _MedicamentosDashboardInfo _medicamentosDashboardInfo(
       resumoLabel: 'sem pendências',
       proximoTitulo: 'Tudo em dia',
       proximoLabel: 'Todos os remédios de hoje foram tomados.',
-      proximoHorario: 'OK',
       proximoTom: _MedicationAlertTone.done,
     );
   }
@@ -843,6 +809,7 @@ _MedicamentosDashboardInfo _medicamentosDashboardInfo(
   final atrasados = pendentes.where(_medicamentoAtrasado).length;
   final proximo = pendentes.first;
   final dosagem = proximo.dosagem?.trim();
+  final horario = proximo.proximoHorario?.trim();
   final minutosAteDose =
       proximo.proximoHorarioPrevisto?.difference(DateTime.now()).inMinutes;
   final tom = _medicamentoAtrasado(proximo)
@@ -858,10 +825,11 @@ _MedicamentosDashboardInfo _medicamentosDashboardInfo(
     proximoTitulo: _medicamentoAtrasado(proximo)
         ? 'Medicamento atrasado'
         : 'Próximo medicamento',
-    proximoLabel: dosagem == null || dosagem.isEmpty
-        ? proximo.nome
-        : '${proximo.nome} - $dosagem',
-    proximoHorario: proximo.proximoHorario ?? '--:--',
+    proximoLabel: [
+      proximo.nome,
+      if (dosagem != null && dosagem.isNotEmpty) dosagem,
+      if (horario != null && horario.isNotEmpty) horario,
+    ].join(' - '),
     proximoTom: tom,
   );
 }
@@ -905,7 +873,6 @@ class _DashboardResumo {
     this.medicamentosLabel = 'em breve',
     this.proximoMedicamentoTitulo = 'Medicamentos',
     this.proximoMedicamentoLabel = 'Cadastre medicamentos',
-    this.proximoMedicamentoHora = '--:--',
     this.proximoMedicamentoTom = _MedicationAlertTone.empty,
     this.humorLabel = 'não registrado ainda',
     this.ultimaRefeicaoLabel = 'não registrado ainda',
@@ -936,7 +903,6 @@ class _DashboardResumo {
       medicamentosLabel: medicamentosInfo.resumoLabel,
       proximoMedicamentoTitulo: medicamentosInfo.proximoTitulo,
       proximoMedicamentoLabel: medicamentosInfo.proximoLabel,
-      proximoMedicamentoHora: medicamentosInfo.proximoHorario,
       proximoMedicamentoTom: medicamentosInfo.proximoTom,
       humorLabel: latestMood ?? 'não registrado ainda',
       ultimaRefeicaoLabel: latestMeal == null
@@ -955,7 +921,6 @@ class _DashboardResumo {
   final String medicamentosLabel;
   final String proximoMedicamentoTitulo;
   final String proximoMedicamentoLabel;
-  final String proximoMedicamentoHora;
   final _MedicationAlertTone proximoMedicamentoTom;
   final String humorLabel;
   final String ultimaRefeicaoLabel;
@@ -968,7 +933,6 @@ class _DashboardResumo {
     String? medicamentosLabel,
     String? proximoMedicamentoTitulo,
     String? proximoMedicamentoLabel,
-    String? proximoMedicamentoHora,
     _MedicationAlertTone? proximoMedicamentoTom,
     String? humorLabel,
     String? ultimaRefeicaoLabel,
@@ -983,8 +947,6 @@ class _DashboardResumo {
           proximoMedicamentoTitulo ?? this.proximoMedicamentoTitulo,
       proximoMedicamentoLabel:
           proximoMedicamentoLabel ?? this.proximoMedicamentoLabel,
-      proximoMedicamentoHora:
-          proximoMedicamentoHora ?? this.proximoMedicamentoHora,
       proximoMedicamentoTom:
           proximoMedicamentoTom ?? this.proximoMedicamentoTom,
       humorLabel: humorLabel ?? this.humorLabel,

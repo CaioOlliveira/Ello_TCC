@@ -13,6 +13,7 @@ import {
 } from "../../database/simple-crud.js";
 import type {
   AtualizarMedicamentoInput,
+  CancelarAdministracaoInput,
   CriarHorarioMedicamentoInput,
   CriarMedicamentoInput,
   RegistrarAdministracaoInput,
@@ -354,6 +355,12 @@ const rotuloStatusAdministracao = (
         descricao: "registrou recusa da dose",
         texto: "Recusou",
         cor: "alerta" as const,
+      };
+    case "cancelado":
+      return {
+        descricao: "cancelou a administra\u00e7\u00e3o",
+        texto: "Cancelado",
+        cor: "atualizado" as const,
       };
     default:
       return {
@@ -996,6 +1003,105 @@ export const medicamentosService = {
 
       await client.query("commit");
       return administracao;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+
+  async cancelarAdministracao(
+    medicamentoId: string,
+    administracaoId: string,
+    input: CancelarAdministracaoInput,
+  ) {
+    const registradoPorId = await resolverUsuarioRegistroId(
+      input.registradoPorId,
+    );
+    const pool = getPool();
+    const client = await pool.connect();
+
+    try {
+      await client.query("begin");
+      const administracaoResult = await client.query<Record<string, unknown>>(
+        `
+          select am.*
+          from administracoes_medicamentos am
+          inner join medicamentos m on m.id = am.medicamento_id
+          where am.id = $1
+            and am.medicamento_id = $2
+            and am.idoso_id = $3
+          for update of am, m
+        `,
+        [administracaoId, medicamentoId, input.idosoId],
+      );
+      const administracao = administracaoResult.rows[0];
+
+      if (!administracao) {
+        throw new AppError(
+          "ADMINISTRACAO_NAO_ENCONTRADA",
+          "Administra\u00e7\u00e3o n\u00e3o encontrada para esta ficha.",
+          404,
+        );
+      }
+
+      if (String(administracao.status).toLowerCase() !== "tomado") {
+        throw new AppError(
+          "ADMINISTRACAO_NAO_CANCELAVEL",
+          "Somente doses marcadas como tomadas podem ser canceladas.",
+          409,
+        );
+      }
+
+      await client.query(
+        "delete from administracoes_medicamentos where id = $1",
+        [administracaoId],
+      );
+
+      const quantidadeDose = Number(administracao.quantidade_dose);
+      if (Number.isFinite(quantidadeDose) && quantidadeDose > 0) {
+        await client.query(
+          `
+            update medicamentos
+            set quantidade_estoque = coalesce(quantidade_estoque, 0) + $1
+            where id = $2
+          `,
+          [quantidadeDose, medicamentoId],
+        );
+      }
+
+      const administracaoCancelada = {
+        ...administracao,
+        status: "cancelado",
+        cancelado_em: new Date().toISOString(),
+      };
+      await client.query(
+        `
+          insert into historico_alteracoes (
+            idoso_id,
+            usuario_id,
+            acao,
+            tipo_entidade,
+            entidade_id,
+            dados_anteriores,
+            dados_novos
+          )
+          values ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [
+          input.idosoId,
+          registradoPorId,
+          "cancelar_administracao",
+          "administracoes_medicamentos",
+          administracaoId,
+          JSON.stringify(administracao),
+          JSON.stringify(administracaoCancelada),
+        ],
+      );
+
+      await client.query("commit");
+      return administracaoCancelada;
     } catch (error) {
       await client.query("rollback");
       throw error;

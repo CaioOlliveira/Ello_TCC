@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
   atualizarMedicamento,
   buscarMedicamento,
+  cancelarAdministracaoMedicamento,
   criarHorarioMedicamento,
   criarMedicamento,
   listarAdministracoesMedicamento,
@@ -31,4 +32,8 @@ medicamentosRoutes.get("/:id/administracoes", listarAdministracoesMedicamento);
 medicamentosRoutes.post(
   "/:id/administracoes",
   registrarAdministracaoMedicamento,
+);
+medicamentosRoutes.delete(
+  "/:id/administracoes/:administracaoId",
+  cancelarAdministracaoMedicamento,
 );

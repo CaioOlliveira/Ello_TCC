@@ -4275,6 +4275,29 @@ class ApiClient {
     }
   }
 
+  Future<void> cancelarAdministracaoMedicamento({
+    required String medicamentoId,
+    required String administracaoId,
+    required String idosoId,
+    String? registradoPorId,
+  }) async {
+    try {
+      await _dio.delete<Map<String, dynamic>>(
+        ApiEndpoints.cancelarAdministracaoMedicamento(
+          medicamentoId,
+          administracaoId,
+        ),
+        data: {
+          'idosoId': idosoId,
+          if (registradoPorId != null && registradoPorId.isNotEmpty)
+            'registradoPorId': registradoPorId,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao cancelar a dose.');
+    }
+  }
+
   ApiException _toApiException(
     DioException error, {
     required String fallback,

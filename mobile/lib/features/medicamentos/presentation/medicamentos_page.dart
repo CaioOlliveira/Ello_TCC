@@ -53,6 +53,7 @@ const _kStatusDose = [
   ),
   ('nao_tomou', 'Não tomou', Icons.cancel_rounded, Color(0xFFD73A3A)),
   ('recusou', 'Recusou', Icons.block_rounded, Color(0xFF8A6FD6)),
+  ('cancelado', 'Cancelado', Icons.undo_rounded, Color(0xFF2FA8B8)),
 ];
 
 class MedicamentosPage extends ConsumerStatefulWidget {
@@ -175,6 +176,16 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF28A745),
+        content: Text(message),
+      ),
     );
   }
 
@@ -434,26 +445,21 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       final atualizado = resumo.medicamentos
           .where((item) => item.id == medicamento.id)
           .firstOrNull;
-      final medicamentoRegistrado = _medicamentoComDoseRegistrada(
-        atualizado ?? medicamento,
-        referenciaAnterior: medicamento,
-        dose: atualizado == null ? dose : null,
-      );
-      final resumoAtualizado = _resumoComMedicamentoRegistrado(
-        resumo,
-        medicamentoRegistrado,
-      );
+      // Usa o resumo devolvido pela API logo depois do registro, para que a
+      // dose e o próximo horário exibidos reflitam o que foi salvo no banco.
+      final medicamentoRegistrado = atualizado ?? medicamento;
       await MedicationReminderScheduler.sync(
         idosoId: idoso.id,
-        resumo: resumoAtualizado,
+        resumo: resumo,
       );
       setState(() {
         _resumoLoadedIdosoId = idoso.id;
-        _resumoFuture = Future.value(resumoAtualizado);
+        _resumoFuture = Future.value(resumo);
         _selecionado = medicamentoRegistrado;
         _administracoes = administracoes;
         _carregandoDetalhe = false;
       });
+      _showSuccess('Dose registrada como administrada.');
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -464,6 +470,86 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Não foi possível registrar a dose.')),
       );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _cancelarAdministracao(
+    Map<String, dynamic> administracao,
+  ) async {
+    final idoso = ref.read(selectedIdosoProvider);
+    final medicamento = _selecionado;
+    final administracaoId = administracao['id']?.toString() ?? '';
+    if (idoso == null || medicamento == null || administracaoId.isEmpty) return;
+    if (!idoso.podeEditarModulo('Medicacoes')) {
+      _showNoEditPermission();
+      return;
+    }
+
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar dose registrada'),
+        content: const Text(
+          'Deseja cancelar esta administração? A dose voltará ao estoque e o lembrete será reativado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Voltar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD73A3A),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Cancelar dose'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      final client = ref.read(apiClientProvider);
+      await client.cancelarAdministracaoMedicamento(
+        medicamentoId: medicamento.id,
+        administracaoId: administracaoId,
+        idosoId: idoso.id,
+        registradoPorId: ref.read(authSessionProvider)?.id,
+      );
+      _invalidateHistorico();
+      final results = await Future.wait<dynamic>([
+        client.getResumoMedicamentosConsolidado(idosoId: idoso.id),
+        client.getAdministracoesMedicamento(medicamento.id),
+      ]);
+      final resumo = results[0] as MedicamentosResumo;
+      final administracoes = results[1] as List<Map<String, dynamic>>;
+      final atualizado = resumo.medicamentos
+          .where((item) => item.id == medicamento.id)
+          .firstOrNull;
+      await MedicationReminderScheduler.sync(
+        idosoId: idoso.id,
+        resumo: resumo,
+      );
+      if (!mounted) return;
+      setState(() {
+        _resumoLoadedIdosoId = idoso.id;
+        _resumoFuture = Future.value(resumo);
+        _selecionado = atualizado ?? medicamento;
+        _administracoes = administracoes;
+        _carregandoDetalhe = false;
+      });
+      _showMessage('Administração cancelada.');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      _showMessage(error.message);
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('Não foi possível cancelar a dose.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -633,6 +719,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
                   onEdit: () => _openEditForm(_selecionado!),
                   onDelete: () => _remover(_selecionado!),
                   onRegistrarDose: _registrarDose,
+                  onCancelarAdministracao: _cancelarAdministracao,
                 ),
           _Mode.resumo => FutureBuilder<MedicamentosResumo>(
               future: _resumoFuture,
@@ -2185,6 +2272,7 @@ class _DetalheView extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onRegistrarDose,
+    required this.onCancelarAdministracao,
   });
 
   final MedicamentoResumo medicamento;
@@ -2195,15 +2283,17 @@ class _DetalheView extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onRegistrarDose;
+  final ValueChanged<Map<String, dynamic>> onCancelarAdministracao;
 
   @override
   Widget build(BuildContext context) {
     final canRegisterDose = _medicamentoTemDosePendente(medicamento);
     final registerLabel = canRegisterDose
-        ? 'Remédio dado'
+        ? 'Dar remédio'
         : medicamento.statusHoje == 'dado'
             ? 'Dose registrada hoje'
             : 'Sem dose pendente';
+    final administracaoCancelavel = _administracaoTomadaHoje(administracoes);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
@@ -2283,7 +2373,7 @@ class _DetalheView extends StatelessWidget {
                       label: Text(registerLabel),
                       style: FilledButton.styleFrom(
                         backgroundColor: canRegisterDose
-                            ? const Color(0xFF28A745)
+                            ? const Color(0xFF2FA8B8)
                             : const Color(0xFF9DA8AD),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -2294,6 +2384,29 @@ class _DetalheView extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (administracaoCancelavel != null) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: saving
+                          ? null
+                          : () => onCancelarAdministracao(
+                                administracaoCancelavel,
+                              ),
+                      icon: const Icon(Icons.undo_rounded, size: 18),
+                      label: const Text('Cancelar dose registrada'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFD73A3A),
+                        side: const BorderSide(color: Color(0xFFD73A3A)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Text(
                   'Últimas doses',
@@ -2376,6 +2489,29 @@ class _DetailRow extends StatelessWidget {
       ),
     );
   }
+}
+
+Map<String, dynamic>? _administracaoTomadaHoje(
+  List<Map<String, dynamic>> administracoes,
+) {
+  final hoje = DateTime.now();
+  for (final administracao in administracoes) {
+    if ((administracao['status'] ?? '').toString().toLowerCase() != 'tomado') {
+      continue;
+    }
+    final textoData =
+        (administracao['administrado_em'] ?? administracao['administradoEm'])
+            ?.toString();
+    final data = textoData == null ? null : DateTime.tryParse(textoData);
+    if (data == null) continue;
+    final local = data.toLocal();
+    if (local.year == hoje.year &&
+        local.month == hoje.month &&
+        local.day == hoje.day) {
+      return administracao;
+    }
+  }
+  return null;
 }
 
 class _AdministracaoTile extends StatelessWidget {

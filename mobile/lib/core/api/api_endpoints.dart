@@ -68,4 +68,9 @@ class ApiEndpoints {
   static String horariosMedicamento(String id) => '/medicamentos/$id/horarios';
   static String administracoesMedicamento(String id) =>
       '/medicamentos/$id/administracoes';
+  static String cancelarAdministracaoMedicamento(
+    String medicamentoId,
+    String administracaoId,
+  ) =>
+      '/medicamentos/$medicamentoId/administracoes/$administracaoId';
 }
