@@ -127,10 +127,19 @@ const validarGoogleToken = async (idToken: string) => {
     );
   }
 
-  const ticket = await googleClient.verifyIdToken({
-    idToken,
-    audience: audiences,
-  });
+  let ticket;
+  try {
+    ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: audiences,
+    });
+  } catch {
+    throw new AppError(
+      "GOOGLE_TOKEN_INVALIDO",
+      "Não foi possível validar a conta Google.",
+      401,
+    );
+  }
   const payload = ticket.getPayload();
 
   if (!payload?.email) {
