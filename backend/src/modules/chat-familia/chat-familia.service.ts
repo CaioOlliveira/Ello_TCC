@@ -86,46 +86,51 @@ export const chatFamiliaService = {
             mensagens_nao_lidas,
             false as e_criador
           from pares_com_mensagem
+        ),
+        conversas as (
+          select distinct on (c.usuario_id)
+            mr.id,
+            $1::uuid as idoso_id,
+            c.usuario_id,
+            u.nome as usuario_nome,
+            u.url_foto as usuario_foto,
+            u.telefone as usuario_telefone,
+            u.sexo as usuario_sexo,
+            coalesce(mr.funcao, 'cuidador') as funcao,
+            mr.relacao,
+            coalesce(mr.e_administrador, false) as e_administrador,
+            coalesce(mr.permissoes, '{"visualizar":[],"editar":[]}'::jsonb) as permissoes,
+            coalesce(mr.status, case when c.e_criador then 'ativo' else 'removido' end) as status,
+            c.e_criador,
+            c.ultima_mensagem_em,
+            (
+              select case
+                when length(trim(m.conteudo)) > 0 then m.conteudo
+                when m.anexo is not null then 'Foto enviada'
+                else ''
+              end
+              from mensagens_chat_familia m
+              where m.idoso_id = $1
+                and (
+                  (m.remetente_id = $2 and m.destinatario_id = c.usuario_id)
+                  or (m.remetente_id = c.usuario_id and m.destinatario_id = $2)
+                )
+              order by m.criado_em desc
+              limit 1
+            ) as ultima_mensagem_preview,
+            coalesce(c.mensagens_nao_lidas, 0)::int as mensagens_nao_lidas,
+            up.ultimo_visto_em,
+            (up.ultimo_visto_em is not null and up.ultimo_visto_em >= now() - interval '75 seconds') as online
+          from candidatos c
+          join usuarios u on u.id = c.usuario_id
+          left join membro_recente mr on mr.usuario_id = c.usuario_id
+          left join usuarios_presenca up on up.usuario_id = c.usuario_id
+          where c.usuario_id != $2
+          order by c.usuario_id, c.ultima_mensagem_em desc nulls last
         )
-        select distinct on (c.usuario_id)
-          mr.id,
-          $1::uuid as idoso_id,
-          c.usuario_id,
-          u.nome as usuario_nome,
-          u.url_foto as usuario_foto,
-          u.telefone as usuario_telefone,
-          u.sexo as usuario_sexo,
-          coalesce(mr.funcao, 'cuidador') as funcao,
-          mr.relacao,
-          coalesce(mr.e_administrador, false) as e_administrador,
-          coalesce(mr.permissoes, '{"visualizar":[],"editar":[]}'::jsonb) as permissoes,
-          coalesce(mr.status, case when c.e_criador then 'ativo' else 'removido' end) as status,
-          c.e_criador,
-          c.ultima_mensagem_em,
-          (
-            select case
-              when length(trim(m.conteudo)) > 0 then m.conteudo
-              when m.anexo is not null then 'Foto enviada'
-              else ''
-            end
-            from mensagens_chat_familia m
-            where m.idoso_id = $1
-              and (
-                (m.remetente_id = $2 and m.destinatario_id = c.usuario_id)
-                or (m.remetente_id = c.usuario_id and m.destinatario_id = $2)
-              )
-            order by m.criado_em desc
-            limit 1
-          ) as ultima_mensagem_preview,
-          coalesce(c.mensagens_nao_lidas, 0)::int as mensagens_nao_lidas,
-          up.ultimo_visto_em,
-          (up.ultimo_visto_em is not null and up.ultimo_visto_em >= now() - interval '75 seconds') as online
-        from candidatos c
-        join usuarios u on u.id = c.usuario_id
-        left join membro_recente mr on mr.usuario_id = c.usuario_id
-        left join usuarios_presenca up on up.usuario_id = c.usuario_id
-        where c.usuario_id != $2
-        order by c.usuario_id, c.ultima_mensagem_em desc nulls last
+        select *
+        from conversas
+        order by ultima_mensagem_em desc nulls last, usuario_nome asc
       `,
       [input.idosoId, input.usuarioId],
     );

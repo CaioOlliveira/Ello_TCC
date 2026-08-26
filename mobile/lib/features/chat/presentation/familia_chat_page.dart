@@ -57,7 +57,7 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
 
   void _startRefreshTimer() {
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _load(refreshingPresence: true);
     });
   }
@@ -151,7 +151,7 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
     return _ChatSummary(
       preview:
           preview == null || preview.isEmpty ? _fallbackPreview(peer) : preview,
-      updatedAt: peer.lastMessageAt ?? DateTime.now(),
+      updatedAt: peer.lastMessageAt,
     );
   }
 
@@ -1053,20 +1053,29 @@ class _ConversationTile extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    _formatTime(summary?.updatedAt ?? DateTime.now()),
-                    style: TextStyle(
-                      color: adaptive(context, const Color(0xFF9AA6AA),
-                          AppDarkColors.textMuted),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  if (summary?.updatedAt != null)
+                    Text(
+                      _formatTime(summary!.updatedAt!),
+                      style: TextStyle(
+                        color: unreadCount > 0
+                            ? const Color(0xFF008EA0)
+                            : adaptive(context, const Color(0xFF9AA6AA),
+                                AppDarkColors.textMuted),
+                        fontSize: 11,
+                        fontWeight:
+                            unreadCount > 0 ? FontWeight.w900 : FontWeight.w700,
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 13),
                   const SizedBox(height: 8),
                   if (unreadCount > 0)
                     Container(
-                      width: 20,
-                      height: 20,
+                      constraints: const BoxConstraints(
+                        minWidth: 21,
+                        minHeight: 21,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(
                         color: Color(0xFF008EA0),
@@ -1750,7 +1759,7 @@ class _ChatSummary {
   const _ChatSummary({required this.preview, required this.updatedAt});
 
   final String preview;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
 }
 
 bool _samePeers(List<FamiliaChatPeer> first, List<FamiliaChatPeer> second) {
