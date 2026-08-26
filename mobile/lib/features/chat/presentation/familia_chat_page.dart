@@ -117,18 +117,9 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
           .where((peer) => peer.id.isNotEmpty)
           .toList()
         ..sort(_comparePeersByLastMessage);
-      final summaries = <String, _ChatSummary>{};
-      for (final peer in peers) {
-        if (peer.lastMessageAt == null && _summaries[peer.id] != null) {
-          summaries[peer.id] = _summaries[peer.id]!;
-          continue;
-        }
-        summaries[peer.id] = await _loadSummary(
-          ownerId: usuario.id,
-          idosoId: idoso.id,
-          peer: peer,
-        );
-      }
+      final summaries = {
+        for (final peer in peers) peer.id: _summaryFromPeer(peer),
+      };
       if (!mounted) return;
       final contentChanged =
           !_samePeers(_peers, peers) || !_sameSummaries(_summaries, summaries);
@@ -155,26 +146,12 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
     }
   }
 
-  Future<_ChatSummary> _loadSummary({
-    required String ownerId,
-    required String idosoId,
-    required FamiliaChatPeer peer,
-  }) async {
+  _ChatSummary _summaryFromPeer(FamiliaChatPeer peer) {
     final preview = peer.lastMessagePreview?.trim();
-    if ((preview != null && preview.isNotEmpty) || peer.lastMessageAt != null) {
-      return _ChatSummary(
-        preview: preview == null || preview.isEmpty
-            ? _fallbackPreview(peer)
-            : preview,
-        updatedAt: peer.lastMessageAt ?? DateTime.now(),
-      );
-    }
-
-    return _FamilyChatStore.summary(
-      ownerId: ownerId,
-      idosoId: idosoId,
-      peerId: peer.id,
-      fallback: _fallbackPreview(peer),
+    return _ChatSummary(
+      preview:
+          preview == null || preview.isEmpty ? _fallbackPreview(peer) : preview,
+      updatedAt: peer.lastMessageAt ?? DateTime.now(),
     );
   }
 
@@ -373,7 +350,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
 
   void _startRefreshTimer() {
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _loadMessages();
       _refreshPeerPresence();
     });
@@ -1936,27 +1913,6 @@ class _FamilyChatStore {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key(ownerId, idosoId, peerId));
-  }
-
-  static Future<_ChatSummary> summary({
-    required String ownerId,
-    required String idosoId,
-    required String peerId,
-    required String fallback,
-  }) async {
-    final messages = await loadMessages(
-      ownerId: ownerId,
-      idosoId: idosoId,
-      peerId: peerId,
-    );
-    if (messages.isEmpty) {
-      return _ChatSummary(preview: fallback, updatedAt: DateTime.now());
-    }
-    final last = messages.last;
-    return _ChatSummary(
-      preview: last.text.isNotEmpty ? last.text : 'Foto enviada',
-      updatedAt: last.createdAt,
-    );
   }
 
   static String _key(String ownerId, String idosoId, String peerId) {

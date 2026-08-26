@@ -130,7 +130,7 @@ export const chatFamiliaService = {
       [input.idosoId, input.usuarioId],
     );
 
-    return { dados: result.rows };
+    return { dados: result.rows.map(serializarDatasChatFamilia) };
   },
 
   async listarMensagens(input: ListarMensagensFamiliaInput) {
@@ -164,7 +164,7 @@ export const chatFamiliaService = {
       [input.idosoId, input.usuarioId, input.outroUsuarioId],
     );
 
-    return { dados: result.rows };
+    return { dados: result.rows.map(serializarDatasChatFamilia) };
   },
 
   async criarMensagem(input: CriarMensagemFamiliaInput) {
@@ -203,7 +203,7 @@ export const chatFamiliaService = {
       ],
     );
 
-    return { dados: result.rows[0] };
+    return { dados: serializarDatasChatFamilia(result.rows[0]) };
   },
 
   async apagarConversa(input: ApagarConversaFamiliaInput) {
@@ -273,6 +273,15 @@ async function garantirTabelaChatFamilia() {
     create index if not exists idx_usuarios_presenca_ultimo_visto
       on usuarios_presenca (ultimo_visto_em desc)
   `);
+}
+
+function serializarDatasChatFamilia<T extends Record<string, unknown>>(row: T) {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [
+      key,
+      value instanceof Date ? value.toISOString() : value,
+    ]),
+  ) as T;
 }
 
 async function garantirCamposMembrosFicha() {
