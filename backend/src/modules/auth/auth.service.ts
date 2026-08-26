@@ -107,13 +107,12 @@ const googleAudiences = () => {
   const raw =
     process.env.GOOGLE_CLIENT_IDS ??
     process.env.GOOGLE_CLIENT_ID ??
-    process.env.GOOGLE_WEB_CLIENT_ID ??
-    defaultGoogleClientIds.join(",");
+    process.env.GOOGLE_WEB_CLIENT_ID;
 
-  return raw
-    .split(",")
+  return [...defaultGoogleClientIds, ...(raw ?? "").split(",")]
     .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+    .filter((item) => item.length > 0)
+    .filter((item, index, items) => items.indexOf(item) === index);
 };
 
 const validarGoogleToken = async (idToken: string) => {
