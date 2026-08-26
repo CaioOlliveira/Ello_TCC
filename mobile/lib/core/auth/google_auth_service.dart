@@ -43,7 +43,8 @@ class GoogleAuthService {
       if (error.code == GoogleSignInExceptionCode.canceled) {
         throw const GoogleAuthException(
           'Não foi possível concluir o login com Google. '
-          'Tente selecionar a conta novamente.',
+          'Se voce selecionou a conta e mesmo assim apareceu este aviso, '
+          'verifique a configuracao OAuth Android do app.',
         );
       }
 
