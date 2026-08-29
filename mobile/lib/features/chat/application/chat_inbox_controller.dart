@@ -195,7 +195,8 @@ class ChatInboxController extends StateNotifier<ChatInboxState> {
       );
       if (state.usuarioId != usuarioId || state.idosoId != idosoId) return;
 
-      final sorted = [...conversations]..sort(_compareConversations);
+      final sorted = _mergeCachedPhotos(conversations)
+        ..sort(_compareConversations);
       await _showNewMessageNotifications(
         usuarioId: usuarioId,
         idosoId: idosoId,
@@ -331,6 +332,21 @@ class ChatInboxController extends StateNotifier<ChatInboxState> {
         }),
       );
     }
+  }
+
+  List<MembroFicha> _mergeCachedPhotos(List<MembroFicha> conversations) {
+    return conversations.map((conversation) {
+      final photoUrl = conversation.urlFoto;
+      if (photoUrl != null && photoUrl.trim().isNotEmpty) {
+        _photoCache[conversation.usuarioId] = photoUrl;
+        return conversation;
+      }
+      final cachedPhoto = _photoCache[conversation.usuarioId];
+      if (cachedPhoto == null || cachedPhoto.trim().isEmpty) {
+        return conversation;
+      }
+      return conversation.copyWith(urlFoto: cachedPhoto);
+    }).toList();
   }
 
   String _messageForError(Object error) {

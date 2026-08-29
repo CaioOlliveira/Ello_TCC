@@ -412,9 +412,10 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    ref
-        .read(chatInboxProvider.notifier)
-        .setAppActive(state == AppLifecycleState.resumed);
+    ref.read(chatInboxProvider.notifier).setAppActive(
+          state != AppLifecycleState.paused &&
+              state != AppLifecycleState.detached,
+        );
   }
 
   Future<void> _openChatFromPayload(String payload) async {

@@ -252,11 +252,13 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _refreshTimer?.cancel();
-    if (state == AppLifecycleState.resumed) {
-      _loadMessages();
-      _startRefreshTimer();
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _refreshTimer?.cancel();
+      return;
     }
+    _loadMessages();
+    _startRefreshTimer();
   }
 
   void _startRefreshTimer() {
