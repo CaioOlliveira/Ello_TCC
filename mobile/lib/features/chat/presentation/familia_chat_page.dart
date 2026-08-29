@@ -1268,42 +1268,127 @@ class _ChatDetailHeader extends StatelessWidget {
   }
 }
 
-class _PeerAvatar extends StatelessWidget {
+class _PeerAvatar extends StatefulWidget {
   const _PeerAvatar({required this.peer, required this.size});
 
   final FamiliaChatPeer peer;
   final double size;
 
   @override
-  Widget build(BuildContext context) {
-    final bytes = _decodeDataUrl(peer.photoUrl);
-    final initials = _initials(peer.name);
-    final photoUrl = peer.photoUrl?.trim();
-    ImageProvider<Object>? imageProvider;
-    if (bytes != null) {
-      imageProvider = MemoryImage(bytes);
-    } else if (photoUrl != null && photoUrl.startsWith('http')) {
-      imageProvider = NetworkImage(photoUrl);
-    }
+  State<_PeerAvatar> createState() => _PeerAvatarState();
+}
 
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: adaptive(
-        context,
-        const Color(0xFFEAF8FA),
-        AppDarkColors.tintedInfo,
+class _PeerAvatarState extends State<_PeerAvatar> {
+  static final _dataUrlCache = <String, Uint8List?>{};
+  static final _imageProviderCache = <String, ImageProvider<Object>>{};
+
+  ImageProvider<Object>? _imageProvider;
+  String? _imageKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateImageProvider();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PeerAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _updateImageProvider();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = _initials(widget.peer.name);
+    final imageProvider = _imageProvider;
+
+    return ClipOval(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: adaptive(
+            context,
+            const Color(0xFFEAF8FA),
+            AppDarkColors.tintedInfo,
+          ),
+        ),
+        child: SizedBox(
+          width: widget.size,
+          height: widget.size,
+          child: imageProvider == null
+              ? _AvatarInitials(initials: initials, size: widget.size)
+              : Image(
+                  image: imageProvider,
+                  key: ValueKey(_imageKey),
+                  width: widget.size,
+                  height: widget.size,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  errorBuilder: (_, __, ___) => _AvatarInitials(
+                    initials: initials,
+                    size: widget.size,
+                  ),
+                ),
+        ),
       ),
-      backgroundImage: imageProvider,
-      child: imageProvider == null
-          ? Text(
-              initials,
-              style: TextStyle(
-                color: const Color(0xFF007C8A),
-                fontSize: size >= 50 ? 21 : 16,
-                fontWeight: FontWeight.w900,
-              ),
-            )
-          : null,
+    );
+  }
+
+  void _updateImageProvider() {
+    final nextUrl = widget.peer.photoUrl?.trim();
+    if (nextUrl == null || nextUrl.isEmpty) {
+      return;
+    }
+    final nextKey = '${widget.peer.id}:$nextUrl';
+    if (_imageKey == nextKey) return;
+    final provider = _providerForPhotoUrl(nextUrl);
+    if (provider == null) return;
+    _imageKey = nextKey;
+    _imageProvider = provider;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _imageKey == nextKey) {
+        precacheImage(provider, context);
+      }
+    });
+  }
+
+  ImageProvider<Object>? _providerForPhotoUrl(String photoUrl) {
+    final cached = _imageProviderCache[photoUrl];
+    if (cached != null) return cached;
+    final bytes = _cachedDataUrlBytes(photoUrl);
+    final ImageProvider<Object>? provider = bytes != null
+        ? MemoryImage(bytes)
+        : photoUrl.startsWith('http')
+            ? NetworkImage(photoUrl)
+            : null;
+    if (provider != null) {
+      _imageProviderCache[photoUrl] = provider;
+    }
+    return provider;
+  }
+
+  Uint8List? _cachedDataUrlBytes(String? photoUrl) {
+    if (photoUrl == null || !photoUrl.startsWith('data:image/')) return null;
+    return _dataUrlCache.putIfAbsent(photoUrl, () => _decodeDataUrl(photoUrl));
+  }
+}
+
+class _AvatarInitials extends StatelessWidget {
+  const _AvatarInitials({required this.initials, required this.size});
+
+  final String initials;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        initials,
+        style: TextStyle(
+          color: const Color(0xFF007C8A),
+          fontSize: size >= 50 ? 21 : 16,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
