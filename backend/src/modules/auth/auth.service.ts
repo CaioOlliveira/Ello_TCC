@@ -36,6 +36,7 @@ const defaultGoogleClientIds = [
   "318821887059-iukcc2mai6klc7ml1a1h121ev37rvsvm.apps.googleusercontent.com",
   "318821887059-5s73kv24r25eg92265lc7anm68t7s21r.apps.googleusercontent.com",
 ];
+let usuarioAuthSchemaReady: Promise<void> | null = null;
 
 const toUsuarioPublico = (usuario: UsuarioAuthRow) => ({
   id: usuario.id,
@@ -53,6 +54,25 @@ const respostaAutenticada = (usuario: UsuarioAuthRow) => ({
   usuario: toUsuarioPublico(usuario),
   token: criarTokenSessao(usuario.id),
 });
+
+const prepararSchemaUsuarioAuth = async () => {
+  if (!usuarioAuthSchemaReady) {
+    usuarioAuthSchemaReady = getPool()
+      .query(
+        `
+          alter table usuarios
+          add column if not exists sexo text
+        `,
+      )
+      .then(() => undefined)
+      .catch((error) => {
+        usuarioAuthSchemaReady = null;
+        throw error;
+      });
+  }
+
+  await usuarioAuthSchemaReady;
+};
 
 const criarHashSenha = (senha: string) => {
   const salt = randomBytes(16).toString("hex");
@@ -193,6 +213,8 @@ export const authService = {
   },
 
   async cadastrar(input: CadastroInput) {
+    await prepararSchemaUsuarioAuth();
+
     const usuarioExistente = await buscarUsuarioPorEmail(input.email);
 
     if (usuarioExistente) {
@@ -252,6 +274,8 @@ export const authService = {
   },
 
   async cadastrarGoogle(input: GoogleCadastroInput) {
+    await prepararSchemaUsuarioAuth();
+
     const google = await validarGoogleToken(input.idToken);
     const usuarioExistente = await buscarUsuarioPorEmail(google.email);
 

@@ -1,6 +1,36 @@
 import { z } from "zod";
 
-const sexoSchema = z.enum(["Feminino", "Masculino", "Outro"]);
+const valoresSexo = ["Feminino", "Masculino", "Outro"] as const;
+
+const normalizarSexo = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+
+  if (!normalized) return undefined;
+  if (["f", "fem", "feminino", "mulher"].includes(normalized)) {
+    return "Feminino";
+  }
+  if (["m", "masc", "masculino", "homem"].includes(normalized)) {
+    return "Masculino";
+  }
+  if (
+    ["outro", "outra", "nao binario", "nao_binario", "nonbinary"].includes(
+      normalized,
+    )
+  ) {
+    return "Outro";
+  }
+  return value;
+};
+
+const sexoSchema = z.preprocess(
+  normalizarSexo,
+  z.enum(valoresSexo, { invalid_type_error: "Sexo inválido." }).optional(),
+);
 
 export const loginSchema = z.object({
   email: z.string().email("E-mail inválido."),
@@ -12,7 +42,7 @@ export const cadastroSchema = z.object({
   email: z.string().email("E-mail inválido."),
   senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
   telefone: z.string().optional(),
-  sexo: sexoSchema.optional(),
+  sexo: sexoSchema,
   tipoUsuario: z.string().min(1).default("cuidador"),
 });
 
@@ -23,7 +53,7 @@ export const googleLoginSchema = z.object({
 export const googleCadastroSchema = googleLoginSchema.extend({
   nome: z.string().min(1, "Nome é obrigatório."),
   telefone: z.string().optional(),
-  sexo: sexoSchema.optional(),
+  sexo: sexoSchema,
 });
 
 export const alterarSenhaSchema = z

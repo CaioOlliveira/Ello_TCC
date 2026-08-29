@@ -2208,13 +2208,15 @@ class ApiClient {
     required String sexo,
   }) async {
     try {
+      final telefoneNormalizado = telefone.trim();
+      final sexoNormalizado = sexo.trim();
       final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.cadastroGoogle,
         data: {
           'idToken': idToken,
           'nome': nome,
-          'telefone': telefone,
-          'sexo': sexo,
+          if (telefoneNormalizado.isNotEmpty) 'telefone': telefoneNormalizado,
+          if (sexoNormalizado.isNotEmpty) 'sexo': sexoNormalizado,
         },
       );
       return response.data ?? <String, dynamic>{};
@@ -2234,14 +2236,16 @@ class ApiClient {
     required String sexo,
   }) async {
     try {
+      final telefoneNormalizado = telefone.trim();
+      final sexoNormalizado = sexo.trim();
       final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.cadastro,
         data: {
           'nome': nome,
           'email': email,
-          'telefone': telefone,
+          if (telefoneNormalizado.isNotEmpty) 'telefone': telefoneNormalizado,
           'senha': senha,
-          'sexo': sexo,
+          if (sexoNormalizado.isNotEmpty) 'sexo': sexoNormalizado,
           'tipoUsuario': 'cuidador',
         },
       );
