@@ -54,6 +54,8 @@ class ChatIncomingMessage {
 class ChatInboxController extends StateNotifier<ChatInboxState> {
   ChatInboxController(this._api) : super(const ChatInboxState());
 
+  static const _inboxPollInterval = Duration(milliseconds: 900);
+
   final ApiClient _api;
   final _incomingMessages = StreamController<ChatIncomingMessage>.broadcast();
   final _unreadByPeer = <String, int>{};
@@ -220,9 +222,16 @@ class ChatInboxController extends StateNotifier<ChatInboxState> {
 
   void _startPolling() {
     if (!_appActive || state.usuarioId == null || state.idosoId == null) return;
-    unawaited(refresh(showLoading: true));
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) {
-      unawaited(refresh());
+    _timer?.cancel();
+    unawaited(_refreshAndScheduleNext(showLoading: true));
+  }
+
+  Future<void> _refreshAndScheduleNext({bool showLoading = false}) async {
+    _timer?.cancel();
+    await refresh(showLoading: showLoading);
+    if (!_appActive || state.usuarioId == null || state.idosoId == null) return;
+    _timer = Timer(_inboxPollInterval, () {
+      unawaited(_refreshAndScheduleNext());
     });
   }
 
