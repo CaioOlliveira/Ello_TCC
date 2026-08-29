@@ -142,10 +142,16 @@ export const chatFamiliaService = {
           c.usuario_id as contato_id,
           u.nome as usuario_nome,
           u.nome as nome,
-          u.url_foto as usuario_foto,
-          u.url_foto as foto_url,
+          case
+            when u.url_foto is not null and length(u.url_foto) > 10000 then null
+            else u.url_foto
+          end as usuario_foto,
+          case
+            when u.url_foto is not null and length(u.url_foto) > 10000 then null
+            else u.url_foto
+          end as foto_url,
           u.telefone as usuario_telefone,
-          u.sexo as usuario_sexo,
+          null::text as usuario_sexo,
           coalesce(mr.funcao, 'cuidador') as funcao,
           mr.relacao,
           coalesce(mr.e_administrador, false) as e_administrador,

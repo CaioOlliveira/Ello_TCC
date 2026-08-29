@@ -93,14 +93,25 @@ class ChatInboxController extends StateNotifier<ChatInboxState> {
     _unreadByPeer.clear();
 
     if (!hasConfiguration) {
-      state = usuarioId != null &&
-              usuarioId.isNotEmpty &&
-              idosoId != null &&
-              idosoId.isNotEmpty
-          ? const ChatInboxState(
-              error: 'Sua sessao expirou. Entre novamente para continuar.',
-            )
-          : const ChatInboxState();
+      if (usuarioId != null &&
+          usuarioId.isNotEmpty &&
+          idosoId != null &&
+          idosoId.isNotEmpty) {
+        state = ChatInboxState(
+          usuarioId: usuarioId,
+          idosoId: idosoId,
+          error: 'Sua sessao expirou. Entre novamente para continuar.',
+        );
+      } else if (usuarioId != null && usuarioId.isNotEmpty) {
+        state = ChatInboxState(
+          usuarioId: usuarioId,
+          error: 'Selecione uma ficha para abrir o chat.',
+        );
+      } else {
+        state = const ChatInboxState(
+          error: 'Entre na sua conta para conversar.',
+        );
+      }
       return;
     }
 

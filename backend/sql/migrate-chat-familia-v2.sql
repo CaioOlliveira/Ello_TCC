@@ -3,7 +3,7 @@
 
 create table if not exists mensagens_chat_familia (
   id uuid primary key,
-  idoso_id uuid not null references idosos(id) on delete cascade,
+  idoso_id uuid not null references fichas_idosos(id) on delete cascade,
   remetente_id uuid not null references usuarios(id) on delete cascade,
   destinatario_id uuid not null references usuarios(id) on delete cascade,
   mensagem text not null,
