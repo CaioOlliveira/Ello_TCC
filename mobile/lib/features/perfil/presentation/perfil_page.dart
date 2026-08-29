@@ -208,7 +208,8 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
           );
       final dados = response['dados'];
       if (dados is Map<String, dynamic>) {
-        final sessaoAtualizada = UsuarioSessao.fromJson(dados);
+        final sessaoAtualizada = UsuarioSessao.fromJson(dados)
+            .copyWith(accessToken: usuario.accessToken);
         ref.read(authSessionProvider.notifier).state = sessaoAtualizada;
         try {
           await ref.read(sessaoUsuarioLocalProvider).salvar(sessaoAtualizada);

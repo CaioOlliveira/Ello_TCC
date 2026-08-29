@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -30,8 +31,18 @@ class LocalNotificationService {
   static const _idsKey = 'ello_scheduled_notification_ids';
 
   final _plugin = FlutterLocalNotificationsPlugin();
+  final _responses = StreamController<String>.broadcast();
   bool _initialized = false;
   bool _askedForExactAlarmPermission = false;
+  String? _launchPayload;
+
+  Stream<String> get responses => _responses.stream;
+
+  String? takeLaunchPayload() {
+    final payload = _launchPayload;
+    _launchPayload = null;
+    return payload;
+  }
 
   Future<void> initialize() async {
     if (_initialized || kIsWeb) return;
@@ -52,7 +63,15 @@ class LocalNotificationService {
     const darwin = DarwinInitializationSettings();
     const settings = InitializationSettings(android: android, iOS: darwin);
 
-    await _plugin.initialize(settings: settings);
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    _launchPayload = launchDetails?.notificationResponse?.payload;
+    await _plugin.initialize(
+      settings: settings,
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) _responses.add(payload);
+      },
+    );
     _initialized = true;
 
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<

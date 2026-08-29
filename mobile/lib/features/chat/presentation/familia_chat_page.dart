@@ -12,6 +12,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../application/chat_inbox_controller.dart';
 
 class FamiliaChatPage extends ConsumerStatefulWidget {
   const FamiliaChatPage({super.key});
@@ -21,129 +22,12 @@ class FamiliaChatPage extends ConsumerStatefulWidget {
 }
 
 class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
-  var _loading = true;
-  var _peers = <FamiliaChatPeer>[];
-  var _summaries = <String, _ChatSummary>{};
-  String? _error;
-  Timer? _presenceTimer;
-  Timer? _refreshTimer;
-  var _isRefreshing = false;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _load();
-      _startPresenceTimer();
-      _startRefreshTimer();
+      ref.read(chatInboxProvider.notifier).refresh(showLoading: true);
     });
-  }
-
-  @override
-  void dispose() {
-    _presenceTimer?.cancel();
-    _refreshTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startPresenceTimer() {
-    _sendPresence();
-    _presenceTimer?.cancel();
-    _presenceTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _sendPresence();
-      _load(refreshingPresence: true);
-    });
-  }
-
-  void _startRefreshTimer() {
-    _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      _load(refreshingPresence: true);
-    });
-  }
-
-  Future<void> _sendPresence() async {
-    final usuario = ref.read(authSessionProvider);
-    if (usuario == null || usuario.id.isEmpty) return;
-    try {
-      await ref
-          .read(apiClientProvider)
-          .registrarPresenca(usuarioId: usuario.id);
-    } catch (_) {}
-  }
-
-  Future<void> _load({bool refreshingPresence = false}) async {
-    if (_isRefreshing) return;
-    _isRefreshing = true;
-    final idoso = ref.read(selectedIdosoProvider);
-    final usuario = ref.read(authSessionProvider);
-
-    if (idoso == null || idoso.id.isEmpty) {
-      setState(() {
-        _loading = false;
-        _peers = const [];
-        _summaries = const {};
-        _error = 'Selecione uma ficha para abrir o chat.';
-      });
-      _isRefreshing = false;
-      return;
-    }
-
-    if (usuario == null || usuario.id.isEmpty) {
-      setState(() {
-        _loading = false;
-        _peers = const [];
-        _summaries = const {};
-        _error = 'Entre na sua conta para conversar.';
-      });
-      _isRefreshing = false;
-      return;
-    }
-
-    if (!refreshingPresence) {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-    }
-
-    try {
-      final participantes = await ref
-          .read(apiClientProvider)
-          .listarConversasFamilia(idosoId: idoso.id, usuarioId: usuario.id);
-      final peers = participantes
-          .where((membro) => membro.usuarioId != usuario.id)
-          .map(FamiliaChatPeer.fromMembro)
-          .where((peer) => peer.id.isNotEmpty)
-          .toList()
-        ..sort(_comparePeersByLastMessage);
-      final summaries = {
-        for (final peer in peers) peer.id: _summaryFromPeer(peer),
-      };
-      if (!mounted) return;
-      final contentChanged =
-          !_samePeers(_peers, peers) || !_sameSummaries(_summaries, summaries);
-      if (!contentChanged && refreshingPresence) return;
-      setState(() {
-        _peers = peers;
-        _summaries = summaries;
-        if (!refreshingPresence) _loading = false;
-      });
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        if (!refreshingPresence) _loading = false;
-        _error = error.message;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        if (!refreshingPresence) _loading = false;
-        _error = 'Não foi possível carregar os contatos.';
-      });
-    } finally {
-      _isRefreshing = false;
-    }
   }
 
   _ChatSummary _summaryFromPeer(FamiliaChatPeer peer) {
@@ -168,9 +52,18 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final inbox = ref.watch(chatInboxProvider);
+    final inboxPeers = inbox.conversas
+        .map(FamiliaChatPeer.fromMembro)
+        .where((peer) => peer.id.isNotEmpty)
+        .toList()
+      ..sort(_comparePeersByLastMessage);
+    final inboxSummaries = {
+      for (final peer in inboxPeers) peer.id: _summaryFromPeer(peer),
+    };
     ref.listen<IdosoResumo?>(selectedIdosoProvider, (previous, next) {
       if (previous?.id == next?.id) return;
-      _load();
+      ref.read(chatInboxProvider.notifier).refresh(showLoading: true);
     });
 
     return Scaffold(
@@ -251,7 +144,8 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
                     Expanded(
                       child: RefreshIndicator(
                         color: const Color(0xFF1598AA),
-                        onRefresh: _load,
+                        onRefresh: () =>
+                            ref.read(chatInboxProvider.notifier).refresh(),
                         child: LayoutBuilder(
                           builder: (context, constraints) {
                             return ListView(
@@ -263,10 +157,10 @@ class _FamiliaChatPageState extends ConsumerState<FamiliaChatPage> {
                                     minHeight: constraints.maxHeight,
                                   ),
                                   child: _ConversationPanel(
-                                    loading: _loading,
-                                    error: _error,
-                                    peers: _peers,
-                                    summaries: _summaries,
+                                    loading: inbox.loading,
+                                    error: inbox.error,
+                                    peers: inboxPeers,
+                                    summaries: inboxSummaries,
                                     onTap: _openChat,
                                   ),
                                 ),
@@ -302,29 +196,45 @@ class FamiliaChatDetailPage extends ConsumerStatefulWidget {
       _FamiliaChatDetailPageState();
 }
 
-class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
+class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
+    with WidgetsBindingObserver {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _imagePicker = ImagePicker();
+  late final ChatInboxController _chatInbox;
   var _messages = <_FamilyChatMessage>[];
   _PendingImage? _pendingImage;
   late FamiliaChatPeer _peer;
-  Timer? _presenceTimer;
   Timer? _refreshTimer;
+  StreamSubscription<ChatIncomingMessage>? _incomingMessageSubscription;
   var _isLoadingMessages = false;
+  var _isLoadingOlderMessages = false;
+  var _initialLoading = true;
+  var _hasOlderMessages = false;
+  FamiliaChatCursor? _nextCursor;
+  final _sendingMessageIds = <String>{};
 
   @override
   void initState() {
     super.initState();
+    _chatInbox = ref.read(chatInboxProvider.notifier);
     _peer = widget.initialPeer ??
         FamiliaChatPeer(
           id: widget.peerId,
           name: 'Contato',
           role: 'cuidador',
         );
+    WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_loadOlderMessagesWhenNeeded);
+    _incomingMessageSubscription = _chatInbox.incomingMessages.listen((event) {
+      if (event.idosoId == ref.read(selectedIdosoProvider)?.id &&
+          event.peerId == _peer.id) {
+        _loadMessages();
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadMessages();
-      _startPresenceTimer();
+      _chatInbox.setActiveConversation(_peer.id);
+      _loadMessages(initial: true);
       _startRefreshTimer();
     });
   }
@@ -333,129 +243,200 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
-    _presenceTimer?.cancel();
     _refreshTimer?.cancel();
+    _incomingMessageSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _chatInbox.setActiveConversation(null);
     super.dispose();
   }
 
-  void _startPresenceTimer() {
-    _sendPresence();
-    _refreshPeerPresence();
-    _presenceTimer?.cancel();
-    _presenceTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _sendPresence();
-      _refreshPeerPresence();
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _refreshTimer?.cancel();
+    if (state == AppLifecycleState.resumed) {
+      _loadMessages();
+      _startRefreshTimer();
+    }
   }
 
   void _startRefreshTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _loadMessages();
-      _refreshPeerPresence();
     });
   }
 
-  Future<void> _sendPresence() async {
-    final usuario = ref.read(authSessionProvider);
-    if (usuario == null || usuario.id.isEmpty) return;
-    try {
-      await ref
-          .read(apiClientProvider)
-          .registrarPresenca(usuarioId: usuario.id);
-    } catch (_) {}
-  }
-
-  Future<void> _refreshPeerPresence() async {
-    final idoso = ref.read(selectedIdosoProvider);
-    if (idoso == null || idoso.id.isEmpty) return;
-    try {
-      final usuario = ref.read(authSessionProvider);
-      if (usuario == null || usuario.id.isEmpty) return;
-      final participantes = await ref
-          .read(apiClientProvider)
-          .listarConversasFamilia(idosoId: idoso.id, usuarioId: usuario.id);
-      MembroFicha? membro;
-      for (final participante in participantes) {
-        if (participante.usuarioId == _peer.id) {
-          membro = participante;
-          break;
-        }
-      }
-      if (membro == null || !mounted) return;
-      final membroAtualizado = membro;
-      final updatedPeer = FamiliaChatPeer.fromMembro(membroAtualizado);
-      if (!_samePeer(_peer, updatedPeer)) {
-        setState(() => _peer = updatedPeer);
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _loadMessages() async {
+  Future<void> _loadMessages({bool initial = false}) async {
     if (_isLoadingMessages) return;
     _isLoadingMessages = true;
     final usuario = ref.read(authSessionProvider);
     final idoso = ref.read(selectedIdosoProvider);
-    if (usuario == null || idoso == null) {
+    final accessToken = usuario?.accessToken;
+    if (usuario == null ||
+        idoso == null ||
+        accessToken == null ||
+        accessToken.isEmpty) {
+      if (mounted && _initialLoading) setState(() => _initialLoading = false);
       _isLoadingMessages = false;
       return;
     }
 
     var messages = <_FamilyChatMessage>[];
     try {
-      final apiMessages =
-          await ref.read(apiClientProvider).listarMensagensFamilia(
-                idosoId: idoso.id,
-                usuarioId: usuario.id,
-                outroUsuarioId: _peer.id,
-              );
-      final remoteMessages = apiMessages
+      final page = await ref.read(apiClientProvider).listarMensagensFamilia(
+            idosoId: idoso.id,
+            outroUsuarioId: _peer.id,
+            accessToken: accessToken,
+          );
+      final remoteMessages = page.mensagens
           .map((message) => _FamilyChatMessage.fromApi(message, usuario.id))
           .toList();
       messages = _mergeMessages(remoteMessages);
-      if (remoteMessages.isEmpty && messages.isEmpty) {
+      _hasOlderMessages = page.temMais;
+      _nextCursor = page.proximoCursor;
+
+      final hasUnreadIncoming = page.mensagens.any(
+        (message) => !message.fromMe(usuario.id) && message.lidoEm == null,
+      );
+      if (hasUnreadIncoming) {
+        unawaited(_markIncomingMessagesAsRead(
+          idosoId: idoso.id,
+          accessToken: accessToken,
+        ));
+      }
+    } catch (_) {
+      if (_messages.isEmpty) {
         messages = await _FamilyChatStore.loadMessages(
           ownerId: usuario.id,
           idosoId: idoso.id,
           peerId: _peer.id,
         );
+      } else {
+        messages = _messages;
       }
-    } catch (_) {
-      messages = await _FamilyChatStore.loadMessages(
-        ownerId: usuario.id,
-        idosoId: idoso.id,
-        peerId: _peer.id,
-      );
     }
 
     if (!mounted) {
       _isLoadingMessages = false;
       return;
     }
+    final shouldScroll = initial ||
+        !_scrollController.hasClients ||
+        _scrollController.position.extentAfter < 120;
     final hasNewMessages = _hasNewMessages(messages);
     if (_sameMessages(_messages, messages)) {
+      if (_initialLoading) setState(() => _initialLoading = false);
       _isLoadingMessages = false;
       return;
     }
 
-    setState(() => _messages = messages);
+    setState(() {
+      _messages = messages;
+      _initialLoading = false;
+    });
     try {
       await _persistMessages();
     } catch (_) {}
-    if (hasNewMessages) _scrollToEnd();
+    if (hasNewMessages && shouldScroll) _scrollToEnd();
     _isLoadingMessages = false;
+  }
+
+  Future<void> _markIncomingMessagesAsRead({
+    required String idosoId,
+    required String accessToken,
+  }) async {
+    try {
+      await ref.read(apiClientProvider).marcarMensagensFamiliaComoLidas(
+            idosoId: idosoId,
+            outroUsuarioId: _peer.id,
+            accessToken: accessToken,
+          );
+      ref.read(chatInboxProvider.notifier).markConversationAsRead(_peer.id);
+      unawaited(ref.read(chatInboxProvider.notifier).refresh());
+    } catch (_) {}
+  }
+
+  void _loadOlderMessagesWhenNeeded() {
+    if (!_scrollController.hasClients ||
+        _scrollController.position.extentBefore > 160) {
+      return;
+    }
+    unawaited(_loadOlderMessages());
+  }
+
+  Future<void> _loadOlderMessages() async {
+    final cursor = _nextCursor;
+    final usuario = ref.read(authSessionProvider);
+    final idoso = ref.read(selectedIdosoProvider);
+    final accessToken = usuario?.accessToken;
+    if (_isLoadingMessages ||
+        _isLoadingOlderMessages ||
+        !_hasOlderMessages ||
+        cursor == null ||
+        usuario == null ||
+        idoso == null ||
+        accessToken == null ||
+        accessToken.isEmpty) {
+      return;
+    }
+
+    _isLoadingOlderMessages = true;
+    final oldOffset = _scrollController.position.pixels;
+    final oldMaxExtent = _scrollController.position.maxScrollExtent;
+    try {
+      final page = await ref.read(apiClientProvider).listarMensagensFamilia(
+            idosoId: idoso.id,
+            outroUsuarioId: _peer.id,
+            accessToken: accessToken,
+            cursor: cursor,
+          );
+      if (!mounted) return;
+
+      final remoteMessages = page.mensagens
+          .map((message) => _FamilyChatMessage.fromApi(message, usuario.id))
+          .toList();
+      final messages = _mergeMessages(remoteMessages);
+      _hasOlderMessages = page.temMais;
+      _nextCursor = page.proximoCursor;
+      if (!_sameMessages(_messages, messages)) {
+        setState(() => _messages = messages);
+        try {
+          await _persistMessages();
+        } catch (_) {}
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || !_scrollController.hasClients) return;
+          final delta =
+              _scrollController.position.maxScrollExtent - oldMaxExtent;
+          final target = (oldOffset + delta)
+              .clamp(0.0, _scrollController.position.maxScrollExtent)
+              .toDouble();
+          _scrollController.jumpTo(target);
+        });
+      }
+    } catch (_) {
+      // The current messages remain visible and the user can try again by scrolling.
+    } finally {
+      _isLoadingOlderMessages = false;
+    }
   }
 
   List<_FamilyChatMessage> _mergeMessages(
     List<_FamilyChatMessage> remoteMessages,
   ) {
-    final remoteIds = remoteMessages.map((message) => message.id).toSet();
-    final pendingMessages = _messages.where(
-      (message) =>
-          message.status == _MessageStatus.pending &&
-          !remoteIds.contains(message.id),
-    );
-    return [...remoteMessages, ...pendingMessages]
+    final byId = {for (final message in _messages) message.id: message};
+    final localIdByClientId = {
+      for (final message in _messages)
+        if (message.clientMessageId != null)
+          message.clientMessageId!: message.id,
+    };
+    for (final remote in remoteMessages) {
+      final localId = remote.clientMessageId == null
+          ? null
+          : localIdByClientId[remote.clientMessageId];
+      if (localId != null && localId != remote.id) byId.remove(localId);
+      byId[remote.id] = remote;
+    }
+    return byId.values.toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
@@ -585,8 +566,8 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
     try {
       await ref.read(apiClientProvider).apagarConversaFamilia(
             idosoId: idoso.id,
-            usuarioId: usuario.id,
             outroUsuarioId: _peer.id,
+            accessToken: usuario.accessToken ?? '',
           );
       await _FamilyChatStore.clearMessages(
         ownerId: usuario.id,
@@ -613,12 +594,18 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
     if (text.isEmpty && _pendingImage == null) return;
     final usuario = ref.read(authSessionProvider);
     final idoso = ref.read(selectedIdosoProvider);
-    if (usuario == null || idoso == null) return;
+    if (usuario == null ||
+        idoso == null ||
+        usuario.accessToken?.isEmpty != false) {
+      return;
+    }
 
     final pendingImage = _pendingImage;
+    final clientMessageId = DateTime.now().microsecondsSinceEpoch.toString();
 
     final message = _FamilyChatMessage(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      id: clientMessageId,
+      clientMessageId: clientMessageId,
       text: text,
       fromMe: true,
       createdAt: DateTime.now(),
@@ -632,42 +619,81 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
       _pendingImage = null;
     });
     await _persistMessages();
+    ref.read(chatInboxProvider.notifier).applyOutgoingMessage(
+          peerId: _peer.id,
+          preview: _messagePreview(message),
+          createdAt: message.createdAt,
+        );
+    unawaited(_sendPendingMessage(message));
+    _scrollToEnd();
+  }
+
+  Future<void> _retryMessage(_FamilyChatMessage message) async {
+    if (!message.fromMe || _sendingMessageIds.contains(message.id)) return;
+    final pending = message.copyWith(status: _MessageStatus.pending);
+    setState(() {
+      _messages = _messages
+          .map((item) => item.id == message.id ? pending : item)
+          .toList();
+    });
+    await _persistMessages();
+    unawaited(_sendPendingMessage(pending));
+  }
+
+  Future<void> _sendPendingMessage(_FamilyChatMessage message) async {
+    if (!_sendingMessageIds.add(message.id)) return;
+    final usuario = ref.read(authSessionProvider);
+    final idoso = ref.read(selectedIdosoProvider);
+    final accessToken = usuario?.accessToken;
+    if (usuario == null ||
+        idoso == null ||
+        accessToken == null ||
+        accessToken.isEmpty) {
+      _sendingMessageIds.remove(message.id);
+      return;
+    }
 
     try {
       final persisted = await ref.read(apiClientProvider).criarMensagemFamilia(
             idosoId: idoso.id,
-            usuarioId: usuario.id,
             destinatarioId: _peer.id,
-            mensagem: text,
-            imagem: pendingImage == null
-                ? null
-                : {
-                    'mimeType': pendingImage.mimeType,
-                    'base64': pendingImage.base64Data,
-                  },
+            mensagem: message.text,
+            imagem: _imagePayloadFromDataUrl(message.imageDataUrl),
+            clienteMensagemId: message.clientMessageId ?? message.id,
+            accessToken: accessToken,
           );
+      if (!mounted) return;
+      final remoteMessage = _FamilyChatMessage.fromApi(persisted, usuario.id);
+      setState(() => _messages = _mergeMessages([remoteMessage]));
+      await _persistMessages();
+      ref.read(chatInboxProvider.notifier).applyOutgoingMessage(
+            peerId: _peer.id,
+            preview: _messagePreview(remoteMessage),
+            createdAt: remoteMessage.createdAt,
+          );
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _messages = _messages
             .map(
               (item) => item.id == message.id
-                  ? _FamilyChatMessage.fromApi(persisted, usuario.id)
+                  ? item.copyWith(status: _MessageStatus.failed)
                   : item,
             )
             .toList();
       });
       await _persistMessages();
-    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content:
-              Text('Mensagem salva neste aparelho. Tente sincronizar depois.'),
+          content: Text(
+              'Mensagem nao enviada. Toque no aviso para tentar novamente.'),
         ),
       );
+      unawaited(ref.read(chatInboxProvider.notifier).refresh());
+    } finally {
+      _sendingMessageIds.remove(message.id);
     }
-
-    _scrollToEnd();
   }
 
   Future<void> _showImageOptions() async {
@@ -719,6 +745,15 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
       if (image == null) return;
 
       final bytes = await image.readAsBytes();
+      if (bytes.length > 1100000) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('A imagem precisa ter no maximo 1 MB.'),
+          ),
+        );
+        return;
+      }
       if (!mounted) return;
       setState(() {
         _pendingImage = _PendingImage(
@@ -747,6 +782,14 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final inbox = ref.watch(chatInboxProvider);
+    var displayPeer = _peer;
+    for (final conversation in inbox.conversas) {
+      if (conversation.usuarioId == _peer.id) {
+        displayPeer = FamiliaChatPeer.fromMembro(conversation);
+        break;
+      }
+    }
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor:
@@ -762,7 +805,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
               child: Column(
                 children: [
                   _ChatDetailHeader(
-                    peer: _peer,
+                    peer: displayPeer,
                     canDelete: _canDeleteConversation,
                     onDelete: _confirmDeleteConversation,
                   ),
@@ -789,22 +832,50 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage> {
                           ),
                         ],
                       ),
-                      child: ListView.separated(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-                        itemCount: _messages.length + 1,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return const Center(child: _DayPill(label: 'Hoje'));
-                          }
-                          final message = _messages[index - 1];
-                          return _FamilyMessageBubble(
-                            key: ValueKey(message.id),
-                            message: message,
-                          );
-                        },
-                      ),
+                      child: _initialLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF1598AA),
+                              ),
+                            )
+                          : ListView.separated(
+                              controller: _scrollController,
+                              padding:
+                                  const EdgeInsets.fromLTRB(12, 12, 12, 14),
+                              itemCount: _messages.length + 1,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                if (index == 0) {
+                                  return Column(
+                                    children: [
+                                      if (_isLoadingOlderMessages)
+                                        const Padding(
+                                          padding: EdgeInsets.only(bottom: 8),
+                                          child: SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFF1598AA),
+                                            ),
+                                          ),
+                                        ),
+                                      const _DayPill(label: 'Hoje'),
+                                    ],
+                                  );
+                                }
+                                final message = _messages[index - 1];
+                                return _FamilyMessageBubble(
+                                  key: ValueKey(message.id),
+                                  message: message,
+                                  onRetry:
+                                      message.status == _MessageStatus.failed
+                                          ? () => _retryMessage(message)
+                                          : null,
+                                );
+                              },
+                            ),
                     ),
                   ),
                   Padding(
@@ -1307,9 +1378,14 @@ class _DayPill extends StatelessWidget {
 }
 
 class _FamilyMessageBubble extends StatelessWidget {
-  const _FamilyMessageBubble({required this.message, super.key});
+  const _FamilyMessageBubble({
+    required this.message,
+    this.onRetry,
+    super.key,
+  });
 
   final _FamilyChatMessage message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -1380,6 +1456,21 @@ class _FamilyMessageBubble extends StatelessWidget {
                     if (isMine) ...[
                       const SizedBox(width: 4),
                       _MessageTicks(status: message.status),
+                      if (message.status == _MessageStatus.failed)
+                        IconButton(
+                          tooltip: 'Tentar enviar novamente',
+                          onPressed: onRetry,
+                          constraints: const BoxConstraints(
+                            minWidth: 24,
+                            minHeight: 24,
+                          ),
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(
+                            Icons.error_outline_rounded,
+                            size: 17,
+                            color: Color(0xFFD73A3A),
+                          ),
+                        ),
                     ],
                   ],
                 ),
@@ -1509,13 +1600,20 @@ class _MessageTicks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final delivered = status != _MessageStatus.pending;
-    final color = status == _MessageStatus.read
-        ? const Color(0xFF1E9BDE)
-        : const Color(0xFF8FA1A7);
+    final delivered =
+        status != _MessageStatus.pending && status != _MessageStatus.failed;
+    final color = status == _MessageStatus.failed
+        ? const Color(0xFFD73A3A)
+        : status == _MessageStatus.read
+            ? const Color(0xFF1E9BDE)
+            : const Color(0xFF8FA1A7);
 
     return Icon(
-      delivered ? Icons.done_all_rounded : Icons.done_rounded,
+      status == _MessageStatus.failed
+          ? Icons.error_outline_rounded
+          : delivered
+              ? Icons.done_all_rounded
+              : Icons.done_rounded,
       size: 16,
       color: color,
     );
@@ -1680,7 +1778,7 @@ class FamiliaChatPeer {
   bool get removedFromFicha => _statusIndicaRemocaoDaFicha(status);
 }
 
-enum _MessageStatus { pending, delivered, read }
+enum _MessageStatus { pending, failed, delivered, read }
 
 class _FamilyChatMessage {
   const _FamilyChatMessage({
@@ -1689,6 +1787,7 @@ class _FamilyChatMessage {
     required this.fromMe,
     required this.createdAt,
     this.imageDataUrl,
+    this.clientMessageId,
     this.status = _MessageStatus.delivered,
   });
 
@@ -1700,6 +1799,7 @@ class _FamilyChatMessage {
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
       imageDataUrl: json['imageDataUrl']?.toString(),
+      clientMessageId: json['clientMessageId']?.toString(),
       status: _messageStatusFromJson(json['status']),
     );
   }
@@ -1715,6 +1815,7 @@ class _FamilyChatMessage {
       fromMe: fromMe,
       createdAt: message.criadoEm,
       imageDataUrl: message.imageDataUrl,
+      clientMessageId: message.clienteMensagemId,
       status: fromMe && message.lidoEm != null
           ? _MessageStatus.read
           : _MessageStatus.delivered,
@@ -1726,7 +1827,28 @@ class _FamilyChatMessage {
   final bool fromMe;
   final DateTime createdAt;
   final String? imageDataUrl;
+  final String? clientMessageId;
   final _MessageStatus status;
+
+  _FamilyChatMessage copyWith({
+    String? id,
+    String? text,
+    bool? fromMe,
+    DateTime? createdAt,
+    String? imageDataUrl,
+    String? clientMessageId,
+    _MessageStatus? status,
+  }) {
+    return _FamilyChatMessage(
+      id: id ?? this.id,
+      text: text ?? this.text,
+      fromMe: fromMe ?? this.fromMe,
+      createdAt: createdAt ?? this.createdAt,
+      imageDataUrl: imageDataUrl ?? this.imageDataUrl,
+      clientMessageId: clientMessageId ?? this.clientMessageId,
+      status: status ?? this.status,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -1735,6 +1857,7 @@ class _FamilyChatMessage {
       'fromMe': fromMe,
       'createdAt': createdAt.toIso8601String(),
       if (imageDataUrl != null) 'imageDataUrl': imageDataUrl,
+      if (clientMessageId != null) 'clientMessageId': clientMessageId,
       'status': status.name,
     };
   }
@@ -1762,47 +1885,6 @@ class _ChatSummary {
   final DateTime? updatedAt;
 }
 
-bool _samePeers(List<FamiliaChatPeer> first, List<FamiliaChatPeer> second) {
-  if (first.length != second.length) return false;
-  for (var index = 0; index < first.length; index++) {
-    if (!_samePeer(first[index], second[index])) return false;
-  }
-  return true;
-}
-
-bool _samePeer(FamiliaChatPeer first, FamiliaChatPeer second) {
-  final sameLastSeen =
-      first.online && second.online || first.lastSeenAt == second.lastSeenAt;
-  return first.id == second.id &&
-      first.name == second.name &&
-      first.role == second.role &&
-      first.photoUrl == second.photoUrl &&
-      first.status == second.status &&
-      first.isFichaOwner == second.isFichaOwner &&
-      first.sexo == second.sexo &&
-      first.online == second.online &&
-      sameLastSeen &&
-      first.unreadCount == second.unreadCount &&
-      first.lastMessagePreview == second.lastMessagePreview &&
-      first.lastMessageAt == second.lastMessageAt;
-}
-
-bool _sameSummaries(
-  Map<String, _ChatSummary> first,
-  Map<String, _ChatSummary> second,
-) {
-  if (first.length != second.length) return false;
-  for (final entry in first.entries) {
-    final other = second[entry.key];
-    if (other == null ||
-        other.preview != entry.value.preview ||
-        other.updatedAt != entry.value.updatedAt) {
-      return false;
-    }
-  }
-  return true;
-}
-
 bool _sameMessages(
   List<_FamilyChatMessage> first,
   List<_FamilyChatMessage> second,
@@ -1816,6 +1898,7 @@ bool _sameMessages(
         current.fromMe != updated.fromMe ||
         current.createdAt != updated.createdAt ||
         current.imageDataUrl != updated.imageDataUrl ||
+        current.clientMessageId != updated.clientMessageId ||
         current.status != updated.status) {
       return false;
     }
@@ -2004,6 +2087,24 @@ String _mimeTypeFromPath(String path) {
   if (lower.endsWith('.png')) return 'image/png';
   if (lower.endsWith('.webp')) return 'image/webp';
   return 'image/jpeg';
+}
+
+String _messagePreview(_FamilyChatMessage message) {
+  final text = message.text.trim();
+  return text.isNotEmpty ? text : 'Foto enviada';
+}
+
+Map<String, String>? _imagePayloadFromDataUrl(String? value) {
+  if (value == null || value.isEmpty) return null;
+  final commaIndex = value.indexOf(',');
+  final metadata = commaIndex == -1 ? '' : value.substring(0, commaIndex);
+  if (!metadata.startsWith('data:image/') || !metadata.endsWith(';base64')) {
+    return null;
+  }
+  final mimeType = metadata.substring(5, metadata.length - ';base64'.length);
+  final base64Data = value.substring(commaIndex + 1);
+  if (base64Data.isEmpty) return null;
+  return {'mimeType': mimeType, 'base64': base64Data};
 }
 
 Uint8List? _decodeDataUrl(String? value) {

@@ -65,10 +65,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         senha: _senhaController.text,
       );
       final dados = response['dados'];
-      final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
+      final usuario = _usuarioDaResposta(dados);
 
-      if (usuario is Map<String, dynamic>) {
-        await _salvarSessao(UsuarioSessao.fromJson(usuario));
+      if (usuario != null) {
+        await _salvarSessao(usuario);
       }
 
       if (mounted) context.go('/idosos');
@@ -154,10 +154,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             idToken: googleAuth.idToken,
           );
       final dados = response['dados'];
-      final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
+      final usuario = _usuarioDaResposta(dados);
 
-      if (usuario is Map<String, dynamic>) {
-        await _salvarSessao(UsuarioSessao.fromJson(usuario));
+      if (usuario != null) {
+        await _salvarSessao(usuario);
         if (mounted) context.go('/idosos');
         return;
       }
@@ -237,10 +237,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             sexo: _sexo ?? '',
           );
       final dados = response['dados'];
-      final usuario = dados is Map<String, dynamic> ? dados['usuario'] : null;
+      final usuario = _usuarioDaResposta(dados);
 
-      if (usuario is Map<String, dynamic>) {
-        await _salvarSessao(UsuarioSessao.fromJson(usuario));
+      if (usuario != null) {
+        await _salvarSessao(usuario);
       }
 
       if (mounted) context.go('/idosos');
@@ -263,6 +263,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _view = view;
       _errorMessage = null;
     });
+  }
+
+  UsuarioSessao? _usuarioDaResposta(Object? dados) {
+    if (dados is! Map<String, dynamic>) return null;
+    final usuario = dados['usuario'];
+    final token = dados['token']?.toString();
+    if (usuario is! Map<String, dynamic> || token == null || token.isEmpty) {
+      return null;
+    }
+    return UsuarioSessao.fromJson({...usuario, 'accessToken': token});
   }
 
   Future<void> _salvarSessao(UsuarioSessao usuario) async {

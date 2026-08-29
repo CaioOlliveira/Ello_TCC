@@ -14,7 +14,7 @@ class _FakeApiClient extends ApiClient {
   @override
   Future<List<MembroFicha>> listarConversasFamilia({
     required String idosoId,
-    required String usuarioId,
+    required String accessToken,
   }) async {
     return const [
       MembroFicha(
@@ -32,18 +32,23 @@ class _FakeApiClient extends ApiClient {
   @override
   Future<void> apagarConversaFamilia({
     required String idosoId,
-    required String usuarioId,
     required String outroUsuarioId,
+    required String accessToken,
   }) async {}
 
   @override
-  Future<List<FamiliaChatMensagem>> listarMensagensFamilia({
+  Future<FamiliaChatPagina> listarMensagensFamilia({
     required String idosoId,
-    required String usuarioId,
     required String outroUsuarioId,
+    required String accessToken,
+    int limite = 50,
+    FamiliaChatCursor? cursor,
   }) async {
-    return const [];
+    return const FamiliaChatPagina(mensagens: [], temMais: false);
   }
+
+  @override
+  Future<void> registrarPresencaChat({required String accessToken}) async {}
 }
 
 void main() {
@@ -77,6 +82,7 @@ void main() {
               id: '11111111-1111-1111-1111-111111111111',
               nome: 'Usuario',
               email: 'u@teste.com',
+              accessToken: 'token-de-teste',
             ),
           ),
           selectedIdosoProvider.overrideWith(

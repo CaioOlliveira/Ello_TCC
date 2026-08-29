@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'providers.dart';
+import '../core/api/api_client.dart';
 import '../core/notifications/local_notification_service.dart';
+import '../core/notifications/push_notification_service.dart';
+import '../features/chat/application/chat_inbox_controller.dart';
 import '../features/agenda/presentation/agenda_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
@@ -368,17 +371,96 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
-  Timer? _chatNotificationTimer;
-  String? _chatNotificationKey;
-  String _currentLocation = '/';
-  var _hasUnreadBaseline = false;
-  final _unreadByPeer = <String, int>{};
+class _AppShellState extends ConsumerState<AppShell>
+    with WidgetsBindingObserver {
+  StreamSubscription<String>? _localNotificationSubscription;
+  StreamSubscription<ChatPushPayload>? _pushOpenedSubscription;
+  StreamSubscription<ChatPushPayload>? _pushForegroundSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _localNotificationSubscription = LocalNotificationService.instance.responses
+        .listen(_openChatFromPayload);
+    _pushOpenedSubscription = PushNotificationService.instance.openedMessages
+        .listen(_openChatFromPush);
+    _pushForegroundSubscription =
+        PushNotificationService.instance.foregroundMessages.listen((payload) {
+      ref.read(chatInboxProvider.notifier).notifyIncomingMessage(
+            ChatIncomingMessage(
+              idosoId: payload.idosoId,
+              peerId: payload.peerId,
+              messageId: payload.messageId,
+            ),
+          );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final payload = LocalNotificationService.instance.takeLaunchPayload();
+      if (payload != null) _openChatFromPayload(payload);
+    });
+  }
 
   @override
   void dispose() {
-    _chatNotificationTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _localNotificationSubscription?.cancel();
+    _pushOpenedSubscription?.cancel();
+    _pushForegroundSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    ref
+        .read(chatInboxProvider.notifier)
+        .setAppActive(state == AppLifecycleState.resumed);
+  }
+
+  Future<void> _openChatFromPayload(String payload) async {
+    final parts = payload.split(':');
+    if (parts.length != 3 || parts.first != 'chat') return;
+    await _openChatFromNotification(parts[1], parts[2]);
+  }
+
+  Future<void> _openChatFromPush(ChatPushPayload payload) {
+    return _openChatFromNotification(payload.idosoId, payload.peerId);
+  }
+
+  Future<void> _openChatFromNotification(
+    String idosoId,
+    String peerId,
+  ) async {
+    final usuario = ref.read(authSessionProvider);
+    if (usuario == null ||
+        usuario.id.isEmpty ||
+        idosoId.isEmpty ||
+        peerId.isEmpty) {
+      return;
+    }
+
+    final selected = ref.read(selectedIdosoProvider);
+    if (selected?.id != idosoId) {
+      try {
+        final idosos = await ref
+            .read(apiClientProvider)
+            .listarIdosos(usuarioId: usuario.id);
+        IdosoResumo? idoso;
+        for (final item in idosos) {
+          if (item.id == idosoId) {
+            idoso = item;
+            break;
+          }
+        }
+        if (idoso == null) return;
+        ref.read(selectedIdosoProvider.notifier).state = idoso;
+      } catch (_) {
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    context.go('/chat/${Uri.encodeComponent(peerId)}');
   }
 
   int _currentIndex(String location) {
@@ -402,98 +484,23 @@ class _AppShellState extends ConsumerState<AppShell> {
     return 0;
   }
 
-  void _configureChatNotificationPolling(String? usuarioId, String? idosoId) {
-    final key = usuarioId != null &&
-            usuarioId.isNotEmpty &&
-            idosoId != null &&
-            idosoId.isNotEmpty
-        ? '$usuarioId:$idosoId'
-        : null;
-
-    if (_chatNotificationKey == key) return;
-
-    _chatNotificationTimer?.cancel();
-    _chatNotificationKey = key;
-    _hasUnreadBaseline = false;
-    _unreadByPeer.clear();
-
-    if (key == null) return;
-
-    _refreshPresenceAndChatNotifications();
-    _chatNotificationTimer = Timer.periodic(
-      const Duration(seconds: 4),
-      (_) => _refreshPresenceAndChatNotifications(),
+  void _configureChat({
+    required String? usuarioId,
+    required String? idosoId,
+    required String? accessToken,
+  }) {
+    ref.read(chatInboxProvider.notifier).configure(
+          usuarioId: usuarioId,
+          idosoId: idosoId,
+          accessToken: accessToken,
+        );
+    unawaited(
+      PushNotificationService.instance.configure(
+        api: ref.read(apiClientProvider),
+        usuarioId: usuarioId,
+        accessToken: accessToken,
+      ),
     );
-  }
-
-  Future<void> _refreshPresenceAndChatNotifications() async {
-    final usuario = ref.read(authSessionProvider);
-    if (usuario != null && usuario.id.isNotEmpty) {
-      try {
-        await ref.read(apiClientProvider).registrarPresenca(
-              usuarioId: usuario.id,
-            );
-      } catch (_) {}
-    }
-
-    await _pollChatNotifications();
-  }
-
-  Future<void> _pollChatNotifications() async {
-    final usuario = ref.read(authSessionProvider);
-    final idoso = ref.read(selectedIdosoProvider);
-    if (usuario == null ||
-        usuario.id.isEmpty ||
-        idoso == null ||
-        idoso.id.isEmpty) {
-      return;
-    }
-
-    try {
-      final conversas = await ref
-          .read(apiClientProvider)
-          .listarConversasFamilia(idosoId: idoso.id, usuarioId: usuario.id);
-
-      final peersAtualizados = <String>{};
-      for (final conversa in conversas) {
-        final peerId = conversa.usuarioId;
-        if (peerId.isEmpty || peerId == usuario.id) continue;
-
-        peersAtualizados.add(peerId);
-        final unread = conversa.mensagensNaoLidas;
-        final previous = _unreadByPeer[peerId] ?? 0;
-
-        if (_hasUnreadBaseline &&
-            unread > previous &&
-            !_isViewingChatConversation(peerId)) {
-          final novas = unread - previous;
-          await LocalNotificationService.instance.showNow(
-            id: stableNotificationId('chat:${idoso.id}:$peerId'),
-            title: 'Nova mensagem no Chat do Cuidado',
-            body: novas > 1
-                ? '${conversa.nome} enviou $novas mensagens.'
-                : (conversa.ultimaMensagemPreview?.trim().isNotEmpty == true
-                    ? '${conversa.nome}: ${conversa.ultimaMensagemPreview}'
-                    : '${conversa.nome} enviou uma mensagem.'),
-            payload: 'chat:$peerId',
-          );
-        }
-
-        _unreadByPeer[peerId] = unread;
-      }
-
-      _unreadByPeer
-          .removeWhere((peerId, _) => !peersAtualizados.contains(peerId));
-      _hasUnreadBaseline = true;
-    } catch (_) {
-      // A tela de chat continua responsável por mostrar erros de rede ao usuário.
-    }
-  }
-
-  bool _isViewingChatConversation(String peerId) {
-    final segments = Uri.parse(_currentLocation).pathSegments;
-    if (segments.length < 2 || segments.first != 'chat') return false;
-    return Uri.decodeComponent(segments[1]) == peerId;
   }
 
   @override
@@ -516,10 +523,13 @@ class _AppShellState extends ConsumerState<AppShell> {
     final showCoraFab =
         location == '/dashboard' || location == '/monitoramento';
 
-    _currentLocation = location;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _configureChatNotificationPolling(usuario?.id, idoso?.id);
+      _configureChat(
+        usuarioId: usuario?.id,
+        idosoId: idoso?.id,
+        accessToken: usuario?.accessToken,
+      );
     });
 
     return Scaffold(

@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import { OAuth2Client } from "google-auth-library";
 
+import { criarTokenSessao } from "../../common/auth/session-token.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { getPool } from "../../database/pool.js";
 import type {
@@ -46,6 +47,11 @@ const toUsuarioPublico = (usuario: UsuarioAuthRow) => ({
   tipoUsuario: usuario.tipo_usuario,
   criadoEm: usuario.criado_em,
   atualizadoEm: usuario.atualizado_em,
+});
+
+const respostaAutenticada = (usuario: UsuarioAuthRow) => ({
+  usuario: toUsuarioPublico(usuario),
+  token: criarTokenSessao(usuario.id),
 });
 
 const criarHashSenha = (senha: string) => {
@@ -183,9 +189,7 @@ export const authService = {
       );
     }
 
-    return {
-      usuario: toUsuarioPublico(usuario),
-    };
+    return respostaAutenticada(usuario);
   },
 
   async cadastrar(input: CadastroInput) {
@@ -213,9 +217,7 @@ export const authService = {
       ],
     );
 
-    return {
-      usuario: toUsuarioPublico(result.rows[0]),
-    };
+    return respostaAutenticada(result.rows[0]);
   },
 
   async loginGoogle(input: GoogleLoginInput) {
@@ -233,10 +235,10 @@ export const authService = {
           `,
           [google.fotoUrl, usuarioExistente.id],
         );
-        return { usuario: toUsuarioPublico(atualizado.rows[0]) };
+        return respostaAutenticada(atualizado.rows[0]);
       }
 
-      return { usuario: toUsuarioPublico(usuarioExistente) };
+      return respostaAutenticada(usuarioExistente);
     }
 
     return {
@@ -254,7 +256,7 @@ export const authService = {
     const usuarioExistente = await buscarUsuarioPorEmail(google.email);
 
     if (usuarioExistente) {
-      return { usuario: toUsuarioPublico(usuarioExistente) };
+      return respostaAutenticada(usuarioExistente);
     }
 
     const result = await getPool().query<UsuarioAuthRow>(
@@ -272,9 +274,7 @@ export const authService = {
       ],
     );
 
-    return {
-      usuario: toUsuarioPublico(result.rows[0]),
-    };
+    return respostaAutenticada(result.rows[0]);
   },
 
   async alterarSenha(input: AlterarSenhaInput) {
@@ -310,6 +310,6 @@ export const authService = {
       [criarHashSenha(input.novaSenha), input.usuarioId],
     );
 
-    return { usuario: toUsuarioPublico(result.rows[0]) };
+    return respostaAutenticada(result.rows[0]);
   },
 };

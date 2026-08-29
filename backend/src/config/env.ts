@@ -23,6 +23,12 @@ const envSchema = z.object({
   GEMINI_MODEL: z
     .preprocess(emptyStringToUndefined, z.string().optional())
     .default("gemini-2.5-flash"),
+  AUTH_TOKEN_SECRET: z.preprocess(emptyStringToUndefined, z.string().min(32).optional()),
+  AUTH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(90).default(30),
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
 });
 
 export const env = envSchema.parse(process.env);

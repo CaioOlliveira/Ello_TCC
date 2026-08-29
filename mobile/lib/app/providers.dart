@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/auth/google_auth_service.dart';
 import '../core/config/app_config.dart';
+import '../features/chat/application/chat_inbox_controller.dart';
 
 class UsuarioSessao {
   const UsuarioSessao({
@@ -15,6 +16,7 @@ class UsuarioSessao {
     this.telefone,
     this.urlFoto,
     this.sexo,
+    this.accessToken,
   });
 
   factory UsuarioSessao.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,8 @@ class UsuarioSessao {
       telefone: json['telefone']?.toString(),
       urlFoto: json['urlFoto']?.toString() ?? json['url_foto']?.toString(),
       sexo: json['sexo']?.toString(),
+      accessToken:
+          json['accessToken']?.toString() ?? json['access_token']?.toString(),
     );
   }
 
@@ -34,6 +38,7 @@ class UsuarioSessao {
   final String? telefone;
   final String? urlFoto;
   final String? sexo;
+  final String? accessToken;
 
   UsuarioSessao copyWith({
     String? nome,
@@ -41,6 +46,7 @@ class UsuarioSessao {
     String? telefone,
     String? urlFoto,
     String? sexo,
+    String? accessToken,
   }) {
     return UsuarioSessao(
       id: id,
@@ -49,6 +55,7 @@ class UsuarioSessao {
       telefone: telefone ?? this.telefone,
       urlFoto: urlFoto ?? this.urlFoto,
       sexo: sexo ?? this.sexo,
+      accessToken: accessToken ?? this.accessToken,
     );
   }
 
@@ -59,6 +66,7 @@ class UsuarioSessao {
         'telefone': telefone,
         'urlFoto': urlFoto,
         'sexo': sexo,
+        'accessToken': accessToken,
       };
 }
 
@@ -98,6 +106,11 @@ final appConfigProvider = Provider<AppConfig>((ref) => const AppConfig());
 final apiClientProvider = Provider<ApiClient>((ref) {
   final config = ref.watch(appConfigProvider);
   return ApiClient(baseUrl: config.apiBaseUrl);
+});
+
+final chatInboxProvider =
+    StateNotifierProvider<ChatInboxController, ChatInboxState>((ref) {
+  return ChatInboxController(ref.watch(apiClientProvider));
 });
 
 final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {

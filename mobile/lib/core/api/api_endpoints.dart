@@ -8,7 +8,10 @@ class ApiEndpoints {
   static const cadastro = '/auth/cadastro';
   static const alterarSenha = '/auth/senha';
   static const chatFamiliaMensagens = '/chat-familia/mensagens';
+  static const chatFamiliaMensagensLidas = '/chat-familia/mensagens/lidas';
   static const chatFamiliaConversas = '/chat-familia/conversas';
+  static const chatFamiliaDispositivos = '/chat-familia/dispositivos';
+  static const chatFamiliaPresenca = '/chat-familia/presenca';
   static const idosos = '/idosos';
   static const idososAdministrados = '/idosos/administrados';
   static const convites = '/convites';

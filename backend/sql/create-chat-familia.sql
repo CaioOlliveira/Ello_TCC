@@ -5,12 +5,24 @@ create table if not exists mensagens_chat_familia (
   destinatario_id uuid not null references usuarios(id) on delete cascade,
   conteudo text not null default '',
   anexo jsonb null,
+  cliente_mensagem_id varchar(128) null,
   criado_em timestamptz not null default now(),
   lido_em timestamptz null
 );
 
 alter table mensagens_chat_familia
-  add column if not exists lido_em timestamptz null;
+  add column if not exists lido_em timestamptz null,
+  add column if not exists cliente_mensagem_id varchar(128) null;
+
+update mensagens_chat_familia
+set cliente_mensagem_id = id::text
+where cliente_mensagem_id is null;
+
+alter table mensagens_chat_familia
+  alter column cliente_mensagem_id set not null;
+
+create unique index if not exists mensagens_chat_familia_cliente_unico_idx
+  on mensagens_chat_familia (remetente_id, cliente_mensagem_id);
 
 create index if not exists mensagens_chat_familia_conversa_idx
   on mensagens_chat_familia (
@@ -21,5 +33,5 @@ create index if not exists mensagens_chat_familia_conversa_idx
   );
 
 create index if not exists mensagens_chat_familia_nao_lidas_idx
-  on mensagens_chat_familia (idoso_id, destinatario_id, criado_em desc)
+  on mensagens_chat_familia (idoso_id, destinatario_id, remetente_id, criado_em desc)
   where lido_em is null;

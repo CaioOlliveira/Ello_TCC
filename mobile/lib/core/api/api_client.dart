@@ -316,6 +316,7 @@ class FamiliaChatMensagem {
     required this.criadoEm,
     this.imageDataUrl,
     this.lidoEm,
+    this.clienteMensagemId,
   });
 
   factory FamiliaChatMensagem.fromJson(Map<String, dynamic> json) {
@@ -344,6 +345,8 @@ class FamiliaChatMensagem {
           DateTime.now(),
       imageDataUrl: imageDataUrl,
       lidoEm: _parseLocalDateTime(json['lidoEm'] ?? json['lido_em']),
+      clienteMensagemId: json['clienteMensagemId']?.toString() ??
+          json['cliente_mensagem_id']?.toString(),
     );
   }
 
@@ -355,8 +358,28 @@ class FamiliaChatMensagem {
   final DateTime criadoEm;
   final String? imageDataUrl;
   final DateTime? lidoEm;
+  final String? clienteMensagemId;
 
   bool fromMe(String usuarioId) => remetenteId == usuarioId;
+}
+
+class FamiliaChatCursor {
+  const FamiliaChatCursor({required this.antesDe, required this.antesId});
+
+  final DateTime antesDe;
+  final String antesId;
+}
+
+class FamiliaChatPagina {
+  const FamiliaChatPagina({
+    required this.mensagens,
+    required this.temMais,
+    this.proximoCursor,
+  });
+
+  final List<FamiliaChatMensagem> mensagens;
+  final bool temMais;
+  final FamiliaChatCursor? proximoCursor;
 }
 
 class AiPerguntaResposta {
@@ -1954,12 +1977,22 @@ class MembroFicha {
     final permissoes = json['permissoes'];
     final visualizar = permissoes is Map ? permissoes['visualizar'] : null;
     final editar = permissoes is Map ? permissoes['editar'] : null;
+    final ultimaMensagem = json['ultima_mensagem'];
+    final ultimaMensagemMap = ultimaMensagem is Map
+        ? ultimaMensagem.map(
+            (key, value) => MapEntry(key.toString(), value),
+          )
+        : const <String, dynamic>{};
 
     return MembroFicha(
       id: json['id']?.toString(),
-      usuarioId: json['usuario_id']?.toString() ?? '',
-      nome: json['usuario_nome']?.toString() ?? 'Sem nome',
-      urlFoto: json['usuario_foto']?.toString(),
+      usuarioId: json['usuario_id']?.toString() ??
+          json['contato_id']?.toString() ??
+          '',
+      nome: json['usuario_nome']?.toString() ??
+          json['nome']?.toString() ??
+          'Sem nome',
+      urlFoto: json['usuario_foto']?.toString() ?? json['foto_url']?.toString(),
       telefone: json['usuario_telefone']?.toString(),
       sexo: json['usuario_sexo']?.toString(),
       funcao: json['funcao']?.toString(),
@@ -1967,14 +2000,17 @@ class MembroFicha {
       status: json['status']?.toString(),
       online: _boolValue(json['online']),
       ultimoVistoEm: _parseLocalDateTime(json['ultimo_visto_em']),
-      mensagensNaoLidas: _intOrNull(
-              json['mensagens_nao_lidas'] ?? json['mensagensNaoLidas']) ??
+      mensagensNaoLidas: _intOrNull(json['mensagens_nao_lidas'] ??
+              json['mensagensNaoLidas'] ??
+              json['nao_lidas']) ??
           0,
-      ultimaMensagemPreview:
-          (json['ultima_mensagem_preview'] ?? json['ultimaMensagemPreview'])
-              ?.toString(),
-      ultimaMensagemEm: _parseLocalDateTime(
-          json['ultima_mensagem_em'] ?? json['ultimaMensagemEm']),
+      ultimaMensagemPreview: (json['ultima_mensagem_preview'] ??
+              json['ultimaMensagemPreview'] ??
+              ultimaMensagemMap['conteudo'])
+          ?.toString(),
+      ultimaMensagemEm: _parseLocalDateTime(json['ultima_mensagem_em'] ??
+          json['ultimaMensagemEm'] ??
+          ultimaMensagemMap['criado_em']),
       eAdministrador: _boolValue(json['e_administrador']),
       eCriador: _boolValue(json['e_criador']),
       permissoesVisualizar: visualizar is List
@@ -2004,6 +2040,36 @@ class MembroFicha {
   final bool eCriador;
   final List<String> permissoesVisualizar;
   final List<String> permissoesEditar;
+
+  MembroFicha copyWith({
+    bool? online,
+    DateTime? ultimoVistoEm,
+    int? mensagensNaoLidas,
+    String? ultimaMensagemPreview,
+    DateTime? ultimaMensagemEm,
+  }) {
+    return MembroFicha(
+      id: id,
+      usuarioId: usuarioId,
+      nome: nome,
+      urlFoto: urlFoto,
+      telefone: telefone,
+      sexo: sexo,
+      funcao: funcao,
+      relacao: relacao,
+      status: status,
+      online: online ?? this.online,
+      ultimoVistoEm: ultimoVistoEm ?? this.ultimoVistoEm,
+      mensagensNaoLidas: mensagensNaoLidas ?? this.mensagensNaoLidas,
+      ultimaMensagemPreview:
+          ultimaMensagemPreview ?? this.ultimaMensagemPreview,
+      ultimaMensagemEm: ultimaMensagemEm ?? this.ultimaMensagemEm,
+      eAdministrador: eAdministrador,
+      eCriador: eCriador,
+      permissoesVisualizar: permissoesVisualizar,
+      permissoesEditar: permissoesEditar,
+    );
+  }
 }
 
 class SolicitacaoPendente {
@@ -2071,6 +2137,15 @@ class ApiClient {
   final _equipmentMaintenancesCache =
       <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
   static const _agendaCacheTtl = Duration(minutes: 2);
+
+  Options _authenticatedOptions(String accessToken) {
+    if (accessToken.trim().isEmpty) {
+      throw const ApiException(
+        'Sua sessao expirou. Entre novamente para continuar.',
+      );
+    }
+    return Options(headers: {'Authorization': 'Bearer $accessToken'});
+  }
 
   void _clearAgendaCaches() {
     _agendaCache.clear();
@@ -2858,30 +2933,53 @@ class ApiClient {
     }
   }
 
-  Future<List<FamiliaChatMensagem>> listarMensagensFamilia({
+  Future<FamiliaChatPagina> listarMensagensFamilia({
     required String idosoId,
-    required String usuarioId,
     required String outroUsuarioId,
+    required String accessToken,
+    int limite = 50,
+    FamiliaChatCursor? cursor,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.chatFamiliaMensagens,
         queryParameters: {
           'idosoId': idosoId,
-          'usuarioId': usuarioId,
           'outroUsuarioId': outroUsuarioId,
+          'limite': limite,
+          if (cursor != null)
+            'antesDe': cursor.antesDe.toUtc().toIso8601String(),
+          if (cursor != null) 'antesId': cursor.antesId,
         },
+        options: _authenticatedOptions(accessToken),
       );
       final data = response.data?['dados'];
 
       if (data is List) {
-        return data
+        final mensagens = data
             .whereType<Map<String, dynamic>>()
             .map(FamiliaChatMensagem.fromJson)
             .toList();
+        final pagination = response.data?['paginacao'];
+        final paginationMap = pagination is Map<String, dynamic>
+            ? pagination
+            : const <String, dynamic>{};
+        final next = paginationMap['proximoCursor'];
+        final nextMap =
+            next is Map<String, dynamic> ? next : const <String, dynamic>{};
+        final antesDe = _parseLocalDateTime(nextMap['antesDe']);
+        final antesId = nextMap['antesId']?.toString();
+        return FamiliaChatPagina(
+          mensagens: mensagens,
+          temMais: _boolValue(paginationMap['temMais']),
+          proximoCursor:
+              antesDe != null && antesId != null && antesId.isNotEmpty
+                  ? FamiliaChatCursor(antesDe: antesDe, antesId: antesId)
+                  : null,
+        );
       }
 
-      return const [];
+      return const FamiliaChatPagina(mensagens: [], temMais: false);
     } on DioException catch (error) {
       throw _toApiException(
         error,
@@ -2892,15 +2990,15 @@ class ApiClient {
 
   Future<List<MembroFicha>> listarConversasFamilia({
     required String idosoId,
-    required String usuarioId,
+    required String accessToken,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         ApiEndpoints.chatFamiliaConversas,
         queryParameters: {
           'idosoId': idosoId,
-          'usuarioId': usuarioId,
         },
+        options: _authenticatedOptions(accessToken),
       );
       final data = response.data?['dados'];
       if (data is List) {
@@ -2911,10 +3009,6 @@ class ApiClient {
       }
       return const [];
     } on DioException catch (error) {
-      final statusCode = error.response?.statusCode;
-      if (statusCode == 404 || (statusCode != null && statusCode >= 500)) {
-        return listarParticipantes(idosoId: idosoId);
-      }
       throw _toApiException(
         error,
         fallback: 'Não foi possível listar as conversas.',
@@ -2924,9 +3018,10 @@ class ApiClient {
 
   Future<FamiliaChatMensagem> criarMensagemFamilia({
     required String idosoId,
-    required String usuarioId,
     required String destinatarioId,
     required String mensagem,
+    required String clienteMensagemId,
+    required String accessToken,
     Map<String, String>? imagem,
   }) async {
     try {
@@ -2934,11 +3029,12 @@ class ApiClient {
         ApiEndpoints.chatFamiliaMensagens,
         data: {
           'idosoId': idosoId,
-          'usuarioId': usuarioId,
           'destinatarioId': destinatarioId,
           'mensagem': mensagem,
+          'clienteMensagemId': clienteMensagemId,
           if (imagem != null) 'anexo': imagem,
         },
+        options: _authenticatedOptions(accessToken),
       );
       final dados = response.data?['dados'];
       if (dados is Map<String, dynamic>) {
@@ -2955,22 +3051,82 @@ class ApiClient {
 
   Future<void> apagarConversaFamilia({
     required String idosoId,
-    required String usuarioId,
     required String outroUsuarioId,
+    required String accessToken,
   }) async {
     try {
       await _dio.delete<Map<String, dynamic>>(
         ApiEndpoints.chatFamiliaConversas,
         queryParameters: {
           'idosoId': idosoId,
-          'usuarioId': usuarioId,
           'outroUsuarioId': outroUsuarioId,
         },
+        options: _authenticatedOptions(accessToken),
       );
     } on DioException catch (error) {
       throw _toApiException(
         error,
         fallback: 'Não foi possível apagar esta conversa.',
+      );
+    }
+  }
+
+  Future<int> marcarMensagensFamiliaComoLidas({
+    required String idosoId,
+    required String outroUsuarioId,
+    required String accessToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.chatFamiliaMensagensLidas,
+        data: {
+          'idosoId': idosoId,
+          'outroUsuarioId': outroUsuarioId,
+        },
+        options: _authenticatedOptions(accessToken),
+      );
+      final data = response.data?['dados'];
+      if (data is Map<String, dynamic>) {
+        return _intOrNull(data['mensagensMarcadas']) ?? 0;
+      }
+      return 0;
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel atualizar a leitura da conversa.',
+      );
+    }
+  }
+
+  Future<void> registrarDispositivoPushChat({
+    required String token,
+    required String plataforma,
+    required String accessToken,
+  }) async {
+    try {
+      await _dio.post<void>(
+        ApiEndpoints.chatFamiliaDispositivos,
+        data: {'token': token, 'plataforma': plataforma},
+        options: _authenticatedOptions(accessToken),
+      );
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel registrar este dispositivo.',
+      );
+    }
+  }
+
+  Future<void> registrarPresencaChat({required String accessToken}) async {
+    try {
+      await _dio.post<void>(
+        ApiEndpoints.chatFamiliaPresenca,
+        options: _authenticatedOptions(accessToken),
+      );
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel atualizar sua presenca.',
       );
     }
   }
