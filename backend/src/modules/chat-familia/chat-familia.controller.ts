@@ -3,6 +3,7 @@ import type { RequestHandler } from "express";
 import { getAuthenticatedUserId } from "../../common/middlewares/authenticated-user.js";
 import { asyncHandler } from "../../common/utils/async-handler.js";
 import {
+  buscarFotoContatoChatSchema,
   criarMensagemFamiliaSchema,
   listarConversasFamiliaSchema,
   listarMensagensFamiliaSchema,
@@ -53,6 +54,21 @@ export const marcarMensagensFamiliaComoLidas: RequestHandler = asyncHandler(
     const input = marcarMensagensLidasSchema.parse(req.body);
     res.json(
       await chatFamiliaService.marcarMensagensComoLidas({
+        ...input,
+        usuarioId: getAuthenticatedUserId(req),
+      }),
+    );
+  },
+);
+
+export const buscarFotoContatoChat: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const input = buscarFotoContatoChatSchema.parse({
+      ...req.query,
+      contatoId: req.params.contatoId,
+    });
+    res.json(
+      await chatFamiliaService.buscarFotoContato({
         ...input,
         usuarioId: getAuthenticatedUserId(req),
       }),

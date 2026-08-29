@@ -3,6 +3,7 @@ import { Router } from "express";
 import { requireAuthenticatedUser } from "../../common/middlewares/authenticated-user.js";
 import {
   apagarConversaFamilia,
+  buscarFotoContatoChat,
   criarMensagemFamilia,
   listarConversasFamilia,
   listarMensagensFamilia,
@@ -16,6 +17,7 @@ export const chatFamiliaRoutes = Router();
 chatFamiliaRoutes.use(requireAuthenticatedUser);
 chatFamiliaRoutes.get("/conversas", listarConversasFamilia);
 chatFamiliaRoutes.delete("/conversas", apagarConversaFamilia);
+chatFamiliaRoutes.get("/contatos/:contatoId/foto", buscarFotoContatoChat);
 chatFamiliaRoutes.get("/mensagens", listarMensagensFamilia);
 chatFamiliaRoutes.post("/mensagens", criarMensagemFamilia);
 chatFamiliaRoutes.post("/mensagens/lidas", marcarMensagensFamiliaComoLidas);

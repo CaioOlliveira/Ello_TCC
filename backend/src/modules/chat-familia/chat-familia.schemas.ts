@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 const imagemSchema = z.object({
-  mimeType: z
-    .string()
-    .regex(/^image\/(png|jpe?g|webp)$/i, "Imagem invalida."),
+  mimeType: z.string().regex(/^image\/(png|jpe?g|webp)$/i, "Imagem invalida."),
   base64: z
     .string()
     .min(1, "Imagem vazia.")
@@ -18,13 +16,10 @@ export const listarMensagensFamiliaSchema = z
     antesDe: z.string().datetime({ offset: true }).optional(),
     antesId: z.string().uuid("Cursor invalido.").optional(),
   })
-  .refine(
-    (input) => Boolean(input.antesDe) === Boolean(input.antesId),
-    {
-      message: "O cursor da conversa esta incompleto.",
-      path: ["antesDe"],
-    },
-  );
+  .refine((input) => Boolean(input.antesDe) === Boolean(input.antesId), {
+    message: "O cursor da conversa esta incompleto.",
+    path: ["antesDe"],
+  });
 
 export const listarConversasFamiliaSchema = z.object({
   idosoId: z.string().uuid("Idoso invalido."),
@@ -52,12 +47,13 @@ export const marcarMensagensLidasSchema = z.object({
   outroUsuarioId: z.string().uuid("Contato invalido."),
 });
 
+export const buscarFotoContatoChatSchema = z.object({
+  idosoId: z.string().uuid("Idoso invalido."),
+  contatoId: z.string().uuid("Contato invalido."),
+});
+
 export const registrarDispositivoPushChatSchema = z.object({
-  token: z
-    .string()
-    .trim()
-    .min(20, "Token do dispositivo invalido.")
-    .max(4096),
+  token: z.string().trim().min(20, "Token do dispositivo invalido.").max(4096),
   plataforma: z.enum(["android", "ios", "web"]),
 });
 
@@ -74,6 +70,9 @@ export type CriarMensagemFamiliaInput = z.infer<
 >;
 export type MarcarMensagensLidasInput = z.infer<
   typeof marcarMensagensLidasSchema
+>;
+export type BuscarFotoContatoChatInput = z.infer<
+  typeof buscarFotoContatoChatSchema
 >;
 export type RegistrarDispositivoPushChatInput = z.infer<
   typeof registrarDispositivoPushChatSchema

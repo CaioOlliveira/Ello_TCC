@@ -2042,6 +2042,7 @@ class MembroFicha {
   final List<String> permissoesEditar;
 
   MembroFicha copyWith({
+    String? urlFoto,
     bool? online,
     DateTime? ultimoVistoEm,
     int? mensagensNaoLidas,
@@ -2052,7 +2053,7 @@ class MembroFicha {
       id: id,
       usuarioId: usuarioId,
       nome: nome,
-      urlFoto: urlFoto,
+      urlFoto: urlFoto ?? this.urlFoto,
       telefone: telefone,
       sexo: sexo,
       funcao: funcao,
@@ -3012,6 +3013,32 @@ class ApiClient {
       throw _toApiException(
         error,
         fallback: 'Não foi possível listar as conversas.',
+      );
+    }
+  }
+
+  Future<String?> buscarFotoContatoChat({
+    required String idosoId,
+    required String contatoId,
+    required String accessToken,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.chatFamiliaContatoFoto(contatoId),
+        queryParameters: {'idosoId': idosoId},
+        options: _authenticatedOptions(accessToken),
+      );
+      final data = response.data?['dados'];
+      if (data is Map<String, dynamic>) {
+        final value =
+            data['urlFoto']?.toString() ?? data['url_foto']?.toString();
+        return value?.trim().isEmpty == true ? null : value;
+      }
+      return null;
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'NÃ£o foi possÃ­vel carregar a foto do contato.',
       );
     }
   }

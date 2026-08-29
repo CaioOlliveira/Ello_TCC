@@ -12,6 +12,8 @@ class ApiEndpoints {
   static const chatFamiliaConversas = '/chat-familia/conversas';
   static const chatFamiliaDispositivos = '/chat-familia/dispositivos';
   static const chatFamiliaPresenca = '/chat-familia/presenca';
+  static String chatFamiliaContatoFoto(String contatoId) =>
+      '/chat-familia/contatos/$contatoId/foto';
   static const idosos = '/idosos';
   static const idososAdministrados = '/idosos/administrados';
   static const convites = '/convites';

@@ -9,6 +9,7 @@ import {
   registrarDispositivoPushChat,
 } from "./chat-push.service.js";
 import type {
+  BuscarFotoContatoChatInput,
   CriarMensagemFamiliaInput,
   ListarConversasFamiliaInput,
   ListarMensagensFamiliaInput,
@@ -48,7 +49,9 @@ type ConversaFamiliaRow = Record<string, unknown> & {
 let schemaReady: Promise<void> | null = null;
 
 export const chatFamiliaService = {
-  async listarConversas(input: ComUsuarioAutenticado<ListarConversasFamiliaInput>) {
+  async listarConversas(
+    input: ComUsuarioAutenticado<ListarConversasFamiliaInput>,
+  ) {
     await garantirTabelaChatFamilia();
     await validarAcessoFicha(input.idosoId, input.usuarioId);
 
@@ -190,7 +193,9 @@ export const chatFamiliaService = {
     return { dados: result.rows.map(serializarConversaChatFamilia) };
   },
 
-  async listarMensagens(input: ComUsuarioAutenticado<ListarMensagensFamiliaInput>) {
+  async listarMensagens(
+    input: ComUsuarioAutenticado<ListarMensagensFamiliaInput>,
+  ) {
     await garantirTabelaChatFamilia();
     await validarAcessoFicha(input.idosoId, input.usuarioId);
     await validarContatoAtivoOuComHistorico(input);
@@ -357,6 +362,25 @@ export const chatFamiliaService = {
     } finally {
       client.release();
     }
+  },
+
+  async buscarFotoContato(
+    input: ComUsuarioAutenticado<BuscarFotoContatoChatInput>,
+  ) {
+    await garantirTabelaChatFamilia();
+    await validarAcessoFicha(input.idosoId, input.usuarioId);
+    await validarContatoAtivoOuComHistorico({
+      idosoId: input.idosoId,
+      usuarioId: input.usuarioId,
+      outroUsuarioId: input.contatoId,
+    });
+
+    const result = await getPool().query<{ url_foto: string | null }>(
+      "select url_foto from usuarios where id = $1",
+      [input.contatoId],
+    );
+
+    return { dados: { urlFoto: result.rows[0]?.url_foto ?? null } };
   },
 
   async registrarDispositivoPush(
@@ -526,7 +550,9 @@ function serializarDatasChatFamilia<T>(value: T): T {
 }
 
 function serializarData(value: Date | string) {
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 async function garantirCamposMembrosFicha() {

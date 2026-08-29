@@ -59,6 +59,8 @@ class ChatInboxController extends StateNotifier<ChatInboxState> {
   final ApiClient _api;
   final _incomingMessages = StreamController<ChatIncomingMessage>.broadcast();
   final _unreadByPeer = <String, int>{};
+  final _photoCache = <String, String?>{};
+  final _photoRequests = <String>{};
 
   Timer? _timer;
   String? _accessToken;
@@ -93,6 +95,7 @@ class ChatInboxController extends StateNotifier<ChatInboxState> {
     _lastPresenceAt = null;
     _hasUnreadBaseline = false;
     _unreadByPeer.clear();
+    _photoRequests.clear();
 
     if (!hasConfiguration) {
       if (usuarioId != null &&
@@ -207,6 +210,7 @@ class ChatInboxController extends StateNotifier<ChatInboxState> {
           clearError: true,
         );
       }
+      unawaited(_loadMissingPhotos(sorted));
     } catch (error) {
       if (state.usuarioId != usuarioId || state.idosoId != idosoId) return;
       if (state.conversas.isEmpty) {
@@ -285,6 +289,48 @@ class ChatInboxController extends StateNotifier<ChatInboxState> {
     }
     _unreadByPeer.removeWhere((peerId, _) => !currentPeers.contains(peerId));
     _hasUnreadBaseline = true;
+  }
+
+  Future<void> _loadMissingPhotos(List<MembroFicha> conversations) async {
+    final idosoId = state.idosoId;
+    final accessToken = _accessToken;
+    if (idosoId == null || accessToken == null || accessToken.isEmpty) return;
+
+    for (final conversation in conversations) {
+      final peerId = conversation.usuarioId;
+      if (peerId.isEmpty ||
+          conversation.urlFoto?.trim().isNotEmpty == true ||
+          _photoCache.containsKey(peerId) ||
+          _photoRequests.contains(peerId)) {
+        continue;
+      }
+
+      _photoRequests.add(peerId);
+      unawaited(
+        _api
+            .buscarFotoContatoChat(
+          idosoId: idosoId,
+          contatoId: peerId,
+          accessToken: accessToken,
+        )
+            .then((photoUrl) {
+          _photoCache[peerId] = photoUrl;
+          if (photoUrl == null || photoUrl.trim().isEmpty) return;
+          final updated = state.conversas
+              .map(
+                (item) => item.usuarioId == peerId
+                    ? item.copyWith(urlFoto: photoUrl)
+                    : item,
+              )
+              .toList();
+          state = state.copyWith(conversas: updated, clearError: true);
+        }).catchError((_) {
+          _photoCache[peerId] = null;
+        }).whenComplete(() {
+          _photoRequests.remove(peerId);
+        }),
+      );
+    }
   }
 
   String _messageForError(Object error) {
