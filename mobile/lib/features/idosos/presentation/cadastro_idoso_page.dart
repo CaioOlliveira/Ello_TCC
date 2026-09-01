@@ -193,11 +193,16 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     setState(() => _condicoes.add(trimmed));
   }
 
-  void _goNext() {
+  Future<void> _goNext() async {
     FocusScope.of(context).unfocus();
 
     if (_currentStep == 0 && !(_formKey.currentState?.validate() ?? false)) {
       return;
+    }
+
+    if (_currentStep == 0) {
+      final canContinue = await _confirmBloodTypeIfMissing();
+      if (!mounted || !canContinue) return;
     }
 
     if (_currentStep == 2) {
@@ -216,6 +221,32 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
       _currentStep += 1;
       _errorMessage = null;
     });
+  }
+
+  Future<bool> _confirmBloodTypeIfMissing() async {
+    if (_tipoSanguineoController.text.trim().isNotEmpty) return true;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tipo sanguíneo não informado'),
+        content: const Text(
+          'Esse dado é importante em emergências. Deseja voltar e informar o tipo sanguíneo?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Continuar sem informar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Informar agora'),
+          ),
+        ],
+      ),
+    );
+
+    return confirmed == true;
   }
 
   void _handleBack() {

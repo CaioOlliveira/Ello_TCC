@@ -197,9 +197,9 @@ export const alimentacaoService = {
           hora_consumo = coalesce($4, hora_consumo),
           alimentos_consumidos = coalesce($5::jsonb, alimentos_consumidos),
           aceitacao = coalesce($6, aceitacao),
-          recordatorio = coalesce($7, recordatorio),
-          observacoes = $8
-        where id = $9
+          recordatorio = case when $7::boolean then $8 else recordatorio end,
+          observacoes = $9
+        where id = $10
         returning *
       `,
       [
@@ -209,7 +209,8 @@ export const alimentacaoService = {
         input.horaConsumo,
         input.alimentos ? JSON.stringify(input.alimentos) : null,
         input.aceitacao,
-        input.recordatorio,
+        Object.hasOwn(input, "recordatorio"),
+        input.recordatorio ?? null,
         input.observacoes ?? null,
         id,
       ],

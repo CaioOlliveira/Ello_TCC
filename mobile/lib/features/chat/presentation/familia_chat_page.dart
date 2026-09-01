@@ -211,6 +211,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
   var _isLoadingOlderMessages = false;
   var _initialLoading = true;
   var _hasOlderMessages = false;
+  DateTime? _clearedUntil;
   FamiliaChatCursor? _nextCursor;
   final _sendingMessageIds = <String>{};
 
@@ -293,7 +294,13 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       final remoteMessages = page.mensagens
           .map((message) => _FamilyChatMessage.fromApi(message, usuario.id))
           .toList();
-      messages = _mergeMessages(remoteMessages);
+      final clearedUntil =
+          _clearedUntil ??= await _FamilyChatStore.loadClearedUntil(
+        ownerId: usuario.id,
+        idosoId: idoso.id,
+        peerId: _peer.id,
+      );
+      messages = _visibleMessages(_mergeMessages(remoteMessages), clearedUntil);
       _hasOlderMessages = page.temMais;
       _nextCursor = page.proximoCursor;
 
@@ -308,10 +315,19 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       }
     } catch (_) {
       if (_messages.isEmpty) {
-        messages = await _FamilyChatStore.loadMessages(
+        final clearedUntil =
+            _clearedUntil ??= await _FamilyChatStore.loadClearedUntil(
           ownerId: usuario.id,
           idosoId: idoso.id,
           peerId: _peer.id,
+        );
+        messages = _visibleMessages(
+          await _FamilyChatStore.loadMessages(
+            ownerId: usuario.id,
+            idosoId: idoso.id,
+            peerId: _peer.id,
+          ),
+          clearedUntil,
         );
       } else {
         messages = _messages;
@@ -328,6 +344,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
     final hasNewMessages = _hasNewMessages(messages);
     if (_sameMessages(_messages, messages)) {
       if (_initialLoading) setState(() => _initialLoading = false);
+      if (initial) _scrollToEnd();
       _isLoadingMessages = false;
       return;
     }
@@ -339,7 +356,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
     try {
       await _persistMessages();
     } catch (_) {}
-    if (hasNewMessages && shouldScroll) _scrollToEnd();
+    if (shouldScroll && (initial || hasNewMessages)) _scrollToEnd();
     _isLoadingMessages = false;
   }
 
@@ -397,7 +414,10 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       final remoteMessages = page.mensagens
           .map((message) => _FamilyChatMessage.fromApi(message, usuario.id))
           .toList();
-      final messages = _mergeMessages(remoteMessages);
+      final messages = _visibleMessages(
+        _mergeMessages(remoteMessages),
+        _clearedUntil,
+      );
       _hasOlderMessages = page.temMais;
       _nextCursor = page.proximoCursor;
       if (!_sameMessages(_messages, messages)) {
@@ -440,6 +460,16 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
     }
     return byId.values.toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  List<_FamilyChatMessage> _visibleMessages(
+    List<_FamilyChatMessage> messages,
+    DateTime? clearedUntil,
+  ) {
+    if (clearedUntil == null) return messages;
+    return messages
+        .where((message) => message.createdAt.isAfter(clearedUntil))
+        .toList();
   }
 
   bool _hasNewMessages(List<_FamilyChatMessage> messages) {
@@ -589,6 +619,55 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
         const SnackBar(content: Text('Não foi possível apagar esta conversa.')),
       );
     }
+  }
+
+  Future<void> _confirmClearLocalConversation() async {
+    final usuario = ref.read(authSessionProvider);
+    final idoso = ref.read(selectedIdosoProvider);
+    if (usuario == null || idoso == null) return;
+
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Limpar conversa deste celular?'),
+        content: const Text(
+          'As mensagens serão removidas apenas deste aparelho. As outras pessoas continuam vendo a conversa normalmente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Limpar'),
+          ),
+        ],
+      ),
+    );
+    if (shouldClear != true || !mounted) return;
+
+    final clearedUntil =
+        _messages.isEmpty ? DateTime.now() : _messages.last.createdAt;
+
+    await _FamilyChatStore.clearLocalMessages(
+      ownerId: usuario.id,
+      idosoId: idoso.id,
+      peerId: _peer.id,
+      clearedUntil: clearedUntil,
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _messages = [];
+      _pendingImage = null;
+      _clearedUntil = clearedUntil;
+      _hasOlderMessages = false;
+      _nextCursor = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Conversa limpa neste celular.')),
+    );
   }
 
   Future<void> _sendMessage() async {
@@ -810,6 +889,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
                     peer: displayPeer,
                     canDelete: _canDeleteConversation,
                     onDelete: _confirmDeleteConversation,
+                    onClearLocal: _confirmClearLocalConversation,
                   ),
                   Expanded(
                     child: Container(
@@ -840,44 +920,50 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
                                 color: Color(0xFF1598AA),
                               ),
                             )
-                          : ListView.separated(
-                              controller: _scrollController,
-                              padding:
-                                  const EdgeInsets.fromLTRB(12, 12, 12, 14),
-                              itemCount: _messages.length + 1,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 12),
-                              itemBuilder: (context, index) {
-                                if (index == 0) {
-                                  return Column(
-                                    children: [
-                                      if (_isLoadingOlderMessages)
-                                        const Padding(
-                                          padding: EdgeInsets.only(bottom: 8),
-                                          child: SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Color(0xFF1598AA),
+                          : _messages.isEmpty
+                              ? const _PanelMessage(
+                                  text: 'Nenhuma mensagem nesta conversa.',
+                                )
+                              : ListView.separated(
+                                  controller: _scrollController,
+                                  padding:
+                                      const EdgeInsets.fromLTRB(12, 12, 12, 14),
+                                  itemCount: _messages.length + 1,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: 12),
+                                  itemBuilder: (context, index) {
+                                    if (index == 0) {
+                                      return Column(
+                                        children: [
+                                          if (_isLoadingOlderMessages)
+                                            const Padding(
+                                              padding:
+                                                  EdgeInsets.only(bottom: 8),
+                                              child: SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Color(0xFF1598AA),
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      const _DayPill(label: 'Hoje'),
-                                    ],
-                                  );
-                                }
-                                final message = _messages[index - 1];
-                                return _FamilyMessageBubble(
-                                  key: ValueKey(message.id),
-                                  message: message,
-                                  onRetry:
-                                      message.status == _MessageStatus.failed
+                                          const _DayPill(label: 'Hoje'),
+                                        ],
+                                      );
+                                    }
+                                    final message = _messages[index - 1];
+                                    return _FamilyMessageBubble(
+                                      key: ValueKey(message.id),
+                                      message: message,
+                                      onRetry: message.status ==
+                                              _MessageStatus.failed
                                           ? () => _retryMessage(message)
                                           : null,
-                                );
-                              },
-                            ),
+                                    );
+                                  },
+                                ),
                     ),
                   ),
                   Padding(
@@ -1178,11 +1264,13 @@ class _ChatDetailHeader extends StatelessWidget {
     required this.peer,
     required this.canDelete,
     required this.onDelete,
+    required this.onClearLocal,
   });
 
   final FamiliaChatPeer peer;
   final bool canDelete;
   final VoidCallback onDelete;
+  final VoidCallback onClearLocal;
 
   @override
   Widget build(BuildContext context) {
@@ -1253,20 +1341,52 @@ class _ChatDetailHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (canDelete)
-            IconButton(
-              tooltip: 'Apagar conversa',
-              onPressed: onDelete,
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-                color: Color(0xFF008EA0),
-              ),
+          PopupMenuButton<_ChatMenuAction>(
+            tooltip: 'Opções da conversa',
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              color: Color(0xFF008EA0),
             ),
+            onSelected: (action) {
+              if (action == _ChatMenuAction.clearLocal) {
+                onClearLocal();
+              } else {
+                onDelete();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: _ChatMenuAction.clearLocal,
+                child: Row(
+                  children: [
+                    Icon(Icons.cleaning_services_outlined, size: 20),
+                    SizedBox(width: 10),
+                    Text('Limpar neste celular'),
+                  ],
+                ),
+              ),
+              if (canDelete) ...[
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: _ChatMenuAction.deleteForEveryone,
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline_rounded, size: 20),
+                      SizedBox(width: 10),
+                      Text('Apagar para todos'),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
   }
 }
+
+enum _ChatMenuAction { clearLocal, deleteForEveryone }
 
 class _PeerAvatar extends StatefulWidget {
   const _PeerAvatar({required this.peer, required this.size});
@@ -1777,15 +1897,6 @@ class _FamilyInput extends StatelessWidget {
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Áudio',
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.mic_none_rounded,
-                    color: Color(0xFF49A9BA),
-                    size: 20,
-                  ),
-                ),
               ],
             ),
           ),
@@ -2092,10 +2203,41 @@ class _FamilyChatStore {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key(ownerId, idosoId, peerId));
+    await prefs.remove(_clearedUntilKey(ownerId, idosoId, peerId));
+  }
+
+  static Future<DateTime?> loadClearedUntil({
+    required String ownerId,
+    required String idosoId,
+    required String peerId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_clearedUntilKey(ownerId, idosoId, peerId));
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  static Future<void> clearLocalMessages({
+    required String ownerId,
+    required String idosoId,
+    required String peerId,
+    required DateTime clearedUntil,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_key(ownerId, idosoId, peerId));
+    await prefs.setString(
+      _clearedUntilKey(ownerId, idosoId, peerId),
+      clearedUntil.toIso8601String(),
+    );
   }
 
   static String _key(String ownerId, String idosoId, String peerId) {
     return 'familia_chat_v1:$ownerId:$idosoId:$peerId';
+  }
+
+  static String _clearedUntilKey(
+      String ownerId, String idosoId, String peerId) {
+    return 'familia_chat_v1_cleared_until:$ownerId:$idosoId:$peerId';
   }
 }
 

@@ -1,5 +1,7 @@
 // ignore_for_file: unused_element
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,6 +74,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   final _observacoesController = TextEditingController();
 
   Future<MedicamentosResumo>? _resumoFuture;
+  MedicamentosResumo? _resumoCache;
   String? _resumoLoadedIdosoId;
 
   Future<List<HistoricoMedicamentoEntrada>>? _historicoFuture;
@@ -90,6 +93,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   DateTime? _dataInicio;
   DateTime? _dataFim;
   bool _lembretesAtivos = true;
+  int _antecedenciaLembreteMinutos = 5;
   bool _saving = false;
   List<Map<String, dynamic>> _administracoes = [];
   bool _carregandoDetalhe = false;
@@ -121,7 +125,13 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     final resumo = await ref
         .read(apiClientProvider)
         .getResumoMedicamentosConsolidado(idosoId: idosoId);
-    await MedicationReminderScheduler.sync(idosoId: idosoId, resumo: resumo);
+    _resumoCache = resumo;
+    unawaited(
+      MedicationReminderScheduler.sync(
+        idosoId: idosoId,
+        resumo: resumo,
+      ).catchError((_) {}),
+    );
     return resumo;
   }
 
@@ -170,6 +180,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     _dataInicio = null;
     _dataFim = null;
     _lembretesAtivos = true;
+    _antecedenciaLembreteMinutos = 5;
   }
 
   void _showMessage(String message) {
@@ -219,6 +230,8 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     final lembretesAtivos = await MedicationReminderScheduler.isEnabled(
       medicamento.id,
     );
+    final antecedenciaLembreteMinutos =
+        await MedicationReminderScheduler.getLeadMinutes(medicamento.id);
     if (!mounted) return;
 
     setState(() {
@@ -232,6 +245,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
           ? ''
           : _formatNumber(medicamento.quantidadeEstoque!);
       _lembretesAtivos = lembretesAtivos;
+      _antecedenciaLembreteMinutos = antecedenciaLembreteMinutos;
       _mode = _Mode.form;
     });
 
@@ -283,6 +297,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       if (!mounted) return;
       setState(() {
         if (resumo != null && idoso != null) {
+          _resumoCache = resumo;
           _resumoLoadedIdosoId = idoso.id;
           _resumoFuture = Future.value(resumo);
         }
@@ -386,6 +401,10 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         medicamentoId,
         _lembretesAtivos,
       );
+      await MedicationReminderScheduler.setLeadMinutes(
+        medicamentoId,
+        _antecedenciaLembreteMinutos,
+      );
 
       if (!mounted) return;
       setState(() => _mode = _Mode.resumo);
@@ -423,43 +442,58 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     try {
       final agora = DateTime.now();
       final dose = _doseParaProximaAdministracao(medicamento);
-      await ref.read(apiClientProvider).registrarAdministracaoMedicamento(
-            medicamentoId: medicamento.id,
-            idosoId: idoso.id,
-            horarioPrevisto: medicamento.proximoHorarioPrevisto ??
-                _horarioPrevistoParaAgora(medicamento.proximoHorario, agora),
-            administradoEm: agora,
-            status: 'tomado',
-            quantidadeDose: dose,
-            registradoPorId: ref.read(authSessionProvider)?.id,
-          );
+      final horarioPrevisto = medicamento.proximoHorarioPrevisto ??
+          _horarioPrevistoParaAgora(medicamento.proximoHorario, agora);
+      final client = ref.read(apiClientProvider);
+      final administracao = await client.registrarAdministracaoMedicamento(
+        medicamentoId: medicamento.id,
+        idosoId: idoso.id,
+        horarioPrevisto: horarioPrevisto,
+        administradoEm: agora,
+        status: 'tomado',
+        quantidadeDose: dose,
+        registradoPorId: ref.read(authSessionProvider)?.id,
+      );
       if (!mounted) return;
       _invalidateHistorico();
-      final client = ref.read(apiClientProvider);
-      final results = await Future.wait<dynamic>([
-        client.getResumoMedicamentosConsolidado(idosoId: idoso.id),
-        client.getAdministracoesMedicamento(medicamento.id),
-      ]);
-      final resumo = results[0] as MedicamentosResumo;
-      final administracoes = results[1] as List<Map<String, dynamic>>;
-      final atualizado = resumo.medicamentos
-          .where((item) => item.id == medicamento.id)
-          .firstOrNull;
-      // Usa o resumo devolvido pela API logo depois do registro, para que a
-      // dose e o próximo horário exibidos reflitam o que foi salvo no banco.
-      final medicamentoRegistrado = atualizado ?? medicamento;
-      await MedicationReminderScheduler.sync(
-        idosoId: idoso.id,
-        resumo: resumo,
+      final medicamentoRegistrado = _medicamentoComDoseRegistrada(
+        medicamento,
+        referenciaAnterior: medicamento,
+        dose: dose,
+      );
+      final resumoAtualizado = _resumoCache == null
+          ? null
+          : _resumoComMedicamentoRegistrado(
+              _resumoCache!,
+              medicamentoRegistrado,
+            );
+      final administracaoRegistrada = _administracaoRegistradaParaLista(
+        administracao,
+        horarioPrevisto: horarioPrevisto,
+        administradoEm: agora,
+        dose: dose,
       );
       setState(() {
-        _resumoLoadedIdosoId = idoso.id;
-        _resumoFuture = Future.value(resumo);
+        if (resumoAtualizado != null) {
+          _resumoCache = resumoAtualizado;
+          _resumoLoadedIdosoId = idoso.id;
+          _resumoFuture = Future.value(resumoAtualizado);
+        }
         _selecionado = medicamentoRegistrado;
-        _administracoes = administracoes;
+        _administracoes = [
+          administracaoRegistrada,
+          ..._administracoes.where(
+            (item) => item['id'] != administracaoRegistrada['id'],
+          ),
+        ];
         _carregandoDetalhe = false;
+        _saving = false;
       });
       _showSuccess('Dose registrada como administrada.');
+      _refreshDoseRegistrationInBackground(
+        idosoId: idoso.id,
+        medicamentoId: medicamento.id,
+      );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -473,6 +507,44 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _refreshDoseRegistrationInBackground({
+    required String idosoId,
+    required String medicamentoId,
+  }) {
+    unawaited(() async {
+      try {
+        final client = ref.read(apiClientProvider);
+        final results = await Future.wait<dynamic>([
+          client.getResumoMedicamentosConsolidado(idosoId: idosoId),
+          client.getAdministracoesMedicamento(medicamentoId),
+        ]);
+        final resumo = results[0] as MedicamentosResumo;
+        final administracoes = results[1] as List<Map<String, dynamic>>;
+        final atualizado = resumo.medicamentos
+            .where((item) => item.id == medicamentoId)
+            .firstOrNull;
+        await MedicationReminderScheduler.sync(
+          idosoId: idosoId,
+          resumo: resumo,
+        );
+        if (!mounted || ref.read(selectedIdosoProvider)?.id != idosoId) return;
+
+        setState(() {
+          _resumoCache = resumo;
+          _resumoLoadedIdosoId = idosoId;
+          _resumoFuture = Future.value(resumo);
+          if (_selecionado?.id == medicamentoId) {
+            _selecionado = atualizado ?? _selecionado;
+            _administracoes = administracoes;
+            _carregandoDetalhe = false;
+          }
+        });
+      } catch (_) {
+        // A tela já foi atualizada após o registro; a próxima abertura sincroniza.
+      }
+    }());
   }
 
   Future<void> _cancelarAdministracao(
@@ -537,6 +609,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       );
       if (!mounted) return;
       setState(() {
+        _resumoCache = resumo;
         _resumoLoadedIdosoId = idoso.id;
         _resumoFuture = Future.value(resumo);
         _selecionado = atualizado ?? medicamento;
@@ -662,6 +735,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
               dataInicio: _dataInicio,
               dataFim: _dataFim,
               lembretesAtivos: _lembretesAtivos,
+              antecedenciaLembreteMinutos: _antecedenciaLembreteMinutos,
               onFormatoChanged: (value) => setState(() => _formato = value),
               onFrequenciaChanged: (tipo, dias) => setState(() {
                 _frequenciaTipo = tipo;
@@ -680,6 +754,8 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
               onDataFimChanged: (value) => setState(() => _dataFim = value),
               onLembretesChanged: (value) =>
                   setState(() => _lembretesAtivos = value),
+              onAntecedenciaLembreteChanged: (value) =>
+                  setState(() => _antecedenciaLembreteMinutos = value),
               onSave: _salvar,
               onCancel: () => setState(() => _mode = _Mode.resumo),
             ),
@@ -1254,6 +1330,7 @@ class _MedicamentoFormView extends StatelessWidget {
     required this.dataInicio,
     required this.dataFim,
     required this.lembretesAtivos,
+    required this.antecedenciaLembreteMinutos,
     required this.onFormatoChanged,
     required this.onFrequenciaChanged,
     required this.onHorarioAdded,
@@ -1261,6 +1338,7 @@ class _MedicamentoFormView extends StatelessWidget {
     required this.onDataInicioChanged,
     required this.onDataFimChanged,
     required this.onLembretesChanged,
+    required this.onAntecedenciaLembreteChanged,
     required this.onSave,
     required this.onCancel,
   });
@@ -1280,6 +1358,7 @@ class _MedicamentoFormView extends StatelessWidget {
   final DateTime? dataInicio;
   final DateTime? dataFim;
   final bool lembretesAtivos;
+  final int antecedenciaLembreteMinutos;
   final ValueChanged<String?> onFormatoChanged;
 
   /// Recebe o novo tipo de frequencia ('diaria' | 'semanal' | 'alternado')
@@ -1290,6 +1369,7 @@ class _MedicamentoFormView extends StatelessWidget {
   final ValueChanged<DateTime?> onDataInicioChanged;
   final ValueChanged<DateTime?> onDataFimChanged;
   final ValueChanged<bool> onLembretesChanged;
+  final ValueChanged<int> onAntecedenciaLembreteChanged;
   final VoidCallback onSave;
   final VoidCallback onCancel;
 
@@ -1538,6 +1618,43 @@ class _MedicamentoFormView extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    const _FieldLabel('Antecedência do lembrete'),
+                    DropdownButtonFormField<int>(
+                      initialValue: antecedenciaLembreteMinutos,
+                      decoration: _dropdownDecoration(context),
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(value: 5, child: Text('5 min antes')),
+                        DropdownMenuItem(
+                          value: 10,
+                          child: Text('10 min antes'),
+                        ),
+                        DropdownMenuItem(
+                          value: 30,
+                          child: Text('30 min antes'),
+                        ),
+                        DropdownMenuItem(
+                          value: 60,
+                          child: Text('1 hora antes'),
+                        ),
+                        DropdownMenuItem(
+                          value: 120,
+                          child: Text('2 horas antes'),
+                        ),
+                        DropdownMenuItem(
+                          value: 1440,
+                          child: Text('1 dia antes'),
+                        ),
+                      ],
+                      onChanged: lembretesAtivos
+                          ? (value) {
+                              if (value != null) {
+                                onAntecedenciaLembreteChanged(value);
+                              }
+                            }
+                          : null,
+                    ),
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
@@ -1657,6 +1774,35 @@ class _TextField extends StatelessWidget {
       ),
     );
   }
+}
+
+InputDecoration _dropdownDecoration(BuildContext context) {
+  return InputDecoration(
+    filled: true,
+    fillColor: adaptive(context, Colors.white, AppDarkColors.surface),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    prefixIcon: const Icon(
+      Icons.access_time_rounded,
+      color: Color(0xFF148A9C),
+      size: 20,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(9),
+      borderSide: BorderSide(
+        color: adaptive(context, const Color(0xFFD7E0E3), AppDarkColors.border),
+      ),
+    ),
+    disabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(9),
+      borderSide: BorderSide(
+        color: adaptive(context, const Color(0xFFD7E0E3), AppDarkColors.border),
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(9),
+      borderSide: const BorderSide(color: Color(0xFF2FA3B5), width: 1.4),
+    ),
+  );
 }
 
 class _DateField extends StatelessWidget {
@@ -2369,8 +2515,17 @@ class _DetalheView extends StatelessWidget {
                     child: FilledButton.icon(
                       onPressed:
                           saving || !canRegisterDose ? null : onRegistrarDose,
-                      icon: const Icon(Icons.check_circle_rounded, size: 18),
-                      label: Text(registerLabel),
+                      icon: saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check_circle_rounded, size: 18),
+                      label: Text(saving ? 'Registrando...' : registerLabel),
                       style: FilledButton.styleFrom(
                         backgroundColor: canRegisterDose
                             ? const Color(0xFF2FA8B8)
@@ -2727,6 +2882,28 @@ double? _doseParaProximaAdministracao(MedicamentoResumo medicamento) {
   }
 
   return null;
+}
+
+Map<String, dynamic> _administracaoRegistradaParaLista(
+  Map<String, dynamic> administracao, {
+  required DateTime horarioPrevisto,
+  required DateTime administradoEm,
+  double? dose,
+}) {
+  final dados = Map<String, dynamic>.from(administracao);
+  dados.putIfAbsent('status', () => 'tomado');
+  dados.putIfAbsent(
+    'horario_previsto',
+    () => horarioPrevisto.toUtc().toIso8601String(),
+  );
+  dados.putIfAbsent(
+    'administrado_em',
+    () => administradoEm.toUtc().toIso8601String(),
+  );
+  if (dose != null) {
+    dados.putIfAbsent('quantidade_dose', () => dose);
+  }
+  return dados;
 }
 
 String _medicamentoStatusText(MedicamentoResumo medicamento) {

@@ -309,6 +309,23 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                   fit: BoxFit.cover,
                 ),
               ),
+              if (_canEditAlimentacao()) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _removerRecordatorio(refeicao);
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: const Text('Apagar foto'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFC0392B),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
             ],
             for (final alimento in refeicao.alimentos)
@@ -329,6 +346,69 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _removerRecordatorio(RefeicaoResumo refeicao) async {
+    if (!_canEditAlimentacao()) {
+      _showNoEditPermission();
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apagar foto do recordatório?'),
+        content: const Text(
+          'A foto será apagada da refeição e deixará de aparecer para todos os celulares.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC0392B),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Apagar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final usuarioId = ref.read(authSessionProvider)?.id;
+      final atualizado = await ref.read(apiClientProvider).atualizarRefeicao(
+        id: refeicao.id,
+        data: {
+          'recordatorio': null,
+          if (usuarioId != null && usuarioId.isNotEmpty)
+            'registradoPorId': usuarioId,
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _refeicoes = _refeicoes
+            .map((item) => item.id == refeicao.id ? atualizado : item)
+            .toList();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto apagada do recordatório.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível apagar a foto.')),
+      );
+    }
   }
 
   Future<bool> _confirmTwoHourWarning(DateTime scheduled) async {
@@ -442,6 +522,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
               _AlimentacaoView.galeria => _RecordatorioGalleryView(
                   refeicoes: _refeicoes,
                   onBack: () => setState(() => _view = _AlimentacaoView.lista),
+                  onDeletePhoto: _removerRecordatorio,
                 ),
             },
           ),
@@ -965,10 +1046,12 @@ class _RecordatorioGalleryView extends StatelessWidget {
   const _RecordatorioGalleryView({
     required this.refeicoes,
     required this.onBack,
+    required this.onDeletePhoto,
   });
 
   final List<RefeicaoResumo> refeicoes;
   final VoidCallback onBack;
+  final ValueChanged<RefeicaoResumo> onDeletePhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -1019,6 +1102,7 @@ class _RecordatorioGalleryView extends StatelessWidget {
                             onTap: () => _showRecordatorioPhoto(
                               context,
                               refeicao,
+                              onDeletePhoto: onDeletePhoto,
                             ),
                             borderRadius: BorderRadius.circular(6),
                             child: ClipRRect(
@@ -1514,7 +1598,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
       'horaConsumo': _horaController.text,
       'alimentos': _alimentos.map((item) => item.toJson()).toList(),
       'aceitacao': _aceitacao,
-      'recordatorio': _recordatorio ?? '',
+      'recordatorio': _recordatorio,
       if (_observacoesController.text.trim().isNotEmpty)
         'observacoes': _observacoesController.text.trim(),
       if (widget.usuarioId != null && widget.usuarioId!.isNotEmpty)
@@ -2287,7 +2371,11 @@ Map<String, List<RefeicaoResumo>> _groupRecordatoriosByDate(
   return grouped;
 }
 
-void _showRecordatorioPhoto(BuildContext context, RefeicaoResumo refeicao) {
+void _showRecordatorioPhoto(
+  BuildContext context,
+  RefeicaoResumo refeicao, {
+  required ValueChanged<RefeicaoResumo> onDeletePhoto,
+}) {
   final provider = _imageProvider(refeicao.recordatorio);
   if (provider == null) return;
 
@@ -2308,6 +2396,22 @@ void _showRecordatorioPhoto(BuildContext context, RefeicaoResumo refeicao) {
               child: IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.close_rounded, color: Colors.white),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                tooltip: 'Apagar foto',
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onDeletePhoto(refeicao);
+                },
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
