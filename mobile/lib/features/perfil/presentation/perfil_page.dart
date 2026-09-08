@@ -208,7 +208,7 @@ class _EmergencyActionsCard extends StatelessWidget {
             height: 46,
             child: OutlinedButton.icon(
               onPressed: hasEmergencyContact
-                  ? () => _callPhone(context, emergencyPhone)
+                  ? () => _callPhone(context, emergencyPhone!)
                   : null,
               icon: const Icon(Icons.contact_phone_outlined, size: 20),
               label: Text(

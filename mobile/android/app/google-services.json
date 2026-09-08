@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "541901620732",
+    "project_id": "ello-3bee9",
+    "storage_bucket": "ello-3bee9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:541901620732:android:58ec47827c99bf6326de79",
+        "android_client_info": {
+          "package_name": "com.example.ello_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaWrXLeVQdOf9W2HSR4dXhnR0Qyj70K10"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
