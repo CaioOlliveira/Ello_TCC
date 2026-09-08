@@ -59,7 +59,7 @@ class LocalNotificationService {
       tz.setLocalLocation(tz.getLocation('America/Sao_Paulo'));
     }
 
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const android = AndroidInitializationSettings('@drawable/ic_notification');
     const darwin = DarwinInitializationSettings();
     const settings = InitializationSettings(android: android, iOS: darwin);
 
@@ -138,6 +138,7 @@ class LocalNotificationService {
         'ello_messages',
         'Mensagens do Ello',
         channelDescription: 'Mensagens recebidas no Chat do Cuidado',
+        icon: 'ic_notification',
         importance: Importance.high,
         priority: Priority.high,
       ),
@@ -200,6 +201,7 @@ class LocalNotificationService {
         'ello_reminders',
         'Lembretes do Ello',
         channelDescription: 'Compromissos e horários de medicamentos',
+        icon: 'ic_notification',
         importance: Importance.high,
         priority: Priority.high,
       ),

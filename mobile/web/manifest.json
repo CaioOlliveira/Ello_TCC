@@ -1,11 +1,11 @@
 {
-    "name": "ello_mobile",
-    "short_name": "ello_mobile",
+    "name": "Ello",
+    "short_name": "Ello",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Aplicativo mobile Ello para organizacao do cuidado de idosos.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
