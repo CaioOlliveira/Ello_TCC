@@ -309,6 +309,23 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                   fit: BoxFit.cover,
                 ),
               ),
+              if (_canEditAlimentacao()) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _removerRecordatorio(refeicao);
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: const Text('Apagar foto'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFC0392B),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
             ],
             for (final alimento in refeicao.alimentos)
@@ -331,26 +348,65 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
     );
   }
 
-  Future<void> _deleteRecordatorio(RefeicaoResumo refeicao) async {
+  Future<void> _removerRecordatorio(RefeicaoResumo refeicao) async {
     if (!_canEditAlimentacao()) {
       _showNoEditPermission();
       return;
     }
 
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apagar foto do recordatório?'),
+        content: const Text(
+          'A foto será apagada da refeição e deixará de aparecer para todos os celulares.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC0392B),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Apagar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     try {
-      await ref.read(apiClientProvider).removerRecordatorioRefeicao(
-            id: refeicao.id,
-          );
+      final usuarioId = ref.read(authSessionProvider)?.id;
+      final atualizado = await ref.read(apiClientProvider).atualizarRefeicao(
+        id: refeicao.id,
+        data: {
+          'recordatorio': null,
+          if (usuarioId != null && usuarioId.isNotEmpty)
+            'registradoPorId': usuarioId,
+        },
+      );
       if (!mounted) return;
-      await _load();
-      if (!mounted) return;
+      setState(() {
+        _refeicoes = _refeicoes
+            .map((item) => item.id == refeicao.id ? atualizado : item)
+            .toList();
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto excluida do recordatorio.')),
+        const SnackBar(content: Text('Foto apagada do recordatório.')),
       );
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível apagar a foto.')),
       );
     }
   }
@@ -466,7 +522,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
               _AlimentacaoView.galeria => _RecordatorioGalleryView(
                   refeicoes: _refeicoes,
                   onBack: () => setState(() => _view = _AlimentacaoView.lista),
-                  onDelete: _deleteRecordatorio,
+                  onDeletePhoto: _removerRecordatorio,
                 ),
             },
           ),
@@ -990,12 +1046,12 @@ class _RecordatorioGalleryView extends StatelessWidget {
   const _RecordatorioGalleryView({
     required this.refeicoes,
     required this.onBack,
-    required this.onDelete,
+    required this.onDeletePhoto,
   });
 
   final List<RefeicaoResumo> refeicoes;
   final VoidCallback onBack;
-  final Future<void> Function(RefeicaoResumo refeicao) onDelete;
+  final ValueChanged<RefeicaoResumo> onDeletePhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -1046,7 +1102,7 @@ class _RecordatorioGalleryView extends StatelessWidget {
                             onTap: () => _showRecordatorioPhoto(
                               context,
                               refeicao,
-                              onDelete: onDelete,
+                              onDeletePhoto: onDeletePhoto,
                             ),
                             borderRadius: BorderRadius.circular(6),
                             child: ClipRRect(
@@ -1542,7 +1598,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
       'horaConsumo': _horaController.text,
       'alimentos': _alimentos.map((item) => item.toJson()).toList(),
       'aceitacao': _aceitacao,
-      'recordatorio': _recordatorio ?? '',
+      'recordatorio': _recordatorio,
       if (_observacoesController.text.trim().isNotEmpty)
         'observacoes': _observacoesController.text.trim(),
       if (widget.usuarioId != null && widget.usuarioId!.isNotEmpty)
@@ -2318,7 +2374,7 @@ Map<String, List<RefeicaoResumo>> _groupRecordatoriosByDate(
 void _showRecordatorioPhoto(
   BuildContext context,
   RefeicaoResumo refeicao, {
-  required Future<void> Function(RefeicaoResumo refeicao) onDelete,
+  required ValueChanged<RefeicaoResumo> onDeletePhoto,
 }) {
   final provider = _imageProvider(refeicao.recordatorio);
   if (provider == null) return;
@@ -2347,32 +2403,10 @@ void _showRecordatorioPhoto(
             child: Align(
               alignment: Alignment.topRight,
               child: IconButton(
-                tooltip: 'Excluir foto',
-                onPressed: () async {
-                  final shouldDelete = await showDialog<bool>(
-                    context: context,
-                    builder: (confirmContext) => AlertDialog(
-                      title: const Text('Excluir foto?'),
-                      content: const Text(
-                        'A foto sera removida do recordatorio desta refeicao.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () =>
-                              Navigator.of(confirmContext).pop(false),
-                          child: const Text('Cancelar'),
-                        ),
-                        FilledButton(
-                          onPressed: () =>
-                              Navigator.of(confirmContext).pop(true),
-                          child: const Text('Excluir'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (shouldDelete != true || !context.mounted) return;
+                tooltip: 'Apagar foto',
+                onPressed: () {
                   Navigator.of(context).pop();
-                  await onDelete(refeicao);
+                  onDeletePhoto(refeicao);
                 },
                 icon: const Icon(
                   Icons.delete_outline_rounded,

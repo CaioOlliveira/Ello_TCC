@@ -34,7 +34,7 @@ export const criarRefeicaoSchema = z.object({
     .string()
     .regex(/^\d{2}:\d{2}$/, "Hora inválida.")
     .optional(),
-  recordatorio: z.string().optional(),
+  recordatorio: z.string().nullable().optional(),
   observacoes: z.string().optional(),
   registradoPorId: z.string().uuid().optional(),
 });

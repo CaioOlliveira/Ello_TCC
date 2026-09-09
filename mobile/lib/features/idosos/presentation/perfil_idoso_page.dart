@@ -1,12 +1,15 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/action_icon_button.dart';
@@ -73,9 +76,14 @@ class PerfilIdosoPage extends ConsumerWidget {
                 const SizedBox(height: 14),
                 StaggeredEntry(index: 1, child: _HeroCard(idoso: idoso)),
                 const SizedBox(height: 16),
+                StaggeredEntry(
+                  index: 2,
+                  child: _EmergencyActionsCard(idoso: idoso),
+                ),
+                const SizedBox(height: 16),
                 if (idoso.tipoSanguineo?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 2,
+                    index: 3,
                     child: _InfoCard(
                       icon: Icons.water_drop_rounded,
                       title: 'Tipo sanguíneo',
@@ -84,7 +92,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                   ),
                 if (idoso.sexo?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 3,
+                    index: 4,
                     child: _InfoCard(
                       icon: Icons.badge_rounded,
                       title: 'Sexo',
@@ -93,7 +101,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                   ),
                 if (idoso.condicoes.isNotEmpty)
                   StaggeredEntry(
-                    index: 4,
+                    index: 5,
                     child: _InfoCard(
                       icon: Icons.monitor_heart_rounded,
                       title: 'Condições de saúde',
@@ -103,7 +111,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                 if (idoso.contatoEmergenciaNome?.isNotEmpty == true ||
                     idoso.contatoEmergenciaTelefone?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 5,
+                    index: 6,
                     child: _InfoCard(
                       icon: Icons.phone_rounded,
                       title: 'Contato de emergência',
@@ -117,7 +125,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                   ),
                 if (idoso.alergiasRestricoes?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 6,
+                    index: 7,
                     child: _InfoCard(
                       icon: Icons.warning_amber_rounded,
                       title: 'Alergias ${personText.of}',
@@ -416,6 +424,138 @@ class _CompartilharFichaSheetState
   }
 }
 
+class _EmergencyActionsCard extends StatelessWidget {
+  const _EmergencyActionsCard({required this.idoso});
+
+  static const _samuPhone = '192';
+
+  final IdosoResumo? idoso;
+
+  @override
+  Widget build(BuildContext context) {
+    final emergencyPhone = idoso?.contatoEmergenciaTelefone?.trim();
+    final emergencyName = idoso?.contatoEmergenciaNome?.trim();
+    final hasEmergencyContact =
+        emergencyPhone != null && emergencyPhone.isNotEmpty;
+    final contactLabel = emergencyName != null && emergencyName.isNotEmpty
+        ? 'Contato: $emergencyName'
+        : 'Contato de emergência';
+
+    return _InfoPanel(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Emergência',
+            style: TextStyle(
+              color: adaptive(
+                context,
+                const Color(0xFF073248),
+                AppDarkColors.textPrimary,
+              ),
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 46,
+            child: FilledButton.icon(
+              onPressed: () => _callPhone(context, _samuPhone),
+              icon: const Icon(Icons.local_hospital_outlined, size: 20),
+              label: const Text('Ligar SAMU 192'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFC0392B),
+                foregroundColor: Colors.white,
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: hasEmergencyContact
+                  ? () => _callPhone(context, emergencyPhone)
+                  : null,
+              icon: const Icon(Icons.contact_phone_outlined, size: 20),
+              label: Text(
+                hasEmergencyContact ? contactLabel : 'Contato não cadastrado',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF0B6985),
+                disabledForegroundColor: adaptive(
+                  context,
+                  const Color(0xFF8FA4AA),
+                  AppDarkColors.textSecondary,
+                ),
+                side: BorderSide(
+                  color: hasEmergencyContact
+                      ? const Color(0xFF238FA1)
+                      : adaptive(
+                          context,
+                          const Color(0xFFD9E2E5),
+                          AppDarkColors.border,
+                        ),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoPanel extends StatelessWidget {
+  const _InfoPanel({
+    required this.child,
+    this.padding = const EdgeInsets.all(12),
+  });
+
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
+        border: Border.all(
+          color:
+              adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
+        ),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
 class _HeroCard extends StatelessWidget {
   const _HeroCard({required this.idoso});
 
@@ -632,3 +772,33 @@ String _formatPhone(String value) {
   }
   return value;
 }
+
+Future<void> _callPhone(BuildContext context, String phone) async {
+  final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+  if (digits.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Telefone não informado.')),
+    );
+    return;
+  }
+
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    try {
+      final startedCall =
+          await _phoneChannel.invokeMethod<bool>('call', {'phone': digits});
+      if (startedCall == true) return;
+    } on PlatformException {
+      // Falls back to opening the dialer below.
+    }
+  }
+
+  final uri = Uri(scheme: 'tel', path: digits);
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Não foi possível abrir o telefone.')),
+    );
+  }
+}
+
+const _phoneChannel = MethodChannel('ello/phone');

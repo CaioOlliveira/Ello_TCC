@@ -4468,7 +4468,7 @@ class ApiClient {
     }
   }
 
-  Future<void> registrarAdministracaoMedicamento({
+  Future<Map<String, dynamic>> registrarAdministracaoMedicamento({
     required String medicamentoId,
     required String idosoId,
     required DateTime horarioPrevisto,
@@ -4479,7 +4479,7 @@ class ApiClient {
     String? observacoes,
   }) async {
     try {
-      await _dio.post<Map<String, dynamic>>(
+      final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.administracoesMedicamento(medicamentoId),
         data: {
           'idosoId': idosoId,
@@ -4494,6 +4494,8 @@ class ApiClient {
             'observacoes': observacoes,
         },
       );
+      final data = response.data ?? const <String, dynamic>{};
+      return _mapOrEmpty(data['dados'] ?? data);
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao registrar dose.');
     }
