@@ -7,6 +7,7 @@ import {
   criarMensagemFamilia,
   listarConversasFamilia,
   listarMensagensFamilia,
+  limparConversaFamilia,
   marcarMensagensFamiliaComoLidas,
   registrarDispositivoPushChat,
   registrarPresencaChat,
@@ -17,6 +18,7 @@ export const chatFamiliaRoutes = Router();
 chatFamiliaRoutes.use(requireAuthenticatedUser);
 chatFamiliaRoutes.get("/conversas", listarConversasFamilia);
 chatFamiliaRoutes.delete("/conversas", apagarConversaFamilia);
+chatFamiliaRoutes.post("/conversas/limpar", limparConversaFamilia);
 chatFamiliaRoutes.get("/contatos/:contatoId/foto", buscarFotoContatoChat);
 chatFamiliaRoutes.get("/mensagens", listarMensagensFamilia);
 chatFamiliaRoutes.post("/mensagens", criarMensagemFamilia);

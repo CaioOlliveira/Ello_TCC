@@ -591,6 +591,70 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
     }
   }
 
+  Future<void> _confirmClearConversation() async {
+    final usuario = ref.read(authSessionProvider);
+    final idoso = ref.read(selectedIdosoProvider);
+    if (usuario == null ||
+        idoso == null ||
+        usuario.accessToken?.isEmpty != false) {
+      return;
+    }
+
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Limpar conversa?'),
+        content: const Text(
+          'As mensagens serao removidas apenas para voce. A outra pessoa continuara vendo a conversa.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Limpar'),
+          ),
+        ],
+      ),
+    );
+    if (shouldClear != true || !mounted) return;
+
+    try {
+      await ref.read(apiClientProvider).limparConversaFamilia(
+            idosoId: idoso.id,
+            outroUsuarioId: _peer.id,
+            accessToken: usuario.accessToken!,
+          );
+      await _FamilyChatStore.clearMessages(
+        ownerId: usuario.id,
+        idosoId: idoso.id,
+        peerId: _peer.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _messages = const [];
+        _hasOlderMessages = false;
+        _nextCursor = null;
+      });
+      unawaited(ref.read(chatInboxProvider.notifier).refresh());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Conversa limpa para voce.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao foi possivel limpar a conversa.')),
+      );
+    }
+  }
+
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty && _pendingImage == null) return;
@@ -810,6 +874,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
                     peer: displayPeer,
                     canDelete: _canDeleteConversation,
                     onDelete: _confirmDeleteConversation,
+                    onClear: _confirmClearConversation,
                   ),
                   Expanded(
                     child: Container(
@@ -1178,11 +1243,13 @@ class _ChatDetailHeader extends StatelessWidget {
     required this.peer,
     required this.canDelete,
     required this.onDelete,
+    required this.onClear,
   });
 
   final FamiliaChatPeer peer;
   final bool canDelete;
   final VoidCallback onDelete;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -1253,15 +1320,28 @@ class _ChatDetailHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (canDelete)
-            IconButton(
-              tooltip: 'Apagar conversa',
-              onPressed: onDelete,
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-                color: Color(0xFF008EA0),
-              ),
+          PopupMenuButton<String>(
+            tooltip: 'Opcoes da conversa',
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              color: Color(0xFF008EA0),
             ),
+            onSelected: (value) {
+              if (value == 'limpar') onClear();
+              if (value == 'apagar') onDelete();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'limpar',
+                child: Text('Limpar conversa'),
+              ),
+              if (canDelete)
+                const PopupMenuItem(
+                  value: 'apagar',
+                  child: Text('Apagar para todos'),
+                ),
+            ],
+          ),
         ],
       ),
     );

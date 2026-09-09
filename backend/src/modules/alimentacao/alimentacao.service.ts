@@ -257,6 +257,32 @@ export const alimentacaoService = {
     return dados;
   },
 
+  async removerRecordatorio(id: string) {
+    const anterior = await this.buscarPorId(id);
+    const result = await getPool().query<RefeicaoRow>(
+      `
+        update registros_alimentacao
+        set recordatorio = null
+        where id = $1
+        returning *
+      `,
+      [id],
+    );
+    const atualizado = result.rows[0];
+    if (!atualizado) throw new AppError(...notFound, 404);
+
+    const dados = mapearRefeicao(atualizado);
+    await registrarHistorico({
+      idosoId: String(atualizado.idoso_id ?? ""),
+      acao: "remover_foto",
+      tipoEntidade: table,
+      entidadeId: id,
+      dadosAnteriores: anterior,
+      dadosNovos: dados,
+    });
+    return dados;
+  },
+
   async remover(id: string) {
     const anterior = await this.buscarPorId(id);
     await deleteRow(table, id, ...notFound);

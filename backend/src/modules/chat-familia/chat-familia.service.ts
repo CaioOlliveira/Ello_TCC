@@ -71,6 +71,14 @@ export const chatFamiliaService = {
           from mensagens_chat_familia m
           where m.idoso_id = $1
             and m.remetente_id = $2
+            and not exists (
+              select 1
+              from conversas_chat_familia_limpas cl
+              where cl.idoso_id = m.idoso_id
+                and cl.usuario_id = $2
+                and cl.outro_usuario_id = m.destinatario_id
+                and m.criado_em <= cl.limpo_em
+            )
 
           union all
 
@@ -87,6 +95,14 @@ export const chatFamiliaService = {
           from mensagens_chat_familia m
           where m.idoso_id = $1
             and m.destinatario_id = $2
+            and not exists (
+              select 1
+              from conversas_chat_familia_limpas cl
+              where cl.idoso_id = m.idoso_id
+                and cl.usuario_id = $2
+                and cl.outro_usuario_id = m.remetente_id
+                and m.criado_em <= cl.limpo_em
+            )
         ),
         mensagens_ordenadas as (
           select
@@ -217,6 +233,14 @@ export const chatFamiliaService = {
           and (
             (remetente_id = $2 and destinatario_id = $3)
             or (remetente_id = $3 and destinatario_id = $2)
+          )
+          and not exists (
+            select 1
+            from conversas_chat_familia_limpas cl
+            where cl.idoso_id = mensagens_chat_familia.idoso_id
+              and cl.usuario_id = $2
+              and cl.outro_usuario_id = $3
+              and mensagens_chat_familia.criado_em <= cl.limpo_em
           )
           and (
             $4::timestamptz is null
@@ -423,6 +447,29 @@ export const chatFamiliaService = {
       [input.idosoId, input.usuarioId, input.outroUsuarioId],
     );
   },
+
+  async limparConversaParaUsuario(
+    input: ComUsuarioAutenticado<MarcarMensagensLidasInput>,
+  ) {
+    await garantirTabelaChatFamilia();
+    await validarAcessoFicha(input.idosoId, input.usuarioId);
+    await validarContatoAtivoOuComHistorico(input);
+
+    await getPool().query(
+      `
+        insert into conversas_chat_familia_limpas (
+          idoso_id,
+          usuario_id,
+          outro_usuario_id,
+          limpo_em
+        )
+        values ($1, $2, $3, now())
+        on conflict (idoso_id, usuario_id, outro_usuario_id) do update
+        set limpo_em = excluded.limpo_em
+      `,
+      [input.idosoId, input.usuarioId, input.outroUsuarioId],
+    );
+  },
 };
 
 async function garantirTabelaChatFamilia() {
@@ -496,6 +543,19 @@ async function prepararTabelaChatFamilia() {
         criado_em desc
       )
       where lido_em is null
+  `);
+  await getPool().query(`
+    create table if not exists conversas_chat_familia_limpas (
+      idoso_id uuid not null references fichas_idosos(id) on delete cascade,
+      usuario_id uuid not null references usuarios(id) on delete cascade,
+      outro_usuario_id uuid not null references usuarios(id) on delete cascade,
+      limpo_em timestamptz not null default now(),
+      primary key (idoso_id, usuario_id, outro_usuario_id)
+    )
+  `);
+  await getPool().query(`
+    create index if not exists conversas_chat_familia_limpas_usuario_idx
+      on conversas_chat_familia_limpas (usuario_id, idoso_id, outro_usuario_id)
   `);
   await getPool().query(`
     create table if not exists usuarios_presenca (

@@ -10,6 +10,7 @@ class ApiEndpoints {
   static const chatFamiliaMensagens = '/chat-familia/mensagens';
   static const chatFamiliaMensagensLidas = '/chat-familia/mensagens/lidas';
   static const chatFamiliaConversas = '/chat-familia/conversas';
+  static const chatFamiliaLimparConversa = '/chat-familia/conversas/limpar';
   static const chatFamiliaDispositivos = '/chat-familia/dispositivos';
   static const chatFamiliaPresenca = '/chat-familia/presenca';
   static String chatFamiliaContatoFoto(String contatoId) =>
@@ -58,6 +59,8 @@ class ApiEndpoints {
   static String insumo(String id) => '/insumos/$id';
   static String refeicao(String id) => '/refeicoes/$id';
   static String concluirRefeicao(String id) => '/refeicoes/$id/concluir';
+  static String recordatorioRefeicao(String id) =>
+      '/refeicoes/$id/recordatorio';
   static String movimentacoesInsumo(String id) => '/insumos/$id/movimentacoes';
   static String manutencoesEquipamento(String id) =>
       '/equipamentos/$id/manutencoes';

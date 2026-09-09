@@ -58,6 +58,13 @@ export const concluirRefeicao: RequestHandler = asyncHandler(
   },
 );
 
+export const removerRecordatorioRefeicao: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    res.json({ dados: await alimentacaoService.removerRecordatorio(id) });
+  },
+);
+
 export const removerRefeicao: RequestHandler = asyncHandler(
   async (req, res) => {
     const { id } = idParamSchema.parse(req.params);

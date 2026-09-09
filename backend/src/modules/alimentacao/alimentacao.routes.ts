@@ -6,6 +6,7 @@ import {
   buscarDicaAlimentacao,
   concluirRefeicao,
   criarRefeicao,
+  removerRecordatorioRefeicao,
   listarRefeicoes,
   removerRefeicao,
 } from "./alimentacao.controller.js";
@@ -18,4 +19,5 @@ alimentacaoRoutes.post("/", criarRefeicao);
 alimentacaoRoutes.get("/:id", buscarRefeicao);
 alimentacaoRoutes.patch("/:id", atualizarRefeicao);
 alimentacaoRoutes.post("/:id/concluir", concluirRefeicao);
+alimentacaoRoutes.delete("/:id/recordatorio", removerRecordatorioRefeicao);
 alimentacaoRoutes.delete("/:id", removerRefeicao);

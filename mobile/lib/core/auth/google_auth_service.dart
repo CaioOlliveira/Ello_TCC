@@ -37,7 +37,14 @@ class GoogleAuthService {
 
     final GoogleSignInAccount account;
     try {
-      await GoogleSignIn.instance.signOut();
+      // Limpar credenciais antigas ajuda a mostrar a selecao de conta, mas
+      // essa limpeza nao pode impedir uma nova autenticacao caso o Android
+      // nao tenha uma sessao anterior para remover.
+      try {
+        await GoogleSignIn.instance.signOut();
+      } on GoogleSignInException {
+        // O fluxo de autenticacao abaixo pode seguir normalmente.
+      }
       account = await GoogleSignIn.instance.authenticate();
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled) {

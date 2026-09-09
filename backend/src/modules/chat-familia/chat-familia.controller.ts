@@ -108,3 +108,14 @@ export const apagarConversaFamilia: RequestHandler = asyncHandler(
     res.status(204).send();
   },
 );
+
+export const limparConversaFamilia: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const input = marcarMensagensLidasSchema.parse(req.body);
+    await chatFamiliaService.limparConversaParaUsuario({
+      ...input,
+      usuarioId: getAuthenticatedUserId(req),
+    });
+    res.status(204).send();
+  },
+);

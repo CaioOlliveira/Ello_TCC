@@ -3102,6 +3102,43 @@ class ApiClient {
     }
   }
 
+  Future<RefeicaoResumo> removerRecordatorioRefeicao({
+    required String id,
+  }) async {
+    try {
+      final response = await _dio.delete<Map<String, dynamic>>(
+        ApiEndpoints.recordatorioRefeicao(id),
+      );
+      final dados = response.data?['dados'];
+      if (dados is Map<String, dynamic>) return RefeicaoResumo.fromJson(dados);
+      return RefeicaoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(error, fallback: 'Erro ao excluir a foto.');
+    }
+  }
+
+  Future<void> limparConversaFamilia({
+    required String idosoId,
+    required String outroUsuarioId,
+    required String accessToken,
+  }) async {
+    try {
+      await _dio.post<void>(
+        ApiEndpoints.chatFamiliaLimparConversa,
+        data: {
+          'idosoId': idosoId,
+          'outroUsuarioId': outroUsuarioId,
+        },
+        options: _authenticatedOptions(accessToken),
+      );
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel limpar esta conversa.',
+      );
+    }
+  }
+
   Future<int> marcarMensagensFamiliaComoLidas({
     required String idosoId,
     required String outroUsuarioId,

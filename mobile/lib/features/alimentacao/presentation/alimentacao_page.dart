@@ -331,6 +331,30 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
     );
   }
 
+  Future<void> _deleteRecordatorio(RefeicaoResumo refeicao) async {
+    if (!_canEditAlimentacao()) {
+      _showNoEditPermission();
+      return;
+    }
+
+    try {
+      await ref.read(apiClientProvider).removerRecordatorioRefeicao(
+            id: refeicao.id,
+          );
+      if (!mounted) return;
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto excluida do recordatorio.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
+
   Future<bool> _confirmTwoHourWarning(DateTime scheduled) async {
     final last = _lastDateTime(_refeicoes);
     if (last == null) return true;
@@ -442,6 +466,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
               _AlimentacaoView.galeria => _RecordatorioGalleryView(
                   refeicoes: _refeicoes,
                   onBack: () => setState(() => _view = _AlimentacaoView.lista),
+                  onDelete: _deleteRecordatorio,
                 ),
             },
           ),
@@ -965,10 +990,12 @@ class _RecordatorioGalleryView extends StatelessWidget {
   const _RecordatorioGalleryView({
     required this.refeicoes,
     required this.onBack,
+    required this.onDelete,
   });
 
   final List<RefeicaoResumo> refeicoes;
   final VoidCallback onBack;
+  final Future<void> Function(RefeicaoResumo refeicao) onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -1019,6 +1046,7 @@ class _RecordatorioGalleryView extends StatelessWidget {
                             onTap: () => _showRecordatorioPhoto(
                               context,
                               refeicao,
+                              onDelete: onDelete,
                             ),
                             borderRadius: BorderRadius.circular(6),
                             child: ClipRRect(
@@ -2287,7 +2315,11 @@ Map<String, List<RefeicaoResumo>> _groupRecordatoriosByDate(
   return grouped;
 }
 
-void _showRecordatorioPhoto(BuildContext context, RefeicaoResumo refeicao) {
+void _showRecordatorioPhoto(
+  BuildContext context,
+  RefeicaoResumo refeicao, {
+  required Future<void> Function(RefeicaoResumo refeicao) onDelete,
+}) {
   final provider = _imageProvider(refeicao.recordatorio);
   if (provider == null) return;
 
@@ -2308,6 +2340,44 @@ void _showRecordatorioPhoto(BuildContext context, RefeicaoResumo refeicao) {
               child: IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.close_rounded, color: Colors.white),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                tooltip: 'Excluir foto',
+                onPressed: () async {
+                  final shouldDelete = await showDialog<bool>(
+                    context: context,
+                    builder: (confirmContext) => AlertDialog(
+                      title: const Text('Excluir foto?'),
+                      content: const Text(
+                        'A foto sera removida do recordatorio desta refeicao.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(confirmContext).pop(false),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          onPressed: () =>
+                              Navigator.of(confirmContext).pop(true),
+                          child: const Text('Excluir'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (shouldDelete != true || !context.mounted) return;
+                  Navigator.of(context).pop();
+                  await onDelete(refeicao);
+                },
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
