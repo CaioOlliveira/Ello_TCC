@@ -6,6 +6,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 
 enum _HistoricoPeriodo { dia, semana, mes }
@@ -131,7 +132,15 @@ class _HistoricoPageState extends ConsumerState<HistoricoPage> {
                 children: [
                   AppPageHeader(
                     title: config.title,
-                    onBack: () => context.pop(),
+                    onBack: () {
+                      if (context.canPop()) {
+                        context.pop();
+                        return;
+                      }
+                      context.go(
+                        routeWithCurrentOrigin(context, config.backRoute),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   _PeriodTabs(
@@ -430,6 +439,7 @@ class _Tag extends StatelessWidget {
 class _HistoricoConfig {
   const _HistoricoConfig({
     required this.title,
+    required this.backRoute,
     required this.emptyMessage,
     required this.icon,
     required this.actionLabel,
@@ -438,6 +448,7 @@ class _HistoricoConfig {
   });
 
   final String title;
+  final String backRoute;
   final String emptyMessage;
   final IconData Function(HistoricoRegistro registro) icon;
   final String Function(HistoricoRegistro registro) actionLabel;
@@ -463,6 +474,7 @@ final _insumos = _HistoricoConfig(
     if (registro.acao == 'atualizar') return Icons.edit_outlined;
     return Icons.inventory_2_outlined;
   },
+  backRoute: '/insumos',
   actionLabel: (registro) {
     final tipo = registro.dadosNovos['tipo']?.toString();
     if (registro.acao == 'movimentar_estoque' && tipo == 'saida') {
@@ -502,6 +514,7 @@ final _alimentacao = _HistoricoConfig(
     if (registro.acao == 'atualizar') return Icons.edit_outlined;
     return Icons.local_cafe_outlined;
   },
+  backRoute: '/alimentacao',
   actionLabel: (registro) {
     if (registro.acao == 'concluir') return 'marcou refeição completa';
     if (registro.acao == 'atualizar') return 'atualizou refeição';
@@ -539,6 +552,7 @@ final _humor = _HistoricoConfig(
     'sonolenta' || 'sonolento' => Icons.nights_stay_rounded,
     _ => Icons.sentiment_satisfied_alt_rounded,
   },
+  backRoute: '/humor',
   actionLabel: (registro) {
     if (registro.acao == 'atualizar') return 'alterou humor';
     return 'registrou humor';

@@ -9,6 +9,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -299,7 +300,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
 
                 if (snapshot.hasError) {
                   return _ErrorState(
-                    onBack: () => context.go('/monitoramento'),
+                    onBack: () => context.go(moduleBackRoute(context)),
                     onRetry: () => _reloadResumo(idoso.id),
                   );
                 }
@@ -311,7 +312,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
                   idoso: idoso,
                   resumo: resumo,
                   period: _period,
-                  onBack: () => context.go('/monitoramento'),
+                  onBack: () => context.go(moduleBackRoute(context)),
                   onRegistrar: () {
                     if (!idoso.podeEditarModulo('Oxigenacao')) {
                       _showNoEditPermission();

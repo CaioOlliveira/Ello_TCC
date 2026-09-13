@@ -7,6 +7,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -153,7 +154,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
           );
 
       if (!mounted) return;
-      context.go('/monitoramento');
+      context.go(moduleBackRoute(context));
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _errorMessage = error.message);
@@ -226,7 +227,7 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _Header(
-                      onBack: () => context.go('/monitoramento'),
+                      onBack: () => context.go(moduleBackRoute(context)),
                     ),
                     const SizedBox(height: 24),
                     StaggeredEntry(
@@ -350,7 +351,9 @@ class _HumorPageState extends ConsumerState<HumorPage> {
                         width: double.infinity,
                         height: 52,
                         child: OutlinedButton.icon(
-                          onPressed: () => context.push('/historico/humor'),
+                          onPressed: () => context.push(
+                            routeWithCurrentOrigin(context, '/historico/humor'),
+                          ),
                           icon: const Icon(Icons.history_rounded),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: adaptive(

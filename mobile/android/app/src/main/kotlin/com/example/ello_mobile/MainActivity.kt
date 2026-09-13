@@ -1,6 +1,7 @@
 package com.example.ello_mobile
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -36,7 +37,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun startPhoneCall(phone: String, result: MethodChannel.Result) {
-        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phone"))
+        val intent = Intent(Intent.ACTION_CALL, Uri.fromParts("tel", phone, null))
         if (intent.resolveActivity(packageManager) == null) {
             result.success(false)
             return
@@ -54,8 +55,16 @@ class MainActivity : FlutterActivity() {
             return
         }
 
-        startActivity(intent)
-        result.success(true)
+        try {
+            startActivity(intent)
+            result.success(true)
+        } catch (_: SecurityException) {
+            result.success(false)
+        } catch (_: ActivityNotFoundException) {
+            result.success(false)
+        } catch (_: IllegalArgumentException) {
+            result.success(false)
+        }
     }
 
     override fun onRequestPermissionsResult(

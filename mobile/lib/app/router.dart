@@ -57,6 +57,7 @@ String? _moduleIdFromHistorico(String tipo) {
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
+    restorationScopeId: 'ello_router',
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
@@ -376,6 +377,10 @@ class _AppShellState extends ConsumerState<AppShell>
   StreamSubscription<String>? _localNotificationSubscription;
   StreamSubscription<ChatPushPayload>? _pushOpenedSubscription;
   StreamSubscription<ChatPushPayload>? _pushForegroundSubscription;
+  String? _configuredChatKey;
+  String? _pendingChatKey;
+  String? _lastWarmupIdosoId;
+  String? _lastSavedNavigationKey;
 
   @override
   void initState() {
@@ -504,6 +509,75 @@ class _AppShellState extends ConsumerState<AppShell>
     );
   }
 
+  void _scheduleChatConfiguration({
+    required String? usuarioId,
+    required String? idosoId,
+    required String? accessToken,
+  }) {
+    final key = '${usuarioId ?? ''}|${idosoId ?? ''}|${accessToken ?? ''}';
+    if (_configuredChatKey == key || _pendingChatKey == key) return;
+
+    _pendingChatKey = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _pendingChatKey != key) return;
+
+      _pendingChatKey = null;
+      _configuredChatKey = key;
+      _configureChat(
+        usuarioId: usuarioId,
+        idosoId: idosoId,
+        accessToken: accessToken,
+      );
+
+      if (idosoId == null || idosoId.isEmpty) {
+        _lastWarmupIdosoId = null;
+      } else {
+        _warmSelectedIdosoData(idosoId);
+      }
+    });
+  }
+
+  void _warmSelectedIdosoData(String idosoId) {
+    if (_lastWarmupIdosoId == idosoId) return;
+    _lastWarmupIdosoId = idosoId;
+
+    final api = ref.read(apiClientProvider);
+    unawaited(
+      Future.wait<dynamic>(
+        [
+          api.listarCompromissos(idosoId: idosoId),
+          api.listarHumores(idosoId: idosoId),
+          api.listarRefeicoes(idosoId: idosoId),
+          api.listarHidratacoes(idosoId: idosoId),
+          api.listarInsumos(idosoId: idosoId),
+          api.listarEquipamentos(idosoId: idosoId),
+          api.getResumoGlicemia(idosoId: idosoId),
+          api.getResumoMedicamentosConsolidado(idosoId: idosoId),
+          api.getResumoPressao(idosoId: idosoId),
+          api.getResumoOxigenacao(idosoId: idosoId),
+          api.getResumoTemperatura(idosoId: idosoId),
+        ],
+        eagerError: false,
+      ).catchError((_) => const <dynamic>[]),
+    );
+  }
+
+  void _saveCurrentNavigation({
+    required String location,
+    required String? idosoId,
+  }) {
+    final key = '$location|${idosoId ?? ''}';
+    if (_lastSavedNavigationKey == key) return;
+
+    _lastSavedNavigationKey = key;
+    unawaited(
+      ref.read(appNavigationStateLocalProvider).salvar(
+            location: location,
+            idosoId: idosoId,
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -524,14 +598,15 @@ class _AppShellState extends ConsumerState<AppShell>
     final showCoraFab =
         location == '/dashboard' || location == '/monitoramento';
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _configureChat(
-        usuarioId: usuario?.id,
-        idosoId: idoso?.id,
-        accessToken: usuario?.accessToken,
-      );
-    });
+    _scheduleChatConfiguration(
+      usuarioId: usuario?.id,
+      idosoId: idoso?.id,
+      accessToken: usuario?.accessToken,
+    );
+    _saveCurrentNavigation(
+      location: GoRouterState.of(context).uri.toString(),
+      idosoId: idoso?.id,
+    );
 
     return Scaffold(
       body: widget.child,

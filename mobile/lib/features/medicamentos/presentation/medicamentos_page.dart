@@ -14,6 +14,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/notifications/medication_reminder_scheduler.dart';
 import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -807,7 +808,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
                 }
                 if (snapshot.hasError) {
                   return _ErrorState(
-                    onBack: () => context.go('/monitoramento'),
+                    onBack: () => context.go(moduleBackRoute(context)),
                     onRetry: () => _reloadResumo(idoso.id),
                   );
                 }
@@ -817,7 +818,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
 
                 return _ResumoView(
                   resumo: resumo,
-                  onBack: () => context.go('/monitoramento'),
+                  onBack: () => context.go(moduleBackRoute(context)),
                   onAdd: _openCreateForm,
                   onOpen: _openDetalhe,
                   onHistorico: () => setState(() => _mode = _Mode.historico),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/api/api_client.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 
@@ -45,11 +46,45 @@ class _SplashPageState extends ConsumerState<SplashPage>
     final usuario = results[1] as UsuarioSessao?;
     if (usuario != null) {
       ref.read(authSessionProvider.notifier).state = usuario;
-      context.go('/idosos');
+      await _restoreLastNavigation(usuario);
       return;
     }
 
     context.go('/login');
+  }
+
+  Future<void> _restoreLastNavigation(UsuarioSessao usuario) async {
+    final saved = await ref.read(appNavigationStateLocalProvider).carregar();
+    if (!mounted) return;
+
+    if (saved == null || saved.idosoId == null || saved.idosoId!.isEmpty) {
+      context.go('/idosos');
+      return;
+    }
+
+    try {
+      final idosos =
+          await ref.read(apiClientProvider).listarIdosos(usuarioId: usuario.id);
+      if (!mounted) return;
+
+      IdosoResumo? selected;
+      for (final idoso in idosos) {
+        if (idoso.id == saved.idosoId) {
+          selected = idoso;
+          break;
+        }
+      }
+
+      if (selected == null) {
+        context.go('/idosos');
+        return;
+      }
+
+      ref.read(selectedIdosoProvider.notifier).state = selected;
+      context.go(saved.location);
+    } catch (_) {
+      if (mounted) context.go('/idosos');
+    }
   }
 
   @override

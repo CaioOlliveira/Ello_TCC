@@ -9,6 +9,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -305,7 +306,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
 
                 if (snapshot.hasError) {
                   return _ErrorState(
-                    onBack: () => context.go('/monitoramento'),
+                    onBack: () => context.go(moduleBackRoute(context)),
                     onRetry: () => _reloadResumo(idoso.id),
                   );
                 }
@@ -317,7 +318,7 @@ class _PressaoPageState extends ConsumerState<PressaoPage> {
                   idoso: idoso,
                   resumo: resumo,
                   period: _period,
-                  onBack: () => context.go('/monitoramento'),
+                  onBack: () => context.go(moduleBackRoute(context)),
                   onRegistrar: () {
                     if (!idoso.podeEditarModulo('Pressao')) {
                       _showNoEditPermission();

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 
 enum _AgendaHistoryPeriod { dia, semanal, mes }
@@ -103,7 +104,8 @@ class _AgendaHistoryPageState extends ConsumerState<AgendaHistoryPage> {
                   children: [
                     AppPageHeader(
                       title: 'Histórico da agenda',
-                      onBack: () => context.go('/agenda'),
+                      onBack: () => context
+                          .go(routeWithCurrentOrigin(context, '/agenda')),
                     ),
                     const SizedBox(height: 12),
                     _HistorySwitch(

@@ -2125,9 +2125,23 @@ class ApiClient {
             receiveTimeout: const Duration(seconds: 30),
             headers: {'Content-Type': 'application/json'},
           ),
-        );
+        ) {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onResponse: (response, handler) {
+          if (response.requestOptions.method.toUpperCase() != 'GET') {
+            _clearReadCaches();
+          }
+          handler.next(response);
+        },
+      ),
+    );
+  }
 
   final Dio _dio;
+  final _readCache = <String, _ApiMemoryCache<Object?>>{};
+  final _inFlightReads = <String, Future<Object?>>{};
+  var _cacheEpoch = 0;
   final _agendaCache = <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
   final _agendaHistoryCache =
       <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
@@ -2138,6 +2152,45 @@ class ApiClient {
   final _equipmentMaintenancesCache =
       <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
   static const _agendaCacheTtl = Duration(minutes: 2);
+  static const _readCacheTtl = Duration(minutes: 2);
+
+  Future<T> _cachedRead<T>(
+    String key,
+    Future<T> Function() loader, {
+    Duration ttl = _readCacheTtl,
+  }) async {
+    final cached = _readCache[key];
+    if (cached != null && cached.isFresh(ttl)) {
+      return cached.value as T;
+    }
+
+    final inFlight = _inFlightReads[key];
+    if (inFlight != null) {
+      return await inFlight as T;
+    }
+
+    final epoch = _cacheEpoch;
+    final future = loader().then<Object?>((value) {
+      if (epoch == _cacheEpoch) {
+        _readCache[key] = _ApiMemoryCache(
+          value: value,
+          createdAt: DateTime.now(),
+        );
+      }
+      return value;
+    });
+    _inFlightReads[key] = future;
+
+    try {
+      return await future as T;
+    } finally {
+      if (identical(_inFlightReads[key], future)) {
+        _inFlightReads.remove(key);
+      }
+    }
+  }
+
+  void clearCache() => _clearReadCaches();
 
   Options _authenticatedOptions(String accessToken) {
     if (accessToken.trim().isEmpty) {
@@ -2157,6 +2210,14 @@ class ApiClient {
     _equipmentsCache.clear();
     _equipmentsHistoryCache.clear();
     _equipmentMaintenancesCache.clear();
+  }
+
+  void _clearReadCaches() {
+    _cacheEpoch++;
+    _readCache.clear();
+    _inFlightReads.clear();
+    _clearAgendaCaches();
+    _clearEquipmentCaches();
   }
 
   Future<Map<String, dynamic>> getHealth() async {
@@ -2303,26 +2364,30 @@ class ApiClient {
   }
 
   Future<List<IdosoResumo>> listarIdosos({String? usuarioId}) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.idosos,
-        queryParameters: {
-          if (usuarioId != null && usuarioId.isNotEmpty) 'usuarioId': usuarioId,
-        },
-      );
-      final data = response.data?['dados'];
+    return _cachedRead<List<IdosoResumo>>('idosos:${usuarioId ?? ''}',
+        () async {
+      try {
+        final response = await _dio.get<Map<String, dynamic>>(
+          ApiEndpoints.idosos,
+          queryParameters: {
+            if (usuarioId != null && usuarioId.isNotEmpty)
+              'usuarioId': usuarioId,
+          },
+        );
+        final data = response.data?['dados'];
 
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(IdosoResumo.fromJson)
-            .toList();
+        if (data is List) {
+          return data
+              .whereType<Map<String, dynamic>>()
+              .map(IdosoResumo.fromJson)
+              .toList();
+        }
+
+        return const [];
+      } on DioException catch (error) {
+        throw _toApiException(error, fallback: 'Erro ao listar fichas.');
       }
-
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar fichas.');
-    }
+    });
   }
 
   Future<IdosoResumo> buscarIdoso({required String idosoId}) async {
@@ -2453,25 +2518,30 @@ class ApiClient {
   Future<List<IdosoResumo>> listarIdososAdministrados({
     required String usuarioId,
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.idososAdministrados,
-        queryParameters: {'usuarioId': usuarioId},
-      );
-      final data = response.data?['dados'];
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(IdosoResumo.fromJson)
-            .toList();
-      }
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao listar fichas administradas.',
-      );
-    }
+    return _cachedRead<List<IdosoResumo>>(
+      'idosos-administrados:$usuarioId',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.idososAdministrados,
+            queryParameters: {'usuarioId': usuarioId},
+          );
+          final data = response.data?['dados'];
+          if (data is List) {
+            return data
+                .whereType<Map<String, dynamic>>()
+                .map(IdosoResumo.fromJson)
+                .toList();
+          }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao listar fichas administradas.',
+          );
+        }
+      },
+    );
   }
 
   Future<ConviteFicha> obterConviteFicha({
@@ -2705,25 +2775,30 @@ class ApiClient {
   }
 
   Future<List<RefeicaoResumo>> listarRefeicoes({String? idosoId}) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.refeicoes,
-        queryParameters: {
-          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
-          'limite': 100,
-        },
-      );
-      final data = response.data?['dados'];
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(RefeicaoResumo.fromJson)
-            .toList();
-      }
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar refeições.');
-    }
+    return _cachedRead<List<RefeicaoResumo>>(
+      'refeicoes:${idosoId ?? ''}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.refeicoes,
+            queryParameters: {
+              if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+              'limite': 100,
+            },
+          );
+          final data = response.data?['dados'];
+          if (data is List) {
+            return data
+                .whereType<Map<String, dynamic>>()
+                .map(RefeicaoResumo.fromJson)
+                .toList();
+          }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(error, fallback: 'Erro ao listar refeições.');
+        }
+      },
+    );
   }
 
   Future<String> buscarDicaAlimentacao() async {
@@ -2811,25 +2886,30 @@ class ApiClient {
   }
 
   Future<List<HidratacaoRegistro>> listarHidratacoes({String? idosoId}) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.hidratacoes,
-        queryParameters: {
-          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
-          'limite': 100,
-        },
-      );
-      final data = response.data?['dados'];
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(HidratacaoRegistro.fromJson)
-            .toList();
-      }
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar hidratações.');
-    }
+    return _cachedRead<List<HidratacaoRegistro>>(
+      'hidratacoes:${idosoId ?? ''}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.hidratacoes,
+            queryParameters: {
+              if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+              'limite': 100,
+            },
+          );
+          final data = response.data?['dados'];
+          if (data is List) {
+            return data
+                .whereType<Map<String, dynamic>>()
+                .map(HidratacaoRegistro.fromJson)
+                .toList();
+          }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(error, fallback: 'Erro ao listar hidratações.');
+        }
+      },
+    );
   }
 
   Future<void> criarHidratacao({
@@ -3261,28 +3341,33 @@ class ApiClient {
     String? idosoId,
     String filtro = 'todos',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.insumos,
-        queryParameters: {
-          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
-          'filtro': filtro,
-          'limite': 100,
-        },
-      );
-      final data = response.data?['dados'];
+    return _cachedRead<List<InsumoResumo>>(
+      'insumos:${idosoId ?? ''}:$filtro',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.insumos,
+            queryParameters: {
+              if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+              'filtro': filtro,
+              'limite': 100,
+            },
+          );
+          final data = response.data?['dados'];
 
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(InsumoResumo.fromJson)
-            .toList();
-      }
+          if (data is List) {
+            return data
+                .whereType<Map<String, dynamic>>()
+                .map(InsumoResumo.fromJson)
+                .toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar insumos.');
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(error, fallback: 'Erro ao listar insumos.');
+        }
+      },
+    );
   }
 
   Future<InsumoResumo> criarInsumo({
@@ -3392,24 +3477,29 @@ class ApiClient {
   }
 
   Future<List<Map<String, dynamic>>> listarHumores({String? idosoId}) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.humores,
-        queryParameters: {
-          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
-          'limite': 100,
-        },
-      );
-      final data = response.data?['dados'];
+    return _cachedRead<List<Map<String, dynamic>>>(
+      'humores:${idosoId ?? ''}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.humores,
+            queryParameters: {
+              if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+              'limite': 100,
+            },
+          );
+          final data = response.data?['dados'];
 
-      if (data is List) {
-        return data.whereType<Map<String, dynamic>>().toList();
-      }
+          if (data is List) {
+            return data.whereType<Map<String, dynamic>>().toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar humores.');
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(error, fallback: 'Erro ao listar humores.');
+        }
+      },
+    );
   }
 
   Future<List<HistoricoRegistro>> listarHistorico({
@@ -3749,29 +3839,34 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.glicemiaResumo,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<GlicemiaResumo>(
+      'glicemia-resumo:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.glicemiaResumo,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is Map<String, dynamic>) {
-        return GlicemiaResumo.fromJson(dados);
-      }
+          if (dados is Map<String, dynamic>) {
+            return GlicemiaResumo.fromJson(dados);
+          }
 
-      return GlicemiaResumo.fromJson(const <String, dynamic>{});
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar glicemia.',
-      );
-    }
+          return GlicemiaResumo.fromJson(const <String, dynamic>{});
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar glicemia.',
+          );
+        }
+      },
+    );
   }
 
   Future<List<GlicemiaHistoricoEntrada>> getHistoricoGlicemia({
@@ -3779,32 +3874,37 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.glicemiaHistorico,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<List<GlicemiaHistoricoEntrada>>(
+      'glicemia-historico:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.glicemiaHistorico,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is List) {
-        return dados
-            .whereType<Map<String, dynamic>>()
-            .map(GlicemiaHistoricoEntrada.fromJson)
-            .toList();
-      }
+          if (dados is List) {
+            return dados
+                .whereType<Map<String, dynamic>>()
+                .map(GlicemiaHistoricoEntrada.fromJson)
+                .toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar histórico de glicemia.',
-      );
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar histórico de glicemia.',
+          );
+        }
+      },
+    );
   }
 
   Future<GlicemiaRegistro> criarGlicemia({
@@ -3851,29 +3951,34 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.pressaoResumo,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<PressaoResumo>(
+      'pressao-resumo:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.pressaoResumo,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is Map<String, dynamic>) {
-        return PressaoResumo.fromJson(dados);
-      }
+          if (dados is Map<String, dynamic>) {
+            return PressaoResumo.fromJson(dados);
+          }
 
-      return PressaoResumo.fromJson(const <String, dynamic>{});
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar pressão.',
-      );
-    }
+          return PressaoResumo.fromJson(const <String, dynamic>{});
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar pressão.',
+          );
+        }
+      },
+    );
   }
 
   Future<List<PressaoHistoricoEntrada>> getHistoricoPressao({
@@ -3881,32 +3986,37 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.pressaoHistorico,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<List<PressaoHistoricoEntrada>>(
+      'pressao-historico:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.pressaoHistorico,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is List) {
-        return dados
-            .whereType<Map<String, dynamic>>()
-            .map(PressaoHistoricoEntrada.fromJson)
-            .toList();
-      }
+          if (dados is List) {
+            return dados
+                .whereType<Map<String, dynamic>>()
+                .map(PressaoHistoricoEntrada.fromJson)
+                .toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar histórico de pressão.',
-      );
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar histórico de pressão.',
+          );
+        }
+      },
+    );
   }
 
   Future<PressaoRegistro> criarPressao({
@@ -3953,29 +4063,34 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.oxigenacaoResumo,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<OxigenacaoResumo>(
+      'oxigenacao-resumo:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.oxigenacaoResumo,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is Map<String, dynamic>) {
-        return OxigenacaoResumo.fromJson(dados);
-      }
+          if (dados is Map<String, dynamic>) {
+            return OxigenacaoResumo.fromJson(dados);
+          }
 
-      return OxigenacaoResumo.fromJson(const <String, dynamic>{});
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar oxigenação.',
-      );
-    }
+          return OxigenacaoResumo.fromJson(const <String, dynamic>{});
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar oxigenação.',
+          );
+        }
+      },
+    );
   }
 
   Future<List<OxigenacaoHistoricoEntrada>> getHistoricoOxigenacao({
@@ -3983,32 +4098,37 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.oxigenacaoHistorico,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<List<OxigenacaoHistoricoEntrada>>(
+      'oxigenacao-historico:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.oxigenacaoHistorico,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is List) {
-        return dados
-            .whereType<Map<String, dynamic>>()
-            .map(OxigenacaoHistoricoEntrada.fromJson)
-            .toList();
-      }
+          if (dados is List) {
+            return dados
+                .whereType<Map<String, dynamic>>()
+                .map(OxigenacaoHistoricoEntrada.fromJson)
+                .toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar histórico de oxigenação.',
-      );
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar histórico de oxigenação.',
+          );
+        }
+      },
+    );
   }
 
   Future<OxigenacaoRegistro> criarOxigenacao({
@@ -4053,29 +4173,34 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.temperaturaResumo,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<TemperaturaResumo>(
+      'temperatura-resumo:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.temperaturaResumo,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is Map<String, dynamic>) {
-        return TemperaturaResumo.fromJson(dados);
-      }
+          if (dados is Map<String, dynamic>) {
+            return TemperaturaResumo.fromJson(dados);
+          }
 
-      return TemperaturaResumo.fromJson(const <String, dynamic>{});
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar temperatura.',
-      );
-    }
+          return TemperaturaResumo.fromJson(const <String, dynamic>{});
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar temperatura.',
+          );
+        }
+      },
+    );
   }
 
   Future<List<TemperaturaHistoricoEntrada>> getHistoricoTemperatura({
@@ -4083,32 +4208,37 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.temperaturaHistorico,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<List<TemperaturaHistoricoEntrada>>(
+      'temperatura-historico:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.temperaturaHistorico,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is List) {
-        return dados
-            .whereType<Map<String, dynamic>>()
-            .map(TemperaturaHistoricoEntrada.fromJson)
-            .toList();
-      }
+          if (dados is List) {
+            return dados
+                .whereType<Map<String, dynamic>>()
+                .map(TemperaturaHistoricoEntrada.fromJson)
+                .toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar histórico de temperatura.',
-      );
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar histórico de temperatura.',
+          );
+        }
+      },
+    );
   }
 
   Future<TemperaturaRegistro> criarTemperatura({
@@ -4195,50 +4325,61 @@ class ApiClient {
   Future<MedicamentosResumo> getResumoMedicamentos({
     required String idosoId,
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.medicamentosResumo,
-        queryParameters: {'idosoId': idosoId},
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<MedicamentosResumo>(
+      'medicamentos-resumo:$idosoId',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.medicamentosResumo,
+            queryParameters: {'idosoId': idosoId},
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is Map<String, dynamic>) {
-        return MedicamentosResumo.fromJson(dados);
-      }
+          if (dados is Map<String, dynamic>) {
+            return MedicamentosResumo.fromJson(dados);
+          }
 
-      return MedicamentosResumo.fromJson(const <String, dynamic>{});
-    } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao consultar medicamentos.');
-    }
+          return MedicamentosResumo.fromJson(const <String, dynamic>{});
+        } on DioException catch (error) {
+          throw _toApiException(error,
+              fallback: 'Erro ao consultar medicamentos.');
+        }
+      },
+    );
   }
 
   Future<MedicamentosResumo> getResumoMedicamentosConsolidado({
     required String idosoId,
   }) async {
-    final resumo = await getResumoMedicamentos(idosoId: idosoId);
-    if (resumo.medicamentos.isEmpty) return resumo;
+    return _cachedRead<MedicamentosResumo>(
+      'medicamentos-resumo-consolidado:$idosoId',
+      () async {
+        final resumo = await getResumoMedicamentos(idosoId: idosoId);
+        if (resumo.medicamentos.isEmpty) return resumo;
 
-    final medicamentos = await Future.wait(
-      resumo.medicamentos.map((medicamento) async {
-        try {
-          final administracoes =
-              await getAdministracoesMedicamento(medicamento.id);
-          return _normalizarMedicamentoHoje(medicamento, administracoes);
-        } catch (_) {
-          return medicamento;
-        }
-      }),
-    );
+        final medicamentos = await Future.wait(
+          resumo.medicamentos.map((medicamento) async {
+            try {
+              final administracoes =
+                  await getAdministracoesMedicamento(medicamento.id);
+              return _normalizarMedicamentoHoje(medicamento, administracoes);
+            } catch (_) {
+              return medicamento;
+            }
+          }),
+        );
 
-    final pendentes = medicamentos
-        .where(_medicamentoTemDosePendenteConsolidada)
-        .toList()
-      ..sort(_compararMedicamentosPendentesConsolidados);
+        final pendentes = medicamentos
+            .where(_medicamentoTemDosePendenteConsolidada)
+            .toList()
+          ..sort(_compararMedicamentosPendentesConsolidados);
 
-    return MedicamentosResumo(
-      medicamentos: medicamentos,
-      totalMedicamentos: resumo.totalMedicamentos,
-      proximoMedicamento: pendentes.isEmpty ? null : pendentes.first,
+        return MedicamentosResumo(
+          medicamentos: medicamentos,
+          totalMedicamentos: resumo.totalMedicamentos,
+          proximoMedicamento: pendentes.isEmpty ? null : pendentes.first,
+        );
+      },
     );
   }
 
@@ -4247,32 +4388,37 @@ class ApiClient {
     DateTime? dataReferencia,
     String periodo = 'dia',
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.medicamentosHistorico,
-        queryParameters: {
-          'idosoId': idosoId,
-          'periodo': periodo,
-          if (dataReferencia != null)
-            'dataReferencia': _toIsoDateOnly(dataReferencia),
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<List<HistoricoMedicamentoEntrada>>(
+      'medicamentos-historico:$idosoId:$periodo:${_toIsoDateOnly(dataReferencia ?? DateTime.now())}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.medicamentosHistorico,
+            queryParameters: {
+              'idosoId': idosoId,
+              'periodo': periodo,
+              if (dataReferencia != null)
+                'dataReferencia': _toIsoDateOnly(dataReferencia),
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is List) {
-        return dados
-            .whereType<Map<String, dynamic>>()
-            .map(HistoricoMedicamentoEntrada.fromJson)
-            .toList();
-      }
+          if (dados is List) {
+            return dados
+                .whereType<Map<String, dynamic>>()
+                .map(HistoricoMedicamentoEntrada.fromJson)
+                .toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar histórico de medicamentos.',
-      );
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar histórico de medicamentos.',
+          );
+        }
+      },
+    );
   }
 
   Future<List<MedicamentoHorario>> getHorariosMedicamento(
@@ -4300,23 +4446,28 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> getAdministracoesMedicamento(
     String medicamentoId,
   ) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.administracoesMedicamento(medicamentoId),
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<List<Map<String, dynamic>>>(
+      'medicamento-administracoes:$medicamentoId',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.administracoesMedicamento(medicamentoId),
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is List) {
-        return dados.whereType<Map<String, dynamic>>().toList();
-      }
+          if (dados is List) {
+            return dados.whereType<Map<String, dynamic>>().toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao consultar administrações.',
-      );
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao consultar administrações.',
+          );
+        }
+      },
+    );
   }
 
   Future<MedicamentoDetalhe> criarMedicamento({

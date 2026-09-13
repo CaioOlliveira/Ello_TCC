@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -330,7 +331,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
 
   void _back() {
     if (_view == _EquipamentosView.lista) {
-      context.go('/monitoramento');
+      context.go(moduleBackRoute(context));
       return;
     }
     if (_view == _EquipamentosView.manutencao ||
@@ -383,7 +384,9 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                   setState(() => _view = _EquipamentosView.cadastro);
                 },
                 onOpen: _loadManutencoes,
-                onHistory: () => context.push('/equipamentos/historico'),
+                onHistory: () => context.push(
+                  routeWithCurrentOrigin(context, '/equipamentos/historico'),
+                ),
               )
             : _EquipamentoDetails(
                 equipamento: _selected!,
@@ -436,7 +439,9 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
                   setState(() => _view = _EquipamentosView.cadastro);
                 },
                 onOpen: _loadManutencoes,
-                onHistory: () => context.push('/equipamentos/historico'),
+                onHistory: () => context.push(
+                  routeWithCurrentOrigin(context, '/equipamentos/historico'),
+                ),
               );
     }
 

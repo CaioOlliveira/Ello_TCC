@@ -774,7 +774,7 @@ String _formatPhone(String value) {
 }
 
 Future<void> _callPhone(BuildContext context, String phone) async {
-  final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+  final digits = _phoneNumberForCall(phone);
   if (digits.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Telefone não informado.')),
@@ -794,11 +794,27 @@ Future<void> _callPhone(BuildContext context, String phone) async {
 
   final uri = Uri(scheme: 'tel', path: digits);
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (launched && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Confirme a chamada no telefone.')),
+    );
+    return;
+  }
+
   if (!launched && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Não foi possível abrir o telefone.')),
     );
   }
+}
+
+String _phoneNumberForCall(String phone) {
+  final normalized = phone.trim();
+  if (normalized.startsWith('+')) {
+    return '+${normalized.substring(1).replaceAll(RegExp(r'\D'), '')}';
+  }
+
+  return normalized.replaceAll(RegExp(r'\D'), '');
 }
 
 const _phoneChannel = MethodChannel('ello/phone');

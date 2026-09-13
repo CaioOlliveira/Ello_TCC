@@ -109,6 +109,9 @@ class PerfilPage extends ConsumerWidget {
                       onPressed: () async {
                         try {
                           await ref.read(sessaoUsuarioLocalProvider).limpar();
+                          await ref
+                              .read(appNavigationStateLocalProvider)
+                              .limpar();
                         } catch (_) {}
                         if (!context.mounted) return;
                         ref.read(authSessionProvider.notifier).state = null;

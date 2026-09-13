@@ -41,6 +41,10 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
 
+    if (force) {
+      ref.read(apiClientProvider).clearCache();
+    }
+
     final cached = _cache[idoso.id];
 
     if (cached != null && mounted) {

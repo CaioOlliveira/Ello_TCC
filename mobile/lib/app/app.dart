@@ -16,6 +16,7 @@ class ElloApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Ello',
+      restorationScopeId: 'ello_app',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

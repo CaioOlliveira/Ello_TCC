@@ -9,6 +9,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 
 enum _AlimentacaoView { lista, tipo, form, galeria }
@@ -460,13 +461,15 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                   hidratacoes: _hidratacoes,
                   loading: _loading,
                   error: _error,
-                  onBack: () => context.go('/monitoramento'),
+                  onBack: () => context.go(moduleBackRoute(context)),
                   onRetry: _load,
                   onSaveWeight: _saveWeight,
                   onAddWater: _addWater,
                   onGallery: () =>
                       setState(() => _view = _AlimentacaoView.galeria),
-                  onHistory: () => context.push('/historico/alimentacao'),
+                  onHistory: () => context.push(
+                    routeWithCurrentOrigin(context, '/historico/alimentacao'),
+                  ),
                   onAdd: () {
                     if (!_canEditAlimentacao()) {
                       _showNoEditPermission();

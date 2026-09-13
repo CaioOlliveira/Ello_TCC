@@ -101,6 +101,86 @@ class SessaoUsuarioLocal {
   }
 }
 
+class AppNavigationState {
+  const AppNavigationState({
+    required this.location,
+    required this.idosoId,
+  });
+
+  final String location;
+  final String? idosoId;
+}
+
+class AppNavigationStateLocal {
+  static const _locationKey = 'app_navigation_location_v1';
+  static const _idosoIdKey = 'app_navigation_idoso_id_v1';
+
+  Future<AppNavigationState?> carregar() async {
+    final prefs = await SharedPreferences.getInstance();
+    final location = prefs.getString(_locationKey);
+    if (location == null || location.isEmpty || location == '/') {
+      return null;
+    }
+
+    return AppNavigationState(
+      location: location,
+      idosoId: prefs.getString(_idosoIdKey),
+    );
+  }
+
+  Future<void> salvar({
+    required String location,
+    String? idosoId,
+  }) async {
+    if (!_isRestorableLocation(location)) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_locationKey, location);
+
+    if (idosoId == null || idosoId.isEmpty) {
+      await prefs.remove(_idosoIdKey);
+    } else {
+      await prefs.setString(_idosoIdKey, idosoId);
+    }
+  }
+
+  Future<void> limpar() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_locationKey);
+    await prefs.remove(_idosoIdKey);
+  }
+
+  static bool _isRestorableLocation(String location) {
+    final uri = Uri.tryParse(location);
+    final path = uri?.path ?? location;
+
+    if (path == '/' || path == '/login' || path.startsWith('/chat/')) {
+      return false;
+    }
+
+    return path == '/dashboard' ||
+        path == '/monitoramento' ||
+        path == '/chat' ||
+        path == '/relatorios' ||
+        path == '/idoso/perfil' ||
+        path == '/agenda' ||
+        path == '/agenda/historico' ||
+        path == '/glicemia' ||
+        path == '/alimentacao' ||
+        path == '/medicamentos' ||
+        path == '/equipamentos' ||
+        path == '/equipamentos/historico' ||
+        path == '/insumos' ||
+        path == '/humor' ||
+        path == '/pressao' ||
+        path == '/oxigenacao' ||
+        path == '/temperatura' ||
+        path == '/corgia' ||
+        path == '/coraia' ||
+        path.startsWith('/historico/');
+  }
+}
+
 final appConfigProvider = Provider<AppConfig>((ref) => const AppConfig());
 
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -124,9 +204,13 @@ final sessaoUsuarioLocalProvider = Provider<SessaoUsuarioLocal>(
   (ref) => SessaoUsuarioLocal(),
 );
 
+final appNavigationStateLocalProvider = Provider<AppNavigationStateLocal>(
+  (ref) => AppNavigationStateLocal(),
+);
+
 final selectedIdosoProvider = StateProvider<IdosoResumo?>((ref) => null);
 
-final idososDoUsuarioProvider = FutureProvider.autoDispose<List<IdosoResumo>>((
+final idososDoUsuarioProvider = FutureProvider<List<IdosoResumo>>((
   ref,
 ) {
   final usuario = ref.watch(authSessionProvider);
@@ -138,8 +222,7 @@ final idososDoUsuarioProvider = FutureProvider.autoDispose<List<IdosoResumo>>((
   return ref.watch(apiClientProvider).listarIdosos(usuarioId: usuario.id);
 });
 
-final fichasAdministradasProvider =
-    FutureProvider.autoDispose<List<IdosoResumo>>((ref) {
+final fichasAdministradasProvider = FutureProvider<List<IdosoResumo>>((ref) {
   final usuario = ref.watch(authSessionProvider);
 
   if (usuario == null || usuario.id.isEmpty) {

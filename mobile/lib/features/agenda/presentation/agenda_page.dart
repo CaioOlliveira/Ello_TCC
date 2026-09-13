@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import 'agenda_form_page.dart';
@@ -493,7 +494,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                 width: double.infinity,
                 height: 42,
                 child: OutlinedButton(
-                  onPressed: () => context.go('/agenda/historico'),
+                  onPressed: () => context.push(
+                      routeWithCurrentOrigin(context, '/agenda/historico')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: adaptive(context, const Color(0xFF222222),
                         AppDarkColors.textPrimary),
@@ -528,7 +530,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 child: Column(
                   children: [
-                    _Header(onBack: () => context.go('/monitoramento')),
+                    _Header(onBack: () => context.go(moduleBackRoute(context))),
                     const SizedBox(height: 14),
                     _ViewSwitch(
                       value: _view,

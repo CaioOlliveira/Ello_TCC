@@ -12,6 +12,7 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -324,9 +325,11 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
                         loading: _loading,
                         error: _error,
                         onRetry: _load,
-                        onBack: () => context.go('/monitoramento'),
+                        onBack: () => context.go(moduleBackRoute(context)),
                         onAdd: _showCadastro,
-                        onHistory: () => context.push('/historico/insumos'),
+                        onHistory: () => context.push(
+                          routeWithCurrentOrigin(context, '/historico/insumos'),
+                        ),
                         onGeneratePdf: _generateExpiredPdf,
                         onOpen: _showDetalhe,
                         selectedFilter: _selectedFilter,
