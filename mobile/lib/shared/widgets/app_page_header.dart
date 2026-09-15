@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/navigation/app_back_navigation.dart';
 
 /// Cabeçalho visual único das telas do aplicativo.
 ///
@@ -63,7 +64,11 @@ class AppPageHeader extends StatelessWidget {
                 child: Center(
                   child: onBack != null
                       ? IconButton(
-                          onPressed: onBack,
+                          onPressed: () {
+                            AppBackNavigation.instance
+                                .markAppBackButtonPressed();
+                            onBack!();
+                          },
                           tooltip: backTooltip,
                           icon: const Icon(
                             Icons.chevron_left_rounded,

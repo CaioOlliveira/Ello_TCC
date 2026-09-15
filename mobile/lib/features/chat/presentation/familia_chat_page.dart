@@ -635,7 +635,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       builder: (dialogContext) => AlertDialog(
         title: const Text('Limpar conversa?'),
         content: const Text(
-          'As mensagens serão removidas apenas deste aparelho. As outras pessoas continuam vendo a conversa normalmente.',
+          'As mensagens serao removidas apenas para voce. A outra pessoa continuara vendo a conversa.',
         ),
         actions: [
           TextButton(
@@ -652,11 +652,12 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
     if (shouldClear != true || !mounted) return;
 
     try {
-      await ref.read(apiClientProvider).limparConversaFamilia(
-            idosoId: idoso.id,
-            outroUsuarioId: _peer.id,
-            accessToken: usuario.accessToken!,
-          );
+      final clearedOnServer =
+          await ref.read(apiClientProvider).limparConversaFamilia(
+                idosoId: idoso.id,
+                outroUsuarioId: _peer.id,
+                accessToken: usuario.accessToken!,
+              );
       final clearedUntil =
           _messages.isEmpty ? DateTime.now() : _messages.last.createdAt;
 
@@ -677,7 +678,13 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       });
       unawaited(ref.read(chatInboxProvider.notifier).refresh());
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Conversa limpa para voce.')),
+        SnackBar(
+          content: Text(
+            clearedOnServer
+                ? 'Conversa limpa para voce.'
+                : 'Conversa limpa neste aparelho.',
+          ),
+        ),
       );
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -1383,7 +1390,7 @@ class _ChatDetailHeader extends StatelessWidget {
                   children: [
                     Icon(Icons.cleaning_services_outlined, size: 20),
                     SizedBox(width: 10),
-                    Text('Limpar neste celular'),
+                    Text('Limpar conversa'),
                   ],
                 ),
               ),

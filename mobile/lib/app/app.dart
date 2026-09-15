@@ -4,15 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_mode_controller.dart';
+import '../core/navigation/app_back_navigation.dart';
 import 'router.dart';
 
 class ElloApp extends ConsumerWidget {
   const ElloApp({super.key});
 
+  static final _backButtonDispatcher =
+      AppBackButtonDispatcher(AppBackNavigation.instance);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    AppBackNavigation.instance.attach(router);
 
     return MaterialApp.router(
       title: 'Ello',
@@ -31,7 +36,10 @@ class ElloApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      routerConfig: router,
+      routeInformationProvider: router.routeInformationProvider,
+      routeInformationParser: router.routeInformationParser,
+      routerDelegate: router.routerDelegate,
+      backButtonDispatcher: _backButtonDispatcher,
     );
   }
 }

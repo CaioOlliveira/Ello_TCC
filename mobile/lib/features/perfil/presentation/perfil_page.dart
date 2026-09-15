@@ -19,6 +19,7 @@ class PerfilPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usuario = ref.watch(authSessionProvider);
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
     final from = GoRouterState.of(context).uri.queryParameters['from'];
     final backRoute = _routeFromOrigin(from);
     final editRoute =
@@ -59,23 +60,15 @@ class PerfilPage extends ConsumerWidget {
                     usuario: usuario,
                     onEditPersonalInfo: () => context.go(editRoute),
                     from: from,
+                    isDark: isDark,
+                    onDarkModeChanged: (value) =>
+                        ref.read(themeModeProvider.notifier).setDark(value),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Preferências',
-                  style: TextStyle(
-                    color: Color(0xFF238FA1),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const StaggeredEntry(index: 3, child: _PreferenciasCard()),
                 const SizedBox(height: 28),
                 if (from != 'idosos') ...[
                   StaggeredEntry(
-                    index: 4,
+                    index: 3,
                     child: SizedBox(
                       height: 50,
                       child: OutlinedButton.icon(
@@ -102,7 +95,7 @@ class PerfilPage extends ConsumerWidget {
                   const SizedBox(height: 10),
                 ],
                 StaggeredEntry(
-                  index: 5,
+                  index: 4,
                   child: SizedBox(
                     height: 52,
                     child: FilledButton.icon(
@@ -334,15 +327,121 @@ class _EditarPerfilPageState extends ConsumerState<EditarPerfilPage> {
   }
 }
 
-class SegurancaPerfilPage extends ConsumerStatefulWidget {
+class SegurancaPerfilPage extends StatelessWidget {
   const SegurancaPerfilPage({super.key});
 
   @override
-  ConsumerState<SegurancaPerfilPage> createState() =>
-      _SegurancaPerfilPageState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor:
+          adaptive(context, const Color(0xFFFCFCFC), AppDarkColors.bg),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _PerfilHeader(
+                    title: 'Segurança',
+                    onBack: () => context.go(_perfilRouteFromCurrent(context)),
+                  ),
+                  const SizedBox(height: 42),
+                  Row(
+                    children: [
+                      Container(
+                        width: 76,
+                        height: 76,
+                        decoration: BoxDecoration(
+                          color: adaptive(context, const Color(0xFFE7F4F6),
+                              AppDarkColors.tintedInfo),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: const Icon(
+                          Icons.shield_outlined,
+                          color: Color(0xFF238FA1),
+                          size: 42,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Segurança',
+                              style: TextStyle(
+                                color: adaptive(
+                                    context,
+                                    const Color(0xFF238FA1),
+                                    AppDarkColors.textPrimary),
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Gerencie a segurança da sua conta',
+                              style: TextStyle(
+                                color: adaptive(
+                                    context,
+                                    const Color(0xFF737D80),
+                                    AppDarkColors.textSecondary),
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 46),
+                  _Panel(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        _MenuItem(
+                          icon: Icons.lock_outline_rounded,
+                          label: 'Alterar senha',
+                          onTap: () => context.go('/perfil/seguranca/senha'),
+                          showDivider: true,
+                        ),
+                        _MenuItem(
+                          icon: Icons.group_outlined,
+                          label: 'Acessos compartilhados',
+                          onTap: () => context.go('/perfil/seguranca/acessos'),
+                          showDivider: true,
+                        ),
+                        _MenuItem(
+                          icon: Icons.history_rounded,
+                          label: 'Histórico de acessos',
+                          onTap: () =>
+                              context.go('/perfil/seguranca/historico'),
+                          showDivider: false,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _SegurancaPerfilPageState extends ConsumerState<SegurancaPerfilPage> {
+class AlterarSenhaPage extends ConsumerStatefulWidget {
+  const AlterarSenhaPage({super.key});
+
+  @override
+  ConsumerState<AlterarSenhaPage> createState() => _AlterarSenhaPageState();
+}
+
+class _AlterarSenhaPageState extends ConsumerState<AlterarSenhaPage> {
   final _formKey = GlobalKey<FormState>();
   final _senhaAtualController = TextEditingController();
   final _novaSenhaController = TextEditingController();
@@ -409,8 +508,9 @@ class _SegurancaPerfilPageState extends ConsumerState<SegurancaPerfilPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _PerfilHeader(
-                    title: 'Segurança',
-                    onBack: () => context.go(_perfilRouteFromCurrent(context))),
+                  title: 'Alterar senha',
+                  onBack: () => context.go('/perfil/seguranca'),
+                ),
                 const SizedBox(height: 18),
                 _Panel(
                   child: Column(
@@ -638,11 +738,15 @@ class _MenuCard extends StatelessWidget {
   const _MenuCard({
     required this.usuario,
     required this.onEditPersonalInfo,
+    required this.isDark,
+    required this.onDarkModeChanged,
     this.from,
   });
 
   final UsuarioSessao? usuario;
   final VoidCallback onEditPersonalInfo;
+  final bool isDark;
+  final ValueChanged<bool> onDarkModeChanged;
   final String? from;
 
   @override
@@ -668,11 +772,6 @@ class _MenuCard extends StatelessWidget {
         'Sobre o App',
         () => context.go('/perfil/sobre$suffix'),
       ),
-      (
-        Icons.tune_rounded,
-        'Permissões',
-        () => context.go('/permissoes'),
-      ),
     ];
 
     return _Panel(
@@ -686,6 +785,13 @@ class _MenuCard extends StatelessWidget {
               onTap: items[index].$3,
               showDivider: index < items.length - 1,
             ),
+          _SwitchItem(
+            icon: Icons.dark_mode_outlined,
+            label: 'Modo escuro',
+            value: isDark,
+            onChanged: onDarkModeChanged,
+            showDivider: false,
+          ),
         ],
       ),
     );
@@ -823,41 +929,6 @@ class _PersonalInfoLine extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreferenciasCard extends ConsumerWidget {
-  const _PreferenciasCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
-
-    return _Panel(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _SwitchItem(
-            icon: Icons.dark_mode_outlined,
-            label: 'Modo escuro',
-            value: isDark,
-            onChanged: (value) =>
-                ref.read(themeModeProvider.notifier).setDark(value),
-          ),
-          const _SwitchItem(
-            icon: Icons.notifications_none_rounded,
-            label: 'Receber lembretes',
-            value: true,
-          ),
-          const _SwitchItem(
-            icon: Icons.lock_outline_rounded,
-            label: 'Senha',
-            value: true,
-            showDivider: false,
           ),
         ],
       ),

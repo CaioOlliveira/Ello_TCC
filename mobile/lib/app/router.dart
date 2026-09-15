@@ -31,6 +31,7 @@ import '../features/medicamentos/presentation/medicamentos_page.dart';
 import '../features/monitoramento/presentation/monitoramento_page.dart';
 import '../features/perfil/presentation/perfil_page.dart';
 import '../features/permissoes/presentation/acessos_ficha_page.dart';
+import '../features/permissoes/presentation/acessos_historico_page.dart';
 import '../features/permissoes/presentation/permissoes_detalhadas_page.dart';
 import '../features/permissoes/presentation/permissoes_fichas_page.dart';
 import '../features/pressao/presentation/pressao_page.dart';
@@ -124,6 +125,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/perfil/seguranca',
         builder: (context, state) => const SegurancaPerfilPage(),
+      ),
+      GoRoute(
+        path: '/perfil/seguranca/senha',
+        builder: (context, state) => const AlterarSenhaPage(),
+      ),
+      GoRoute(
+        path: '/perfil/seguranca/acessos',
+        builder: (context, state) => const PermissoesFichasPage(),
+      ),
+      GoRoute(
+        path: '/perfil/seguranca/historico',
+        builder: (context, state) =>
+            const PermissoesFichasPage(historico: true),
+      ),
+      GoRoute(
+        path: '/perfil/seguranca/historico/recentes',
+        builder: (context, state) => AcessosHistoricoPage(
+          idosoId: state.uri.queryParameters['idosoId'] ?? '',
+        ),
       ),
       GoRoute(
         path: '/perfil/sobre',

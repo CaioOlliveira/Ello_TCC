@@ -12,7 +12,9 @@ import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class PermissoesFichasPage extends ConsumerWidget {
-  const PermissoesFichasPage({super.key});
+  const PermissoesFichasPage({super.key, this.historico = false});
+
+  final bool historico;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,16 +39,20 @@ class PermissoesFichasPage extends ConsumerWidget {
                     StaggeredEntry(
                       index: 0,
                       child: AppPageHeader(
-                        title: 'Permissões',
-                        onBack: () => context.go('/perfil'),
+                        title: historico
+                            ? 'Histórico de acessos'
+                            : 'Acessos compartilhados',
+                        onBack: () => context.go('/perfil/seguranca'),
                       ),
                     ),
                     const SizedBox(height: 6),
                     StaggeredEntry(
                       index: 2,
                       child: Text(
-                        'Fichas em que você é administrador. Toque em uma '
-                        'para gerenciar acessos e permissões.',
+                        historico
+                            ? 'Selecione uma ficha para consultar quem a acessou por último.'
+                            : 'Fichas em que você é administrador. Toque em uma '
+                                'para gerenciar acessos e permissões.',
                         style: TextStyle(
                           color: adaptive(context, const Color(0xFF4C4C4C),
                               AppDarkColors.textSecondary),
@@ -60,7 +66,10 @@ class PermissoesFichasPage extends ConsumerWidget {
                       child: fichasAsync.when(
                         data: (fichas) => fichas.isEmpty
                             ? const _EmptyAdminState()
-                            : _FichasAdministradasList(fichas: fichas),
+                            : _FichasAdministradasList(
+                                fichas: fichas,
+                                historico: historico,
+                              ),
                         loading: () => const Center(
                           child: CircularProgressIndicator(
                             color: Color(0xFF238FA1),
@@ -110,9 +119,13 @@ class PermissoesFichasPage extends ConsumerWidget {
 }
 
 class _FichasAdministradasList extends StatelessWidget {
-  const _FichasAdministradasList({required this.fichas});
+  const _FichasAdministradasList({
+    required this.fichas,
+    required this.historico,
+  });
 
   final List<IdosoResumo> fichas;
+  final bool historico;
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +137,7 @@ class _FichasAdministradasList extends StatelessWidget {
         final idoso = fichas[index];
         return StaggeredEntry(
           index: index,
-          child: _FichaAdminCard(idoso: idoso),
+          child: _FichaAdminCard(idoso: idoso, historico: historico),
         );
       },
     );
@@ -132,9 +145,10 @@ class _FichasAdministradasList extends StatelessWidget {
 }
 
 class _FichaAdminCard extends StatelessWidget {
-  const _FichaAdminCard({required this.idoso});
+  const _FichaAdminCard({required this.idoso, required this.historico});
 
   final IdosoResumo idoso;
+  final bool historico;
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +159,11 @@ class _FichaAdminCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go('/idoso/acessos?idosoId=${idoso.id}'),
+        onTap: () => context.go(
+          historico
+              ? '/perfil/seguranca/historico/recentes?idosoId=${idoso.id}'
+              : '/idoso/acessos?idosoId=${idoso.id}',
+        ),
         child: Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(

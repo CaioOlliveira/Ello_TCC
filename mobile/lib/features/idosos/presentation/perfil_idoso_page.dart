@@ -12,7 +12,6 @@ import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
@@ -46,44 +45,60 @@ class PerfilIdosoPage extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
               children: [
-                const AppPageHeader(title: 'Perfil da pessoa idosa'),
-                StaggeredEntry(
-                  index: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ActionIconButton(
-                        tooltip: 'Editar ficha',
-                        icon: Icons.edit_rounded,
-                        onTap: () =>
-                            context.go('/idosos/editar?from=idoso-perfil'),
+                AppPageHeader(
+                  title: 'Perfil da pessoa idosa',
+                  trailing: PopupMenuButton<_PerfilIdosoMenuAction>(
+                    tooltip: 'Opcoes da ficha',
+                    icon: const Icon(
+                      Icons.more_vert_rounded,
+                      color: Color(0xFF0E6F7E),
+                    ),
+                    onSelected: (action) {
+                      switch (action) {
+                        case _PerfilIdosoMenuAction.edit:
+                          context.go('/idosos/editar?from=idoso-perfil');
+                        case _PerfilIdosoMenuAction.share:
+                          _showCompartilharSheet(context, idoso.id);
+                        case _PerfilIdosoMenuAction.caregiverProfile:
+                          context.go('/perfil?from=idoso-perfil');
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: _PerfilIdosoMenuAction.edit,
+                        child: _PerfilIdosoMenuItem(
+                          icon: Icons.edit_rounded,
+                          label: 'Editar ficha',
+                        ),
                       ),
-                      const SizedBox(width: 10),
-                      ActionIconButton(
-                        tooltip: 'Compartilhar ficha',
-                        icon: Icons.ios_share_rounded,
-                        onTap: () => _showCompartilharSheet(context, idoso.id),
+                      PopupMenuItem(
+                        value: _PerfilIdosoMenuAction.share,
+                        child: _PerfilIdosoMenuItem(
+                          icon: Icons.ios_share_rounded,
+                          label: 'Compartilhar ficha',
+                        ),
                       ),
-                      const SizedBox(width: 10),
-                      ActionIconButton(
-                        tooltip: 'Perfil do cuidador',
-                        icon: Icons.person_rounded,
-                        onTap: () => context.go('/perfil?from=idoso-perfil'),
+                      PopupMenuItem(
+                        value: _PerfilIdosoMenuAction.caregiverProfile,
+                        child: _PerfilIdosoMenuItem(
+                          icon: Icons.person_rounded,
+                          label: 'Perfil do cuidador',
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 14),
-                StaggeredEntry(index: 1, child: _HeroCard(idoso: idoso)),
+                StaggeredEntry(index: 0, child: _HeroCard(idoso: idoso)),
                 const SizedBox(height: 16),
                 StaggeredEntry(
-                  index: 2,
+                  index: 1,
                   child: _EmergencyActionsCard(idoso: idoso),
                 ),
                 const SizedBox(height: 16),
                 if (idoso.tipoSanguineo?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 3,
+                    index: 2,
                     child: _InfoCard(
                       icon: Icons.water_drop_rounded,
                       title: 'Tipo sanguíneo',
@@ -92,7 +107,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                   ),
                 if (idoso.sexo?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 4,
+                    index: 3,
                     child: _InfoCard(
                       icon: Icons.badge_rounded,
                       title: 'Sexo',
@@ -101,7 +116,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                   ),
                 if (idoso.condicoes.isNotEmpty)
                   StaggeredEntry(
-                    index: 5,
+                    index: 4,
                     child: _InfoCard(
                       icon: Icons.monitor_heart_rounded,
                       title: 'Condições de saúde',
@@ -111,7 +126,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                 if (idoso.contatoEmergenciaNome?.isNotEmpty == true ||
                     idoso.contatoEmergenciaTelefone?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 6,
+                    index: 5,
                     child: _InfoCard(
                       icon: Icons.phone_rounded,
                       title: 'Contato de emergência',
@@ -125,7 +140,7 @@ class PerfilIdosoPage extends ConsumerWidget {
                   ),
                 if (idoso.alergiasRestricoes?.isNotEmpty == true)
                   StaggeredEntry(
-                    index: 7,
+                    index: 6,
                     child: _InfoCard(
                       icon: Icons.warning_amber_rounded,
                       title: 'Alergias ${personText.of}',
@@ -138,6 +153,27 @@ class PerfilIdosoPage extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+enum _PerfilIdosoMenuAction { edit, share, caregiverProfile }
+
+class _PerfilIdosoMenuItem extends StatelessWidget {
+  const _PerfilIdosoMenuItem({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF0E6F7E)),
+        const SizedBox(width: 10),
+        Text(label),
+      ],
     );
   }
 }

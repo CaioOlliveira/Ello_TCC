@@ -3197,7 +3197,9 @@ class ApiClient {
     }
   }
 
-  Future<void> limparConversaFamilia({
+  /// Returns false when an older API has not deployed the remote clear route.
+  /// The caller can still clear this device without exposing a route error.
+  Future<bool> limparConversaFamilia({
     required String idosoId,
     required String outroUsuarioId,
     required String accessToken,
@@ -3211,7 +3213,9 @@ class ApiClient {
         },
         options: _authenticatedOptions(accessToken),
       );
+      return true;
     } on DioException catch (error) {
+      if (error.response?.statusCode == 404) return false;
       throw _toApiException(
         error,
         fallback: 'Nao foi possivel limpar esta conversa.',
