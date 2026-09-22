@@ -30,6 +30,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
   bool _loading = true;
   bool _exporting = false;
   String? _error;
+  int _loadToken = 0;
 
   @override
   void initState() {
@@ -54,6 +55,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
       return;
     }
 
+    final loadToken = ++_loadToken;
     final range = _rangeAtual();
     setState(() {
       _loading = true;
@@ -67,16 +69,16 @@ class _GastosPageState extends ConsumerState<GastosPage> {
             fim: _isoDate(range.end),
             accessToken: usuario!.accessToken!,
           );
-      if (!mounted) return;
+      if (!mounted || loadToken != _loadToken) return;
       setState(() => _dados = dados);
     } on ApiException catch (error) {
-      if (!mounted) return;
+      if (!mounted || loadToken != _loadToken) return;
       setState(() => _error = error.message);
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || loadToken != _loadToken) return;
       setState(() => _error = 'Nao foi possivel carregar os gastos.');
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && loadToken == _loadToken) setState(() => _loading = false);
     }
   }
 

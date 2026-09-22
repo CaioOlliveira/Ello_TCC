@@ -2208,7 +2208,7 @@ class ApiClient {
       : _dio = Dio(
           BaseOptions(
             baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 10),
+            connectTimeout: const Duration(seconds: 18),
             receiveTimeout: const Duration(seconds: 30),
             headers: {'Content-Type': 'application/json'},
           ),
@@ -3166,25 +3166,35 @@ class ApiClient {
     required String fim,
     required String accessToken,
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.gastos,
-        queryParameters: {
-          'idosoId': idosoId,
-          'inicio': inicio,
-          'fim': fim,
-        },
-        options: _authenticatedOptions(accessToken),
-      );
-      final data = response.data?['dados'];
-      if (data is Map<String, dynamic>) return GastosPeriodo.fromJson(data);
-      return GastosPeriodo.fromJson(const <String, dynamic>{});
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Nao foi possivel carregar os gastos.',
-      );
+    DioException? lastError;
+
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final response = await _dio.get<Map<String, dynamic>>(
+          ApiEndpoints.gastos,
+          queryParameters: {
+            'idosoId': idosoId,
+            'inicio': inicio,
+            'fim': fim,
+          },
+          options: _authenticatedOptions(accessToken).copyWith(
+            receiveTimeout: const Duration(seconds: 40),
+          ),
+        );
+        final data = response.data?['dados'];
+        if (data is Map<String, dynamic>) return GastosPeriodo.fromJson(data);
+        return GastosPeriodo.fromJson(const <String, dynamic>{});
+      } on DioException catch (error) {
+        lastError = error;
+        if (!_isTransientNetworkError(error) || attempt == 2) break;
+        await Future<void>.delayed(Duration(milliseconds: 700 * (attempt + 1)));
+      }
     }
+
+    throw _toApiException(
+      lastError!,
+      fallback: 'Nao foi possivel carregar os gastos.',
+    );
   }
 
   Future<GastoResumo> criarGasto({
@@ -4867,6 +4877,16 @@ class ApiClient {
       statusCode: error.response?.statusCode,
     );
   }
+}
+
+bool _isTransientNetworkError(DioException error) {
+  return error.type == DioExceptionType.connectionTimeout ||
+      error.type == DioExceptionType.receiveTimeout ||
+      error.type == DioExceptionType.sendTimeout ||
+      error.type == DioExceptionType.connectionError ||
+      error.response?.statusCode == 502 ||
+      error.response?.statusCode == 503 ||
+      error.response?.statusCode == 504;
 }
 
 String _toIsoDateOnly(DateTime date) {

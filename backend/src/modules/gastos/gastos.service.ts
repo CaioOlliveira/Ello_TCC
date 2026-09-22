@@ -30,7 +30,6 @@ type Gasto = {
 };
 
 const gastosMemoria: Gasto[] = [];
-let schemaReady = false;
 
 const toIsoDate = (value: string | Date) => {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -51,30 +50,6 @@ const mapearGasto = (row: GastoRow): Gasto => ({
   criadoPorNome: row.usuario_nome ?? null,
   criadoEm: toIsoDateTime(row.criado_em),
 });
-
-async function ensureSchema() {
-  if (!isDatabaseEnabled || schemaReady) return;
-
-  await getPool().query(`
-    create table if not exists gastos_ficha (
-      id uuid primary key default gen_random_uuid(),
-      idoso_id uuid not null references fichas_idosos(id) on delete cascade,
-      valor numeric(12, 2) not null check (valor > 0),
-      descricao text not null,
-      fonte text not null,
-      data_gasto date not null default current_date,
-      criado_por_id uuid not null references usuarios(id) on delete restrict,
-      criado_em timestamptz not null default now()
-    )
-  `);
-
-  await getPool().query(`
-    create index if not exists idx_gastos_ficha_periodo
-      on gastos_ficha (idoso_id, data_gasto desc, criado_em desc)
-  `);
-
-  schemaReady = true;
-}
 
 async function validarResponsavelFicha(idosoId: string, usuarioId: string) {
   if (!isDatabaseEnabled) return;
@@ -144,7 +119,6 @@ export const gastosService = {
       return { dados, resumo: { total, inicio, fim } };
     }
 
-    await ensureSchema();
     await validarResponsavelFicha(input.idosoId, input.usuarioId);
 
     const result = await getPool().query<GastoRow>(
@@ -183,7 +157,6 @@ export const gastosService = {
       return gasto;
     }
 
-    await ensureSchema();
     await validarResponsavelFicha(input.idosoId, input.usuarioId);
 
     const result = await getPool().query<GastoRow>(
