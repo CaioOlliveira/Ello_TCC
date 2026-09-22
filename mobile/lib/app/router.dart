@@ -16,6 +16,7 @@ import '../features/chat/presentation/familia_chat_page.dart';
 import '../features/coraia/presentation/coraia_page.dart';
 import '../features/equipamentos/presentation/equipamentos_page.dart';
 import '../features/equipamentos/presentation/equipamentos_history_page.dart';
+import '../features/gastos/presentation/gastos_page.dart';
 import '../features/glicemia/presentation/glicemia_page.dart';
 import '../features/historico/presentation/historico_page.dart';
 import '../features/humor/presentation/humor_page.dart';
@@ -44,6 +45,7 @@ String? _moduleIdFromHistorico(String tipo) {
     'agenda' => 'Agenda',
     'alimentacao' => 'Alimentacao',
     'equipamentos' => 'Equipamentos',
+    'gastos' => 'Gastos',
     'glicemia' => 'Glicemia',
     'humor' => 'Humor',
     'insumos' => 'Insumos',
@@ -223,6 +225,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/gastos',
+            builder: (context, state) => const _OwnerAccessGate(
+              child: GastosPage(),
+            ),
+          ),
+          GoRoute(
               path: '/insumos',
               builder: (context, state) => const _ModuleAccessGate(
                     moduleId: 'Insumos',
@@ -289,6 +297,95 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+class _OwnerAccessGate extends ConsumerWidget {
+  const _OwnerAccessGate({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final idoso = ref.watch(selectedIdosoProvider);
+
+    if (idoso == null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.person_search_rounded,
+                    color: Color(0xFF147D8C),
+                    size: 56,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Selecione uma ficha para continuar.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.go('/idosos'),
+                    child: const Text('Escolher ficha'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (idoso.ehDono == true) return child;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.lock_outline_rounded,
+                  color: Color(0xFF147D8C),
+                  size: 56,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Acesso do responsavel',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Somente o responsavel pela ficha pode ver os gastos.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Color(0xFF65757C)),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: () => context.go('/monitoramento'),
+                  child: const Text('Voltar ao monitoramento'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _ModuleAccessGate extends ConsumerWidget {
   const _ModuleAccessGate({
@@ -609,8 +706,14 @@ class _AppShellState extends ConsumerState<AppShell>
         location == '/equipamentos' ||
         location == '/equipamentos/historico' ||
         location == '/alimentacao' ||
+        location == '/gastos' ||
+        location == '/glicemia' ||
         location == '/insumos' ||
+        location == '/medicamentos' ||
         location == '/humor' ||
+        location == '/pressao' ||
+        location == '/oxigenacao' ||
+        location == '/temperatura' ||
         location == '/corgia' ||
         location == '/coraia' ||
         location.startsWith('/chat/') ||

@@ -91,9 +91,21 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
   @override
   Widget build(BuildContext context) {
     final idoso = ref.watch(selectedIdosoProvider);
+    final visibleModuleIds = idoso == null
+        ? const <String>[]
+        : idoso.monitoramentosVisiveis
+            .where((id) => idoso.ehDono == true || id != 'Gastos')
+            .toList();
     final options = idoso == null
         ? const <MonitoramentoOption>[]
-        : monitoramentoOptionsByIds(idoso.monitoramentosVisiveis);
+        : [
+            ...monitoramentoOptionsByIds(visibleModuleIds),
+            if (idoso.ehDono == true)
+              for (final option in monitoramentoOptions)
+                if (option.id == 'Gastos' &&
+                    !visibleModuleIds.contains('Gastos'))
+                  option,
+          ];
     final canManageMonitoramentos = idoso?.podeEditarFicha ?? false;
     final hasFullAccess = idoso?.temAcessoTotal ?? false;
 

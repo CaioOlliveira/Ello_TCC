@@ -181,6 +181,88 @@ class IdosoResumo {
   }
 }
 
+class GastoResumo {
+  const GastoResumo({
+    required this.id,
+    required this.idosoId,
+    required this.valor,
+    required this.descricao,
+    required this.fonte,
+    required this.dataGasto,
+    required this.criadoPorId,
+    required this.criadoEm,
+    this.criadoPorNome,
+  });
+
+  factory GastoResumo.fromJson(Map<String, dynamic> json) {
+    return GastoResumo(
+      id: json['id']?.toString() ?? '',
+      idosoId:
+          json['idosoId']?.toString() ?? json['idoso_id']?.toString() ?? '',
+      valor: _numOrNull(json['valor']) ?? 0,
+      descricao: json['descricao']?.toString() ?? '',
+      fonte: json['fonte']?.toString() ?? '',
+      dataGasto: _parseDateOnly(
+            json['dataGasto']?.toString() ?? json['data_gasto']?.toString(),
+          ) ??
+          DateTime.now(),
+      criadoPorId: json['criadoPorId']?.toString() ??
+          json['criado_por_id']?.toString() ??
+          '',
+      criadoPorNome: json['criadoPorNome']?.toString() ??
+          json['usuarioNome']?.toString() ??
+          json['usuario_nome']?.toString(),
+      criadoEm: _parseLocalDateTime(json['criadoEm'] ?? json['criado_em']) ??
+          DateTime.now(),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final double valor;
+  final String descricao;
+  final String fonte;
+  final DateTime dataGasto;
+  final String criadoPorId;
+  final String? criadoPorNome;
+  final DateTime criadoEm;
+}
+
+class GastosPeriodo {
+  const GastosPeriodo({
+    required this.gastos,
+    required this.total,
+    required this.inicio,
+    required this.fim,
+  });
+
+  factory GastosPeriodo.fromJson(Map<String, dynamic> json) {
+    final dados = json['dados'];
+    final resumo = json['resumo'];
+    final resumoMap =
+        resumo is Map<String, dynamic> ? resumo : const <String, dynamic>{};
+    final now = DateTime.now();
+
+    return GastosPeriodo(
+      gastos: dados is List
+          ? dados
+              .whereType<Map<String, dynamic>>()
+              .map(GastoResumo.fromJson)
+              .toList()
+          : const [],
+      total: _numOrNull(resumoMap['total']) ?? 0,
+      inicio: _parseDateOnly(resumoMap['inicio']?.toString()) ??
+          DateTime(now.year, now.month),
+      fim: _parseDateOnly(resumoMap['fim']?.toString()) ?? now,
+    );
+  }
+
+  final List<GastoResumo> gastos;
+  final double total;
+  final DateTime inicio;
+  final DateTime fim;
+}
+
 int _idadeFromDate(String? value) {
   if (value == null || value.length < 10) return 0;
   final date = DateTime.tryParse(value.substring(0, 10));
@@ -192,6 +274,11 @@ int _idadeFromDate(String? value) {
     age--;
   }
   return age < 0 ? 0 : age;
+}
+
+DateTime? _parseDateOnly(String? value) {
+  if (value == null || value.length < 10) return null;
+  return DateTime.tryParse(value.substring(0, 10));
 }
 
 List<String> _stringList(dynamic value) {
@@ -3069,6 +3156,64 @@ class ApiClient {
       throw _toApiException(
         error,
         fallback: 'Não foi possível abrir este chat.',
+      );
+    }
+  }
+
+  Future<GastosPeriodo> listarGastos({
+    required String idosoId,
+    required String inicio,
+    required String fim,
+    required String accessToken,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.gastos,
+        queryParameters: {
+          'idosoId': idosoId,
+          'inicio': inicio,
+          'fim': fim,
+        },
+        options: _authenticatedOptions(accessToken),
+      );
+      final data = response.data?['dados'];
+      if (data is Map<String, dynamic>) return GastosPeriodo.fromJson(data);
+      return GastosPeriodo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel carregar os gastos.',
+      );
+    }
+  }
+
+  Future<GastoResumo> criarGasto({
+    required String idosoId,
+    required double valor,
+    required String descricao,
+    required String fonte,
+    required String dataGasto,
+    required String accessToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.gastos,
+        data: {
+          'idosoId': idosoId,
+          'valor': valor,
+          'descricao': descricao,
+          'fonte': fonte,
+          'dataGasto': dataGasto,
+        },
+        options: _authenticatedOptions(accessToken),
+      );
+      final data = response.data?['dados'];
+      if (data is Map<String, dynamic>) return GastoResumo.fromJson(data);
+      return GastoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel salvar o gasto.',
       );
     }
   }

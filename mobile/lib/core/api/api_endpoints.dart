@@ -28,6 +28,7 @@ class ApiEndpoints {
   static const agendaHistorico = '/agenda/historico';
   static const equipamentos = '/equipamentos';
   static const equipamentosHistorico = '/equipamentos/historico';
+  static const gastos = '/gastos';
   static const insumos = '/insumos';
   static const refeicoes = '/refeicoes';
   static const dicaAlimentacao = '/refeicoes/dica';

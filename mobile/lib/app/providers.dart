@@ -167,6 +167,7 @@ class AppNavigationStateLocal {
         path == '/agenda/historico' ||
         path == '/glicemia' ||
         path == '/alimentacao' ||
+        path == '/gastos' ||
         path == '/medicamentos' ||
         path == '/equipamentos' ||
         path == '/equipamentos/historico' ||

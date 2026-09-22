@@ -78,6 +78,14 @@ const monitoramentoOptions = [
     route: '/insumos',
   ),
   MonitoramentoOption(
+    id: 'Gastos',
+    title: 'Gastos',
+    selectionLabel: 'Gastos',
+    subtitle: 'Controle financeiro',
+    icon: Icons.payments_rounded,
+    route: '/gastos',
+  ),
+  MonitoramentoOption(
     id: 'Glicemia',
     title: 'Glicemia',
     selectionLabel: 'Glicemia',
