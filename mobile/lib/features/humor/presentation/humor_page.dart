@@ -687,17 +687,22 @@ class _Mood {
 }
 
 const _moods = [
-  _Mood('feliz', 'Feliz', 'Feliz', Icons.sentiment_satisfied_alt_rounded),
-  _Mood('calma', 'Calma', 'Calmo', Icons.sentiment_neutral_rounded),
+  _Mood('feliz', 'Feliz', 'Feliz', Icons.sentiment_very_satisfied_rounded),
+  _Mood('calma', 'Calma', 'Calmo', Icons.self_improvement_rounded),
   _Mood('triste', 'Triste', 'Triste', Icons.sentiment_dissatisfied_rounded),
   _Mood(
     'chorona',
     'Chorona',
     'Chorão',
+    Icons.water_drop_rounded,
+  ),
+  _Mood(
+    'irritada',
+    'Irritada',
+    'Irritado',
     Icons.sentiment_very_dissatisfied_rounded,
   ),
-  _Mood('irritada', 'Irritada', 'Irritado', Icons.mood_bad_rounded),
-  _Mood('sonolenta', 'Sonolenta', 'Sonolento', Icons.nights_stay_rounded),
+  _Mood('sonolenta', 'Sonolenta', 'Sonolento', Icons.bedtime_rounded),
 ];
 
 String _moodLabel(String id, IdosoResumo? idoso) {

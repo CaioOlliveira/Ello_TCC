@@ -7,6 +7,7 @@ import { chatFamiliaRoutes } from "../modules/chat-familia/chat-familia.routes.j
 import { convitesRoutes } from "../modules/convites/convites.routes.js";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes.js";
 import { equipamentosRoutes } from "../modules/equipamentos/equipamentos.routes.js";
+import { gastosRoutes } from "../modules/gastos/gastos.routes.js";
 import { glicemiaRoutes } from "../modules/glicemia/glicemia.routes.js";
 import { historicoRoutes } from "../modules/historico/historico.routes.js";
 import { iaRoutes } from "../modules/ia/ia.routes.js";
@@ -46,6 +47,7 @@ routes.use("/medicamentos", medicamentosRoutes);
 routes.use("/membros", membrosRoutes);
 routes.use("/agenda", agendaRoutes);
 routes.use("/equipamentos", equipamentosRoutes);
+routes.use("/gastos", gastosRoutes);
 routes.use("/insumos", insumosRoutes);
 routes.use("/notificacoes", notificacoesRoutes);
 routes.use("/oxigenacao", oxigenacaoRoutes);

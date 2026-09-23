@@ -28,6 +28,7 @@ class ApiEndpoints {
   static const agendaHistorico = '/agenda/historico';
   static const equipamentos = '/equipamentos';
   static const equipamentosHistorico = '/equipamentos/historico';
+  static const gastos = '/gastos';
   static const insumos = '/insumos';
   static const refeicoes = '/refeicoes';
   static const dicaAlimentacao = '/refeicoes/dica';
@@ -56,6 +57,7 @@ class ApiEndpoints {
   static String compromisso(String id) => '/agenda/$id';
   static String ocorrenciaCompromisso(String id) => '/agenda/$id/ocorrencias';
   static String equipamento(String id) => '/equipamentos/$id';
+  static String gasto(String id) => '/gastos/$id';
   static String insumo(String id) => '/insumos/$id';
   static String refeicao(String id) => '/refeicoes/$id';
   static String concluirRefeicao(String id) => '/refeicoes/$id/concluir';
