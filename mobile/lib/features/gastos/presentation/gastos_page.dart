@@ -196,8 +196,8 @@ class _GastosPageState extends ConsumerState<GastosPage> {
     _load();
   }
 
-  Future<void> _abrirCadastro() async {
-    final saved = await showModalBottomSheet<bool>(
+  Future<void> _abrirCadastro({GastoResumo? gasto}) async {
+    final saved = await showModalBottomSheet<GastoResumo>(
       context: context,
       isScrollControlled: true,
       backgroundColor:
@@ -205,9 +205,112 @@ class _GastosPageState extends ConsumerState<GastosPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => const _NovoGastoSheet(),
+      builder: (context) => _NovoGastoSheet(gasto: gasto),
     );
-    if (saved == true) await _load();
+    if (saved != null) _upsertGastoLocal(saved, replacingId: gasto?.id);
+  }
+
+  Future<void> _excluirGasto(GastoResumo gasto) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir gasto'),
+        content: Text('Deseja excluir "${gasto.descricao}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD94D4D),
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    final usuario = ref.read(authSessionProvider);
+    if (usuario?.accessToken?.isEmpty != false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Entre novamente para excluir o gasto.')),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(apiClientProvider).removerGasto(
+            id: gasto.id,
+            accessToken: usuario!.accessToken!,
+          );
+      _removeGastoLocal(gasto.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gasto excluido.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao foi possivel excluir o gasto.')),
+      );
+    }
+  }
+
+  void _upsertGastoLocal(GastoResumo gasto, {String? replacingId}) {
+    final dados = _dados;
+    if (dados == null) {
+      _load();
+      return;
+    }
+
+    final range = _rangeAtual();
+    final inRange =
+        !_startOfDay(gasto.dataGasto).isBefore(_startOfDay(range.start)) &&
+            !_startOfDay(gasto.dataGasto).isAfter(_startOfDay(range.end));
+    final gastos = List<GastoResumo>.from(dados.gastos);
+    final index =
+        gastos.indexWhere((item) => item.id == (replacingId ?? gasto.id));
+    final oldValue = index >= 0 ? gastos[index].valor : 0.0;
+
+    if (inRange) {
+      if (index >= 0) {
+        gastos[index] = gasto;
+      } else {
+        gastos.add(gasto);
+      }
+    } else if (index >= 0) {
+      gastos.removeAt(index);
+    }
+
+    gastos.sort(_compareGastos);
+    final newTotal = dados.total - oldValue + (inRange ? gasto.valor : 0.0);
+    setState(() {
+      _dados = dados.copyWith(gastos: gastos, total: newTotal);
+    });
+  }
+
+  void _removeGastoLocal(String id) {
+    final dados = _dados;
+    if (dados == null) return;
+    final gastos = List<GastoResumo>.from(dados.gastos);
+    final index = gastos.indexWhere((item) => item.id == id);
+    if (index < 0) return;
+    final removed = gastos.removeAt(index);
+    setState(() {
+      _dados = dados.copyWith(
+        gastos: gastos,
+        total: dados.total - removed.valor,
+      );
+    });
   }
 
   Future<void> _exportCsv() async {
@@ -312,7 +415,15 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                                           const EdgeInsets.only(bottom: 10),
                                       itemCount: gastos.length,
                                       itemBuilder: (context, index) =>
-                                          _GastoCard(gasto: gastos[index]),
+                                          _GastoCard(
+                                        gasto: gastos[index],
+                                        onEdit: () => _abrirCadastro(
+                                          gasto: gastos[index],
+                                        ),
+                                        onDelete: () => _excluirGasto(
+                                          gastos[index],
+                                        ),
+                                      ),
                                     ),
                     ),
                     const SizedBox(height: 12),
@@ -370,18 +481,36 @@ class _GastosPageState extends ConsumerState<GastosPage> {
 }
 
 class _NovoGastoSheet extends ConsumerStatefulWidget {
-  const _NovoGastoSheet();
+  const _NovoGastoSheet({this.gasto});
+
+  final GastoResumo? gasto;
 
   @override
   ConsumerState<_NovoGastoSheet> createState() => _NovoGastoSheetState();
 }
 
 class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
-  final _valorController = TextEditingController();
-  final _descricaoController = TextEditingController();
-  final _fonteController = TextEditingController();
-  DateTime _data = DateTime.now();
+  late final TextEditingController _valorController;
+  late final TextEditingController _descricaoController;
+  late final TextEditingController _fonteController;
+  late DateTime _data;
   bool _saving = false;
+
+  bool get _editing => widget.gasto != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final gasto = widget.gasto;
+    _valorController = TextEditingController(
+      text: gasto == null
+          ? ''
+          : gasto.valor.toStringAsFixed(2).replaceAll('.', ','),
+    );
+    _descricaoController = TextEditingController(text: gasto?.descricao ?? '');
+    _fonteController = TextEditingController(text: gasto?.fonte ?? '');
+    _data = gasto?.dataGasto ?? DateTime.now();
+  }
 
   @override
   void dispose() {
@@ -422,16 +551,26 @@ class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
 
     setState(() => _saving = true);
     try {
-      await ref.read(apiClientProvider).criarGasto(
-            idosoId: idoso.id,
-            valor: valor,
-            descricao: descricao,
-            fonte: fonte,
-            dataGasto: _isoDate(_data),
-            accessToken: usuario!.accessToken!,
-          );
+      final api = ref.read(apiClientProvider);
+      final gasto = _editing
+          ? await api.atualizarGasto(
+              id: widget.gasto!.id,
+              valor: valor,
+              descricao: descricao,
+              fonte: fonte,
+              dataGasto: _isoDate(_data),
+              accessToken: usuario!.accessToken!,
+            )
+          : await api.criarGasto(
+              idosoId: idoso.id,
+              valor: valor,
+              descricao: descricao,
+              fonte: fonte,
+              dataGasto: _isoDate(_data),
+              accessToken: usuario!.accessToken!,
+            );
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(gasto);
     } on ApiException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -462,7 +601,7 @@ class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Novo gasto',
+                _editing ? 'Editar gasto' : 'Novo gasto',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: adaptive(
@@ -533,7 +672,11 @@ class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
                       borderRadius: BorderRadius.circular(13),
                     ),
                   ),
-                  child: Text(_saving ? 'Salvando...' : 'Salvar'),
+                  child: Text(_saving
+                      ? 'Salvando...'
+                      : _editing
+                          ? 'Salvar alteracoes'
+                          : 'Salvar'),
                 ),
               ),
             ],
@@ -729,9 +872,15 @@ class _PeriodSelector extends StatelessWidget {
 }
 
 class _GastoCard extends StatelessWidget {
-  const _GastoCard({required this.gasto});
+  const _GastoCard({
+    required this.gasto,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final GastoResumo gasto;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -830,6 +979,31 @@ class _GastoCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(width: 2),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'editar') onEdit();
+              if (value == 'excluir') onDelete();
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'editar',
+                child: Text('Editar'),
+              ),
+              PopupMenuItem(
+                value: 'excluir',
+                child: Text('Excluir'),
+              ),
+            ],
+            icon: Icon(
+              Icons.more_vert_rounded,
+              color: adaptive(
+                context,
+                const Color(0xFF66777D),
+                AppDarkColors.textSecondary,
+              ),
+            ),
           ),
         ],
       ),
@@ -985,6 +1159,12 @@ String _formatCurrency(double value) {
     if (position > 1 && position % 3 == 1) buffer.write('.');
   }
   return 'R\$ ${buffer.toString()},${parts.last}';
+}
+
+int _compareGastos(GastoResumo left, GastoResumo right) {
+  final dateCompare = right.dataGasto.compareTo(left.dataGasto);
+  if (dateCompare != 0) return dateCompare;
+  return right.criadoEm.compareTo(left.criadoEm);
 }
 
 String _periodLabel(DateTimeRange range, _GastosPeriodoFiltro filtro) {

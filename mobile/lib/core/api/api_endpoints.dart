@@ -57,6 +57,7 @@ class ApiEndpoints {
   static String compromisso(String id) => '/agenda/$id';
   static String ocorrenciaCompromisso(String id) => '/agenda/$id/ocorrencias';
   static String equipamento(String id) => '/equipamentos/$id';
+  static String gasto(String id) => '/gastos/$id';
   static String insumo(String id) => '/insumos/$id';
   static String refeicao(String id) => '/refeicoes/$id';
   static String concluirRefeicao(String id) => '/refeicoes/$id/concluir';

@@ -48,3 +48,43 @@ with check (
       and f.criado_por_id = auth.uid()
   )
 );
+
+drop policy if exists gastos_ficha_responsavel_update
+on public.gastos_ficha;
+
+create policy gastos_ficha_responsavel_update
+on public.gastos_ficha
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.fichas_idosos f
+    where f.id = gastos_ficha.idoso_id
+      and f.criado_por_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.fichas_idosos f
+    where f.id = gastos_ficha.idoso_id
+      and f.criado_por_id = auth.uid()
+  )
+);
+
+drop policy if exists gastos_ficha_responsavel_delete
+on public.gastos_ficha;
+
+create policy gastos_ficha_responsavel_delete
+on public.gastos_ficha
+for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.fichas_idosos f
+    where f.id = gastos_ficha.idoso_id
+      and f.criado_por_id = auth.uid()
+  )
+);

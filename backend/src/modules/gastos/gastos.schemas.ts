@@ -30,5 +30,13 @@ export const criarGastoSchema = z.object({
   dataGasto: dateSchema,
 });
 
+export const atualizarGastoSchema = criarGastoSchema
+  .omit({ idosoId: true })
+  .partial()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "Informe ao menos um campo para atualizar.",
+  });
+
 export type ListarGastosQuery = z.infer<typeof listarGastosQuerySchema>;
 export type CriarGastoInput = z.infer<typeof criarGastoSchema>;
+export type AtualizarGastoInput = z.infer<typeof atualizarGastoSchema>;

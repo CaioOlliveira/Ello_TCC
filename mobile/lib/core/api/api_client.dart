@@ -261,6 +261,20 @@ class GastosPeriodo {
   final double total;
   final DateTime inicio;
   final DateTime fim;
+
+  GastosPeriodo copyWith({
+    List<GastoResumo>? gastos,
+    double? total,
+    DateTime? inicio,
+    DateTime? fim,
+  }) {
+    return GastosPeriodo(
+      gastos: gastos ?? this.gastos,
+      total: total ?? this.total,
+      inicio: inicio ?? this.inicio,
+      fim: fim ?? this.fim,
+    );
+  }
 }
 
 int _idadeFromDate(String? value) {
@@ -3224,6 +3238,53 @@ class ApiClient {
       throw _toApiException(
         error,
         fallback: 'Nao foi possivel salvar o gasto.',
+      );
+    }
+  }
+
+  Future<GastoResumo> atualizarGasto({
+    required String id,
+    required double valor,
+    required String descricao,
+    required String fonte,
+    required String dataGasto,
+    required String accessToken,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ApiEndpoints.gasto(id),
+        data: {
+          'valor': valor,
+          'descricao': descricao,
+          'fonte': fonte,
+          'dataGasto': dataGasto,
+        },
+        options: _authenticatedOptions(accessToken),
+      );
+      final data = response.data?['dados'];
+      if (data is Map<String, dynamic>) return GastoResumo.fromJson(data);
+      return GastoResumo.fromJson(const <String, dynamic>{});
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel atualizar o gasto.',
+      );
+    }
+  }
+
+  Future<void> removerGasto({
+    required String id,
+    required String accessToken,
+  }) async {
+    try {
+      await _dio.delete<void>(
+        ApiEndpoints.gasto(id),
+        options: _authenticatedOptions(accessToken),
+      );
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Nao foi possivel excluir o gasto.',
       );
     }
   }
