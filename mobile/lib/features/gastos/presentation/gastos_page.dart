@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
@@ -313,7 +313,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
     });
   }
 
-  Future<void> _exportCsv() async {
+  Future<void> _exportSpreadsheet() async {
     final dados = _dados;
     if (dados == null || dados.gastos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -324,30 +324,40 @@ class _GastosPageState extends ConsumerState<GastosPage> {
 
     setState(() => _exporting = true);
     try {
-      final csv = _buildCsv(dados.gastos);
       final range = _rangeAtual();
       final fileName =
-          'gastos-${_isoDate(range.start)}-a-${_isoDate(range.end)}.csv';
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: 'Salvar planilha de gastos',
-        fileName: fileName,
-        type: FileType.custom,
-        allowedExtensions: const ['csv'],
-        bytes: Uint8List.fromList(utf8.encode(csv)),
+          'gastos-${_isoDate(range.start)}-a-${_isoDate(range.end)}.xls';
+      final html = _buildStyledSpreadsheet(
+        gastos: dados.gastos,
+        total: dados.total,
+        periodo: _periodLabel(range, _filtro),
+      );
+      final box = context.findRenderObject() as RenderBox?;
+
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            Uint8List.fromList(utf8.encode(html)),
+            name: fileName,
+            mimeType: 'application/vnd.ms-excel',
+          ),
+        ],
+        text: 'Planilha de gastos do periodo ${_periodLabel(range, _filtro)}.',
+        subject: 'Gastos da ficha',
+        sharePositionOrigin:
+            box == null ? null : box.localToGlobal(Offset.zero) & box.size,
       );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            path == null ? 'Exportacao cancelada.' : 'Planilha gerada.',
-          ),
-        ),
+        const SnackBar(content: Text('Planilha pronta para compartilhar.')),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel gerar a planilha.')),
+        const SnackBar(
+          content: Text('Nao foi possivel compartilhar a planilha.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _exporting = false);
@@ -430,7 +440,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                     SizedBox(
                       height: 48,
                       child: OutlinedButton.icon(
-                        onPressed: _exporting ? null : _exportCsv,
+                        onPressed: _exporting ? null : _exportSpreadsheet,
                         icon: _exporting
                             ? const SizedBox(
                                 width: 16,
@@ -441,7 +451,11 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                             : const Icon(Icons.table_chart_rounded),
                         label: const Text('Gerar planilha'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF073248),
+                          foregroundColor: adaptive(
+                            context,
+                            const Color(0xFF073248),
+                            AppDarkColors.textPrimary,
+                          ),
                           side: const BorderSide(color: Color(0xFF2BA8BA)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(13),
@@ -652,7 +666,11 @@ class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
                 icon: const Icon(Icons.calendar_month_rounded),
                 label: const Text('Alterar data'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF073248),
+                  foregroundColor: adaptive(
+                    context,
+                    const Color(0xFF073248),
+                    AppDarkColors.textPrimary,
+                  ),
                   side: const BorderSide(color: Color(0xFF2BA8BA)),
                   minimumSize: const Size.fromHeight(46),
                   shape: RoundedRectangleBorder(
@@ -787,7 +805,11 @@ class _FiltroTabs extends StatelessWidget {
     return Container(
       height: 34,
       decoration: BoxDecoration(
-        color: const Color(0xFFBEE4E9),
+        color: adaptive(
+          context,
+          const Color(0xFFBEE4E9),
+          AppDarkColors.surfaceAlt,
+        ),
         borderRadius: BorderRadius.circular(999),
       ),
       clipBehavior: Clip.antiAlias,
@@ -810,7 +832,11 @@ class _FiltroTabs extends StatelessWidget {
                     style: TextStyle(
                       color: selected == option.$1
                           ? Colors.white
-                          : const Color(0xFF073248),
+                          : adaptive(
+                              context,
+                              const Color(0xFF073248),
+                              AppDarkColors.textPrimary,
+                            ),
                       fontSize: 11.5,
                       fontWeight: FontWeight.w800,
                     ),
@@ -844,7 +870,11 @@ class _PeriodSelector extends StatelessWidget {
         IconButton(
           onPressed: onPrevious,
           icon: const Icon(Icons.chevron_left_rounded),
-          color: const Color(0xFF0A7D8D),
+          color: adaptive(
+            context,
+            const Color(0xFF0A7D8D),
+            AppDarkColors.textPrimary,
+          ),
         ),
         Expanded(
           child: OutlinedButton.icon(
@@ -864,7 +894,11 @@ class _PeriodSelector extends StatelessWidget {
         IconButton(
           onPressed: onNext,
           icon: const Icon(Icons.chevron_right_rounded),
-          color: const Color(0xFF0A7D8D),
+          color: adaptive(
+            context,
+            const Color(0xFF0A7D8D),
+            AppDarkColors.textPrimary,
+          ),
         ),
       ],
     );
@@ -1096,24 +1130,108 @@ class _GastosError extends StatelessWidget {
   }
 }
 
-String _buildCsv(List<GastoResumo> gastos) {
-  final rows = <List<String>>[
-    ['Data', 'Valor', 'Descricao', 'Fonte', 'Registrado por', 'Criado em'],
-    for (final gasto in gastos)
-      [
-        _formatDate(gasto.dataGasto),
-        gasto.valor.toStringAsFixed(2).replaceAll('.', ','),
-        gasto.descricao,
-        gasto.fonte,
-        gasto.criadoPorNome ?? '',
-        '${_formatDate(gasto.criadoEm)} ${_formatTime(gasto.criadoEm)}',
-      ],
-  ];
+String _buildStyledSpreadsheet({
+  required List<GastoResumo> gastos,
+  required double total,
+  required String periodo,
+}) {
+  final rows = gastos.map((gasto) {
+    return '''
+      <tr>
+        <td>${_escapeHtml(_formatDate(gasto.dataGasto))}</td>
+        <td class="money">${_escapeHtml(_formatCurrency(gasto.valor))}</td>
+        <td>${_escapeHtml(gasto.descricao)}</td>
+        <td>${_escapeHtml(gasto.fonte)}</td>
+        <td>${_escapeHtml(gasto.criadoPorNome ?? '')}</td>
+        <td>${_escapeHtml('${_formatDate(gasto.criadoEm)} ${_formatTime(gasto.criadoEm)}')}</td>
+      </tr>
+    ''';
+  }).join();
 
-  return rows
-      .map((row) =>
-          row.map((cell) => '"${cell.replaceAll('"', '""')}"').join(';'))
-      .join('\n');
+  return '''
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            color: #17324D;
+          }
+          .summary {
+            background: #E8F6F8;
+            border: 1px solid #9AD6DE;
+            padding: 16px;
+            margin-bottom: 16px;
+          }
+          .brand {
+            color: #3396A8;
+            font-size: 26px;
+            font-weight: 700;
+          }
+          .total {
+            color: #D94D4D;
+            font-size: 22px;
+            font-weight: 700;
+          }
+          table {
+            border-collapse: collapse;
+            width: 100%;
+          }
+          th {
+            background: #3396A8;
+            color: #FFFFFF;
+            font-weight: 700;
+            border: 1px solid #2B8796;
+            padding: 10px;
+            text-align: left;
+          }
+          td {
+            border: 1px solid #D9E8EB;
+            padding: 9px;
+          }
+          tr:nth-child(even) {
+            background: #F6FAFB;
+          }
+          .money {
+            color: #D94D4D;
+            font-weight: 700;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="summary">
+          <div class="brand">Ello - Gastos da ficha</div>
+          <div>Periodo: ${_escapeHtml(periodo)}</div>
+          <div class="total">Total: ${_escapeHtml(_formatCurrency(total))}</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Valor</th>
+              <th>Descricao</th>
+              <th>Fonte</th>
+              <th>Registrado por</th>
+              <th>Criado em</th>
+            </tr>
+          </thead>
+          <tbody>
+            $rows
+          </tbody>
+        </table>
+      </body>
+    </html>
+  ''';
+}
+
+String _escapeHtml(String value) {
+  return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
 }
 
 double? _parseMoney(String value) {
