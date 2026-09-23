@@ -2129,7 +2129,10 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onResponse: (response, handler) {
-          if (response.requestOptions.method.toUpperCase() != 'GET') {
+          final shouldKeepInviteCache =
+              response.requestOptions.path == ApiEndpoints.convites;
+          if (response.requestOptions.method.toUpperCase() != 'GET' &&
+              !shouldKeepInviteCache) {
             _clearReadCaches();
           }
           handler.next(response);
@@ -2390,18 +2393,20 @@ class ApiClient {
     });
   }
 
-  Future<IdosoResumo> buscarIdoso({required String idosoId}) async {
-    try {
-      final response =
-          await _dio.get<Map<String, dynamic>>(ApiEndpoints.idoso(idosoId));
-      final dados = response.data?['dados'];
-      if (dados is Map<String, dynamic>) {
-        return IdosoResumo.fromJson(dados);
+  Future<IdosoResumo> buscarIdoso({required String idosoId}) {
+    return _cachedRead<IdosoResumo>('idoso:$idosoId', () async {
+      try {
+        final response =
+            await _dio.get<Map<String, dynamic>>(ApiEndpoints.idoso(idosoId));
+        final dados = response.data?['dados'];
+        if (dados is Map<String, dynamic>) {
+          return IdosoResumo.fromJson(dados);
+        }
+        throw const ApiException('Ficha não encontrada.');
+      } on DioException catch (error) {
+        throw _toApiException(error, fallback: 'Erro ao buscar ficha.');
       }
-      throw const ApiException('Ficha não encontrada.');
-    } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao buscar ficha.');
-    }
+    });
   }
 
   Future<Map<String, dynamic>> criarIdoso({
@@ -2462,27 +2467,32 @@ class ApiClient {
   Future<String> gerarConviteIdoso({
     required String idosoId,
     String? convidadoPorId,
-  }) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        ApiEndpoints.convites,
-        data: {
-          'idosoId': idosoId,
-          if (convidadoPorId != null && convidadoPorId.isNotEmpty)
-            'convidadoPorId': convidadoPorId,
-        },
-      );
-      final dados = response.data?['dados'];
-      if (dados is Map<String, dynamic>) {
-        return dados['codigo']?.toString() ?? '';
-      }
-      return '';
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao gerar código de convite.',
-      );
-    }
+  }) {
+    return _cachedRead<String>(
+      'convite-gerado:$idosoId:${convidadoPorId ?? ''}',
+      () async {
+        try {
+          final response = await _dio.post<Map<String, dynamic>>(
+            ApiEndpoints.convites,
+            data: {
+              'idosoId': idosoId,
+              if (convidadoPorId != null && convidadoPorId.isNotEmpty)
+                'convidadoPorId': convidadoPorId,
+            },
+          );
+          final dados = response.data?['dados'];
+          if (dados is Map<String, dynamic>) {
+            return dados['codigo']?.toString() ?? '';
+          }
+          return '';
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao gerar código de convite.',
+          );
+        }
+      },
+    );
   }
 
   Future<String> aceitarConviteIdoso({
@@ -2547,48 +2557,55 @@ class ApiClient {
   Future<ConviteFicha> obterConviteFicha({
     required String idosoId,
     String? usuarioId,
-  }) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        ApiEndpoints.convites,
-        data: {
-          'idosoId': idosoId,
-          if (usuarioId != null && usuarioId.isNotEmpty)
-            'convidadoPorId': usuarioId,
-        },
-      );
-      final dados = response.data?['dados'];
-      if (dados is Map<String, dynamic>) {
-        return ConviteFicha.fromJson(dados);
-      }
-      return const ConviteFicha(codigo: '');
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao gerar link de compartilhamento.',
-      );
-    }
+  }) {
+    return _cachedRead<ConviteFicha>(
+      'convite-ficha:$idosoId:${usuarioId ?? ''}',
+      () async {
+        try {
+          final response = await _dio.post<Map<String, dynamic>>(
+            ApiEndpoints.convites,
+            data: {
+              'idosoId': idosoId,
+              if (usuarioId != null && usuarioId.isNotEmpty)
+                'convidadoPorId': usuarioId,
+            },
+          );
+          final dados = response.data?['dados'];
+          if (dados is Map<String, dynamic>) {
+            return ConviteFicha.fromJson(dados);
+          }
+          return const ConviteFicha(codigo: '');
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao gerar link de compartilhamento.',
+          );
+        }
+      },
+    );
   }
 
   Future<List<MembroFicha>> listarParticipantes({
     required String idosoId,
-  }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.membrosParticipantes,
-        queryParameters: {'idosoId': idosoId},
-      );
-      final data = response.data?['dados'];
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(MembroFicha.fromJson)
-            .toList();
+  }) {
+    return _cachedRead<List<MembroFicha>>('membros:$idosoId', () async {
+      try {
+        final response = await _dio.get<Map<String, dynamic>>(
+          ApiEndpoints.membrosParticipantes,
+          queryParameters: {'idosoId': idosoId},
+        );
+        final data = response.data?['dados'];
+        if (data is List) {
+          return data
+              .whereType<Map<String, dynamic>>()
+              .map(MembroFicha.fromJson)
+              .toList();
+        }
+        return const [];
+      } on DioException catch (error) {
+        throw _toApiException(error, fallback: 'Erro ao listar participantes.');
       }
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(error, fallback: 'Erro ao listar participantes.');
-    }
+    });
   }
 
   Future<void> registrarPresenca({required String usuarioId}) async {
@@ -2604,26 +2621,31 @@ class ApiClient {
 
   Future<List<SolicitacaoPendente>> listarSolicitacoesPendentes({
     required String idosoId,
-  }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.membrosPendentes,
-        queryParameters: {'idosoId': idosoId},
-      );
-      final data = response.data?['dados'];
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(SolicitacaoPendente.fromJson)
-            .toList();
-      }
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Erro ao listar solicitacoes pendentes.',
-      );
-    }
+  }) {
+    return _cachedRead<List<SolicitacaoPendente>>(
+      'membros-pendentes:$idosoId',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.membrosPendentes,
+            queryParameters: {'idosoId': idosoId},
+          );
+          final data = response.data?['dados'];
+          if (data is List) {
+            return data
+                .whereType<Map<String, dynamic>>()
+                .map(SolicitacaoPendente.fromJson)
+                .toList();
+          }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Erro ao listar solicitacoes pendentes.',
+          );
+        }
+      },
+    );
   }
 
   Future<void> aprovarSolicitacao({

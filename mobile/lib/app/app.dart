@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -40,6 +41,17 @@ class ElloApp extends ConsumerWidget {
       routeInformationParser: router.routeInformationParser,
       routerDelegate: router.routerDelegate,
       backButtonDispatcher: _backButtonDispatcher,
+      onNavigationNotification: (notification) {
+        // Routes navigated with GoRouter.go replace the Navigator stack. Keep
+        // Android's predictive-back gesture enabled while our route history
+        // still has a screen to return to, otherwise Android closes the app
+        // before Flutter receives the gesture.
+        SystemNavigator.setFrameworkHandlesBack(
+          notification.canHandlePop ||
+              AppBackNavigation.instance.canHandleSystemBack,
+        );
+        return true;
+      },
     );
   }
 }

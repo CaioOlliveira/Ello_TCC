@@ -343,27 +343,34 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
           ),
           const SizedBox(height: 8),
           for (var i = 0; i < _participantes.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: StaggeredEntry(
-                index: 11 + i,
-                child: _ParticipanteCard(
-                  membro: _participantes[i],
-                  loading: _acaoEmAndamentoId == _participantes[i].id,
-                  onTap: _participantes[i].id == null
-                      ? null
-                      : () async {
-                          await context.push(
-                            '/permissoes/detalhes?membroId=${_participantes[i].id}',
-                          );
-                          if (mounted) _carregar();
-                        },
-                  onSelecionarCargo: (cargo) =>
-                      _alterarCargo(_participantes[i], cargo),
-                  onAlternarAdmin: () => _alternarAdmin(_participantes[i]),
-                  onRemover: () => _removerAcesso(_participantes[i]),
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                final membro = _participantes[i];
+                final membroId = membro.id;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: StaggeredEntry(
+                    index: 11 + i,
+                    child: _ParticipanteCard(
+                      membro: membro,
+                      loading:
+                          membroId != null && _acaoEmAndamentoId == membroId,
+                      onTap: membroId == null
+                          ? null
+                          : () async {
+                              await context.push(
+                                '/permissoes/detalhes?membroId=$membroId',
+                              );
+                              if (mounted) _carregar();
+                            },
+                      onSelecionarCargo: (cargo) =>
+                          _alterarCargo(membro, cargo),
+                      onAlternarAdmin: () => _alternarAdmin(membro),
+                      onRemover: () => _removerAcesso(membro),
+                    ),
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -890,31 +897,22 @@ class _ParticipanteCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              if (loading)
+              if (membro.eCriador)
+                const Tooltip(
+                  message: 'Responsável pela ficha',
+                  child: Icon(
+                    Icons.verified_user_rounded,
+                    color: Color(0xFF0D6E80),
+                    size: 25,
+                  ),
+                )
+              else if (loading)
                 const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     color: Color(0xFF2BA8BA),
-                  ),
-                )
-              else if (membro.eCriador)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: adaptive(context, const Color(0xFFE7F4F6),
-                        AppDarkColors.tintedInfo),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: const Text(
-                    'Administrador',
-                    style: TextStyle(
-                      color: Color(0xFF0D6E80),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
                   ),
                 )
               else

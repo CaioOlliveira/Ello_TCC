@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 /// Keeps the route history for screens navigated with [GoRouter.go].
@@ -28,9 +29,25 @@ class AppBackNavigation {
     _nextNavigationIsBack = true;
   }
 
+  /// Whether the app can consume a system-back request without closing the
+  /// Android activity.
+  bool get canHandleSystemBack {
+    final router = _router;
+    return router != null && (router.canPop() || _previousLocations.isNotEmpty);
+  }
+
   bool handleSystemBack() {
     final router = _router;
-    if (router == null || _previousLocations.isEmpty) return false;
+    if (router == null) return false;
+
+    // Screens opened with `push` still have a Navigator entry. Pop that
+    // entry first so the user returns to the immediately previous screen.
+    if (router.canPop()) {
+      router.pop();
+      return true;
+    }
+
+    if (_previousLocations.isEmpty) return false;
 
     final destination = _previousLocations.removeLast();
     _handlingSystemBack = true;
@@ -93,10 +110,33 @@ class AppBackButtonDispatcher extends RootBackButtonDispatcher {
   AppBackButtonDispatcher(this._navigation);
 
   final AppBackNavigation _navigation;
+  bool _handlingPredictiveBackGesture = false;
 
   @override
   Future<bool> didPopRoute() async {
     if (_navigation.handleSystemBack()) return true;
     return super.didPopRoute();
+  }
+
+  @override
+  bool handleStartBackGesture(PredictiveBackEvent backEvent) {
+    // On Android 13+, swiping from a screen edge is delivered through the
+    // predictive-back callbacks instead of didPopRoute. Claim it whenever the
+    // app has a Navigator entry or an in-app history entry to return to.
+    _handlingPredictiveBackGesture = _navigation.canHandleSystemBack;
+    return _handlingPredictiveBackGesture;
+  }
+
+  @override
+  void handleCommitBackGesture() {
+    if (_handlingPredictiveBackGesture) {
+      _navigation.handleSystemBack();
+    }
+    _handlingPredictiveBackGesture = false;
+  }
+
+  @override
+  void handleCancelBackGesture() {
+    _handlingPredictiveBackGesture = false;
   }
 }
