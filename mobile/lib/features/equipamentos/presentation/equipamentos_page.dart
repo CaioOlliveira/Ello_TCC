@@ -13,6 +13,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
+import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 part 'equipamentos_formularios.dart';
@@ -104,7 +105,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   }
 
   void _showNoEditPermission() {
-    _showMessage('Você não tem permissão para editar equipamentos.');
+    showEditPermissionDenied(context);
   }
 
   Future<void> _saveEquipamento(EquipamentoFormData data) async {

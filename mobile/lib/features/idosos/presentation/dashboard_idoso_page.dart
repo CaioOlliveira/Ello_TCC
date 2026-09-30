@@ -1124,30 +1124,35 @@ class _DashboardResumo {
 }
 
 String _glicemiaDashboardLabel(GlicemiaResumo resumo) {
-  final media = resumo.mediaDia ?? resumo.analise.mediaUltimos7Dias;
-  if (media == null) return 'não registrado ainda';
-  return '${media.round()} mg/dL';
+  final registro = resumo.ultima;
+  if (registro == null || !_isSameLocalDay(registro.medidoEm)) {
+    return 'não registrado ainda';
+  }
+  return '${registro.valor} mg/dL';
 }
 
 String _pressaoDashboardLabel(PressaoResumo resumo) {
-  final sistolica =
-      resumo.mediaSistolicaDia ?? resumo.analise.mediaUltimos7Dias;
-  final diastolica =
-      resumo.mediaDiastolicaDia ?? resumo.analise.mediaDiastolicaUltimos7Dias;
-  if (sistolica == null || diastolica == null) return 'não registrado ainda';
-  return '${sistolica.round()}/${diastolica.round()} mmHg';
+  final registro = resumo.ultima;
+  if (registro == null || !_isSameLocalDay(registro.medidoEm)) {
+    return 'não registrado ainda';
+  }
+  return '${registro.sistolica}/${registro.diastolica} mmHg';
 }
 
 String _oxigenacaoDashboardLabel(OxigenacaoResumo resumo) {
-  final spo2 = resumo.mediaSaturacaoDia ?? resumo.analise.mediaUltimos7Dias;
-  if (spo2 == null) return 'não registrado ainda';
-  return '${spo2.round()}% SpO2';
+  final registro = resumo.ultima;
+  if (registro == null || !_isSameLocalDay(registro.medidoEm)) {
+    return 'não registrado ainda';
+  }
+  return '${registro.saturacao}% SpO2';
 }
 
 String _temperaturaDashboardLabel(TemperaturaResumo resumo) {
-  final media = resumo.mediaTemperaturaDia ?? resumo.analise.mediaUltimos7Dias;
-  if (media == null) return 'não registrado ainda';
-  return '${_formatDecimal(media)} °C';
+  final registro = resumo.ultima;
+  if (registro == null || !_isSameLocalDay(registro.medidoEm)) {
+    return 'não registrado ainda';
+  }
+  return '${_formatDecimal(registro.temperatura)} °C';
 }
 
 class _DashboardCacheEntry {

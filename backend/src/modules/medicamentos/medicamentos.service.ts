@@ -4,6 +4,7 @@ import { getPool } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
 import { AppError } from "../../common/errors/app-error.js";
 import { parseLocalDate, periodRange } from "../../common/utils/date-utils.js";
+import { enviarPushMedicamento } from "../chat-familia/chat-push.service.js";
 import {
   deleteRow,
   getRowById,
@@ -13,7 +14,6 @@ import {
 } from "../../database/simple-crud.js";
 import type {
   AtualizarMedicamentoInput,
-  CancelarAdministracaoInput,
   CriarHorarioMedicamentoInput,
   CriarMedicamentoInput,
   RegistrarAdministracaoInput,
@@ -50,6 +50,188 @@ const fields = {
   alertaEstoqueBaixo: "alerta_estoque_baixo",
   ativo: "ativo",
 } as const;
+
+let solicitacoesTableReady: Promise<void> | null = null;
+
+const garantirTabelaSolicitacoesCancelamento = async () => {
+  if (!solicitacoesTableReady) {
+    solicitacoesTableReady = (async () => {
+      await getPool().query(`
+        create table if not exists solicitacoes_cancelamento_medicamento (
+          id uuid primary key default gen_random_uuid(),
+          idoso_id uuid not null references fichas_idosos(id) on delete cascade,
+          medicamento_id uuid not null references medicamentos(id) on delete cascade,
+          administracao_id uuid not null,
+          solicitante_id uuid not null references usuarios(id) on delete cascade,
+          responsavel_id uuid not null references usuarios(id) on delete cascade,
+          status varchar(16) not null default 'pendente'
+            check (status in ('pendente', 'aprovada', 'recusada')),
+          respondido_por_id uuid references usuarios(id) on delete set null,
+          criado_em timestamptz not null default now(),
+          respondido_em timestamptz
+        )
+      `);
+      await getPool().query(`
+        create unique index if not exists solicitacao_cancelamento_dose_pendente_idx
+          on solicitacoes_cancelamento_medicamento (administracao_id)
+          where status = 'pendente'
+      `);
+      await getPool().query(`
+        create index if not exists solicitacoes_cancelamento_responsavel_idx
+          on solicitacoes_cancelamento_medicamento (
+            responsavel_id,
+            idoso_id,
+            status,
+            criado_em desc
+          )
+      `);
+    })().catch((error) => {
+      solicitacoesTableReady = null;
+      throw error;
+    });
+  }
+  await solicitacoesTableReady;
+};
+
+const buscarDonoFicha = async (client: PoolClient, idosoId: string) => {
+  const result = await client.query<{ dono_id: string | null }>(
+    `
+      select coalesce(
+        (
+          select h.usuario_id
+          from historico_alteracoes h
+          where h.tipo_entidade = 'fichas_idosos'
+            and h.acao = 'criar'
+            and h.entidade_id::text = $1::uuid::text
+            and h.usuario_id is not null
+          order by h.criado_em asc
+          limit 1
+        ),
+        f.criado_por_id
+      ) as dono_id
+      from fichas_idosos f
+      where f.id = $1::uuid
+      limit 1
+    `,
+    [idosoId],
+  );
+  const donoId = result.rows[0]?.dono_id;
+  if (!donoId) {
+    throw new AppError(
+      "RESPONSAVEL_NAO_ENCONTRADO",
+      "Responsável pela ficha não encontrado.",
+      404,
+    );
+  }
+  return donoId;
+};
+
+const podeEditarMedicacoes = async (
+  client: PoolClient,
+  idosoId: string,
+  usuarioId: string,
+) => {
+  const result = await client.query<{ permitido: boolean }>(
+    `
+      select exists (
+        select 1
+        from membros_ficha mf
+        where mf.idoso_id = $1
+          and mf.usuario_id = $2
+          and mf.status = 'ativo'
+          and (
+            mf.e_administrador = true
+            or coalesce(mf.permissoes -> 'editar', '[]'::jsonb) ? 'Medicacoes'
+          )
+      ) as permitido
+    `,
+    [idosoId, usuarioId],
+  );
+  return result.rows[0]?.permitido === true;
+};
+
+const cancelarAdministracaoComCliente = async (
+  client: PoolClient,
+  medicamentoId: string,
+  administracaoId: string,
+  idosoId: string,
+  usuarioId: string,
+) => {
+  const administracaoResult = await client.query<Record<string, unknown>>(
+    `
+      select am.*
+      from administracoes_medicamentos am
+      inner join medicamentos m on m.id = am.medicamento_id
+      where am.id = $1
+        and am.medicamento_id = $2
+        and am.idoso_id = $3
+      for update of am, m
+    `,
+    [administracaoId, medicamentoId, idosoId],
+  );
+  const administracao = administracaoResult.rows[0];
+
+  if (!administracao) {
+    throw new AppError(
+      "ADMINISTRACAO_NAO_ENCONTRADA",
+      "Administração não encontrada para esta ficha.",
+      404,
+    );
+  }
+  if (String(administracao.status).toLowerCase() !== "tomado") {
+    throw new AppError(
+      "ADMINISTRACAO_NAO_CANCELAVEL",
+      "Somente doses marcadas como tomadas podem ser canceladas.",
+      409,
+    );
+  }
+
+  await client.query("delete from administracoes_medicamentos where id = $1", [
+    administracaoId,
+  ]);
+
+  const quantidadeDose = Number(administracao.quantidade_dose);
+  if (Number.isFinite(quantidadeDose) && quantidadeDose > 0) {
+    await client.query(
+      `
+        update medicamentos
+        set quantidade_estoque = coalesce(quantidade_estoque, 0) + $1
+        where id = $2
+      `,
+      [quantidadeDose, medicamentoId],
+    );
+  }
+
+  const administracaoCancelada = {
+    ...administracao,
+    status: "cancelado",
+    cancelado_em: new Date().toISOString(),
+  };
+  await client.query(
+    `
+      insert into historico_alteracoes (
+        idoso_id,
+        usuario_id,
+        acao,
+        tipo_entidade,
+        entidade_id,
+        dados_anteriores,
+        dados_novos
+      )
+      values ($1, $2, $3, $4, $5, $6, $7)
+    `,
+    [
+      idosoId,
+      usuarioId,
+      "cancelar_administracao",
+      "administracoes_medicamentos",
+      administracaoId,
+      JSON.stringify(administracao),
+      JSON.stringify(administracaoCancelada),
+    ],
+  );
+  return administracaoCancelada;
+};
 
 const FUSO_CUIDADO_OFFSET = "-03:00";
 
@@ -1014,92 +1196,29 @@ export const medicamentosService = {
   async cancelarAdministracao(
     medicamentoId: string,
     administracaoId: string,
-    input: CancelarAdministracaoInput,
+    idosoId: string,
+    usuarioId: string,
   ) {
-    const registradoPorId = await resolverUsuarioRegistroId(
-      input.registradoPorId,
-    );
     const pool = getPool();
     const client = await pool.connect();
 
     try {
       await client.query("begin");
-      const administracaoResult = await client.query<Record<string, unknown>>(
-        `
-          select am.*
-          from administracoes_medicamentos am
-          inner join medicamentos m on m.id = am.medicamento_id
-          where am.id = $1
-            and am.medicamento_id = $2
-            and am.idoso_id = $3
-          for update of am, m
-        `,
-        [administracaoId, medicamentoId, input.idosoId],
-      );
-      const administracao = administracaoResult.rows[0];
-
-      if (!administracao) {
+      const donoId = await buscarDonoFicha(client, idosoId);
+      if (donoId !== usuarioId) {
         throw new AppError(
-          "ADMINISTRACAO_NAO_ENCONTRADA",
-          "Administra\u00e7\u00e3o n\u00e3o encontrada para esta ficha.",
-          404,
+          "CANCELAMENTO_EXIGE_RESPONSAVEL",
+          "Somente o responsável pela ficha pode cancelar a dose.",
+          403,
         );
       }
-
-      if (String(administracao.status).toLowerCase() !== "tomado") {
-        throw new AppError(
-          "ADMINISTRACAO_NAO_CANCELAVEL",
-          "Somente doses marcadas como tomadas podem ser canceladas.",
-          409,
-        );
-      }
-
-      await client.query(
-        "delete from administracoes_medicamentos where id = $1",
-        [administracaoId],
+      const administracaoCancelada = await cancelarAdministracaoComCliente(
+        client,
+        medicamentoId,
+        administracaoId,
+        idosoId,
+        usuarioId,
       );
-
-      const quantidadeDose = Number(administracao.quantidade_dose);
-      if (Number.isFinite(quantidadeDose) && quantidadeDose > 0) {
-        await client.query(
-          `
-            update medicamentos
-            set quantidade_estoque = coalesce(quantidade_estoque, 0) + $1
-            where id = $2
-          `,
-          [quantidadeDose, medicamentoId],
-        );
-      }
-
-      const administracaoCancelada = {
-        ...administracao,
-        status: "cancelado",
-        cancelado_em: new Date().toISOString(),
-      };
-      await client.query(
-        `
-          insert into historico_alteracoes (
-            idoso_id,
-            usuario_id,
-            acao,
-            tipo_entidade,
-            entidade_id,
-            dados_anteriores,
-            dados_novos
-          )
-          values ($1, $2, $3, $4, $5, $6, $7)
-        `,
-        [
-          input.idosoId,
-          registradoPorId,
-          "cancelar_administracao",
-          "administracoes_medicamentos",
-          administracaoId,
-          JSON.stringify(administracao),
-          JSON.stringify(administracaoCancelada),
-        ],
-      );
-
       await client.query("commit");
       return administracaoCancelada;
     } catch (error) {
@@ -1107,6 +1226,320 @@ export const medicamentosService = {
       throw error;
     } finally {
       client.release();
+    }
+  },
+
+  async solicitarCancelamentoAdministracao(
+    medicamentoId: string,
+    administracaoId: string,
+    idosoId: string,
+    solicitanteId: string,
+  ) {
+    await garantirTabelaSolicitacoesCancelamento();
+    const client = await getPool().connect();
+    let push:
+      | {
+          responsavelId: string;
+          solicitacaoId: string;
+          medicamentoNome: string;
+          solicitanteNome: string;
+        }
+      | undefined;
+
+    try {
+      await client.query("begin");
+      const responsavelId = await buscarDonoFicha(client, idosoId);
+      if (responsavelId === solicitanteId) {
+        throw new AppError(
+          "RESPONSAVEL_CANCELA_DIRETAMENTE",
+          "O responsável pode cancelar a dose diretamente.",
+          409,
+        );
+      }
+      if (!(await podeEditarMedicacoes(client, idosoId, solicitanteId))) {
+        throw new AppError(
+          "SEM_PERMISSAO_EDITAR_MEDICAMENTOS",
+          "Você não tem permissão para editar medicamentos.",
+          403,
+        );
+      }
+
+      const doseResult = await client.query<{
+        medicamento_nome: string;
+        solicitante_nome: string;
+      }>(
+        `
+          select m.nome as medicamento_nome, u.nome as solicitante_nome
+          from administracoes_medicamentos am
+          join medicamentos m on m.id = am.medicamento_id
+          join usuarios u on u.id = $4
+          where am.id = $1
+            and am.medicamento_id = $2
+            and am.idoso_id = $3
+            and lower(am.status) = 'tomado'
+          limit 1
+        `,
+        [administracaoId, medicamentoId, idosoId, solicitanteId],
+      );
+      const dose = doseResult.rows[0];
+      if (!dose) {
+        throw new AppError(
+          "ADMINISTRACAO_NAO_CANCELAVEL",
+          "A dose não foi encontrada ou não pode mais ser cancelada.",
+          409,
+        );
+      }
+
+      const existente = await client.query<Record<string, unknown>>(
+        `
+          select *
+          from solicitacoes_cancelamento_medicamento
+          where administracao_id = $1 and status = 'pendente'
+          limit 1
+        `,
+        [administracaoId],
+      );
+      if (existente.rows[0]) {
+        await client.query("commit");
+        return existente.rows[0];
+      }
+
+      const result = await client.query<Record<string, unknown>>(
+        `
+          insert into solicitacoes_cancelamento_medicamento (
+            idoso_id,
+            medicamento_id,
+            administracao_id,
+            solicitante_id,
+            responsavel_id
+          )
+          values ($1, $2, $3, $4, $5)
+          returning *
+        `,
+        [idosoId, medicamentoId, administracaoId, solicitanteId, responsavelId],
+      );
+      const solicitacao = result.rows[0];
+      const solicitacaoId = String(solicitacao.id);
+      const mensagem = `${dose.solicitante_nome} solicitou o cancelamento da dose de ${dose.medicamento_nome}.`;
+      await client.query(
+        `
+          insert into notificacoes (
+            idoso_id,
+            usuario_id,
+            titulo,
+            mensagem,
+            tipo_notificacao,
+            tipo_entidade_relacionada,
+            entidade_relacionada_id,
+            programado_para
+          )
+          values ($1, $2, $3, $4, $5, $6, $7, now())
+        `,
+        [
+          idosoId,
+          responsavelId,
+          "Cancelamento de medicação",
+          mensagem,
+          "solicitacao_cancelamento_medicamento",
+          "solicitacoes_cancelamento_medicamento",
+          solicitacaoId,
+        ],
+      );
+      await client.query("commit");
+      push = {
+        responsavelId,
+        solicitacaoId,
+        medicamentoNome: dose.medicamento_nome,
+        solicitanteNome: dose.solicitante_nome,
+      };
+      return solicitacao;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+      if (push) {
+        void enviarPushMedicamento({
+          destinatarioId: push.responsavelId,
+          titulo: "Cancelamento de medicação",
+          mensagem: `${push.solicitanteNome} quer cancelar a dose de ${push.medicamentoNome}.`,
+          idosoId,
+          solicitacaoId: push.solicitacaoId,
+        }).catch(() => undefined);
+      }
+    }
+  },
+
+  async listarSolicitacoesCancelamento(idosoId: string, responsavelId: string) {
+    await garantirTabelaSolicitacoesCancelamento();
+    const client = await getPool().connect();
+    try {
+      const donoId = await buscarDonoFicha(client, idosoId);
+      if (donoId !== responsavelId) {
+        throw new AppError(
+          "APENAS_RESPONSAVEL_LISTA_SOLICITACOES",
+          "Somente o responsável pode consultar estas solicitações.",
+          403,
+        );
+      }
+      const result = await client.query(
+        `
+          select
+            s.id,
+            s.idoso_id as "idosoId",
+            s.medicamento_id as "medicamentoId",
+            s.administracao_id as "administracaoId",
+            s.solicitante_id as "solicitanteId",
+            u.nome as "solicitanteNome",
+            m.nome as "medicamentoNome",
+            m.dosagem,
+            s.status,
+            s.criado_em as "criadoEm"
+          from solicitacoes_cancelamento_medicamento s
+          join usuarios u on u.id = s.solicitante_id
+          join medicamentos m on m.id = s.medicamento_id
+          where s.idoso_id = $1
+            and s.responsavel_id = $2
+            and s.status = 'pendente'
+          order by s.criado_em asc
+        `,
+        [idosoId, responsavelId],
+      );
+      return result.rows;
+    } finally {
+      client.release();
+    }
+  },
+
+  async responderSolicitacaoCancelamento(
+    solicitacaoId: string,
+    aprovar: boolean,
+    responsavelId: string,
+  ) {
+    await garantirTabelaSolicitacoesCancelamento();
+    const client = await getPool().connect();
+    let notificacaoResposta:
+      | { destinatarioId: string; idosoId: string; medicamentoNome: string }
+      | undefined;
+
+    try {
+      await client.query("begin");
+      const result = await client.query<{
+        id: string;
+        idoso_id: string;
+        medicamento_id: string;
+        administracao_id: string;
+        solicitante_id: string;
+        responsavel_id: string;
+        status: string;
+        medicamento_nome: string;
+      }>(
+        `
+          select s.*, m.nome as medicamento_nome
+          from solicitacoes_cancelamento_medicamento s
+          join medicamentos m on m.id = s.medicamento_id
+          where s.id = $1
+          for update of s
+        `,
+        [solicitacaoId],
+      );
+      const solicitacao = result.rows[0];
+      if (!solicitacao || solicitacao.responsavel_id !== responsavelId) {
+        throw new AppError(
+          "SOLICITACAO_NAO_ENCONTRADA",
+          "Solicitação de cancelamento não encontrada.",
+          404,
+        );
+      }
+      if (solicitacao.status !== "pendente") {
+        throw new AppError(
+          "SOLICITACAO_JA_RESPONDIDA",
+          "Esta solicitação já foi respondida.",
+          409,
+        );
+      }
+
+      if (aprovar) {
+        await cancelarAdministracaoComCliente(
+          client,
+          solicitacao.medicamento_id,
+          solicitacao.administracao_id,
+          solicitacao.idoso_id,
+          responsavelId,
+        );
+      }
+      const status = aprovar ? "aprovada" : "recusada";
+      const atualizado = await client.query<Record<string, unknown>>(
+        `
+          update solicitacoes_cancelamento_medicamento
+          set status = $2,
+              respondido_por_id = $3,
+              respondido_em = now()
+          where id = $1
+          returning *
+        `,
+        [solicitacaoId, status, responsavelId],
+      );
+      await client.query(
+        `
+          update notificacoes
+          set lido_em = coalesce(lido_em, now())
+          where tipo_entidade_relacionada = 'solicitacoes_cancelamento_medicamento'
+            and entidade_relacionada_id = $1
+            and usuario_id = $2
+        `,
+        [solicitacaoId, responsavelId],
+      );
+      const mensagem = aprovar
+        ? `O cancelamento da dose de ${solicitacao.medicamento_nome} foi aprovado.`
+        : `O cancelamento da dose de ${solicitacao.medicamento_nome} foi recusado.`;
+      await client.query(
+        `
+          insert into notificacoes (
+            idoso_id,
+            usuario_id,
+            titulo,
+            mensagem,
+            tipo_notificacao,
+            tipo_entidade_relacionada,
+            entidade_relacionada_id,
+            programado_para
+          )
+          values ($1, $2, $3, $4, $5, $6, $7, now())
+        `,
+        [
+          solicitacao.idoso_id,
+          solicitacao.solicitante_id,
+          "Solicitação de medicação respondida",
+          mensagem,
+          "resposta_cancelamento_medicamento",
+          "solicitacoes_cancelamento_medicamento",
+          solicitacaoId,
+        ],
+      );
+      await client.query("commit");
+      notificacaoResposta = {
+        destinatarioId: solicitacao.solicitante_id,
+        idosoId: solicitacao.idoso_id,
+        medicamentoNome: solicitacao.medicamento_nome,
+      };
+      return atualizado.rows[0];
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+      if (notificacaoResposta) {
+        void enviarPushMedicamento({
+          destinatarioId: notificacaoResposta.destinatarioId,
+          titulo: "Solicitação respondida",
+          mensagem: aprovar
+            ? `O cancelamento de ${notificacaoResposta.medicamentoNome} foi aprovado.`
+            : `O cancelamento de ${notificacaoResposta.medicamentoNome} foi recusado.`,
+          idosoId: notificacaoResposta.idosoId,
+          solicitacaoId,
+        }).catch(() => undefined);
+      }
     }
   },
 };

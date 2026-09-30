@@ -37,7 +37,14 @@ export const registrarAdministracaoSchema = z.object({
 
 export const cancelarAdministracaoSchema = z.object({
   idosoId: z.string().uuid("Idoso inv\u00e1lido."),
-  registradoPorId: z.string().uuid().optional(),
+});
+
+export const listarSolicitacoesCancelamentoSchema = z.object({
+  idosoId: z.string().uuid("Idoso inv\u00e1lido."),
+});
+
+export const responderSolicitacaoCancelamentoSchema = z.object({
+  aprovar: z.boolean(),
 });
 
 export const administracaoParamSchema = z.object({
@@ -79,6 +86,9 @@ export type RegistrarAdministracaoInput = z.infer<
 >;
 export type CancelarAdministracaoInput = z.infer<
   typeof cancelarAdministracaoSchema
+>;
+export type ResponderSolicitacaoCancelamentoInput = z.infer<
+  typeof responderSolicitacaoCancelamentoSchema
 >;
 export type SubstituirHorariosMedicamentoInput = z.infer<
   typeof substituirHorariosMedicamentoSchema

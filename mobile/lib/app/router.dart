@@ -517,6 +517,10 @@ class _AppShellState extends ConsumerState<AppShell>
   StreamSubscription<String>? _localNotificationSubscription;
   StreamSubscription<ChatPushPayload>? _pushOpenedSubscription;
   StreamSubscription<ChatPushPayload>? _pushForegroundSubscription;
+  StreamSubscription<MedicationCancellationPushPayload>?
+      _medicationPushOpenedSubscription;
+  StreamSubscription<MedicationCancellationPushPayload>?
+      _medicationPushForegroundSubscription;
   String? _configuredChatKey;
   String? _pendingChatKey;
   String? _lastWarmupIdosoId;
@@ -528,8 +532,8 @@ class _AppShellState extends ConsumerState<AppShell>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _localNotificationSubscription = LocalNotificationService.instance.responses
-        .listen(_openChatFromPayload);
+    _localNotificationSubscription =
+        LocalNotificationService.instance.responses.listen(_openPushPayload);
     _pushOpenedSubscription = PushNotificationService.instance.openedMessages
         .listen(_openChatFromPush);
     _pushForegroundSubscription =
@@ -542,9 +546,26 @@ class _AppShellState extends ConsumerState<AppShell>
             ),
           );
     });
+    _medicationPushOpenedSubscription = PushNotificationService
+        .instance.openedMedicationMessages
+        .listen(_openMedicationFromPush);
+    _medicationPushForegroundSubscription = PushNotificationService
+        .instance.foregroundMedicationMessages
+        .listen((payload) {
+      unawaited(
+        LocalNotificationService.instance.showNow(
+          id: stableNotificationId(
+            'medication-cancellation:${payload.requestId}',
+          ),
+          title: payload.title,
+          body: payload.body,
+          payload: 'medication:${payload.idosoId}',
+        ),
+      );
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final payload = LocalNotificationService.instance.takeLaunchPayload();
-      if (payload != null) _openChatFromPayload(payload);
+      if (payload != null) _openPushPayload(payload);
       _syncSelectedIdoso();
     });
     _permissionsSyncTimer = Timer.periodic(
@@ -560,6 +581,8 @@ class _AppShellState extends ConsumerState<AppShell>
     _localNotificationSubscription?.cancel();
     _pushOpenedSubscription?.cancel();
     _pushForegroundSubscription?.cancel();
+    _medicationPushOpenedSubscription?.cancel();
+    _medicationPushForegroundSubscription?.cancel();
     super.dispose();
   }
 
@@ -615,14 +638,47 @@ class _AppShellState extends ConsumerState<AppShell>
     }
   }
 
-  Future<void> _openChatFromPayload(String payload) async {
+  Future<void> _openPushPayload(String payload) async {
     final parts = payload.split(':');
-    if (parts.length != 3 || parts.first != 'chat') return;
-    await _openChatFromNotification(parts[1], parts[2]);
+    if (parts.length == 3 && parts.first == 'chat') {
+      await _openChatFromNotification(parts[1], parts[2]);
+      return;
+    }
+    if (parts.length == 2 && parts.first == 'medication') {
+      await _openMedicationNotification(parts[1]);
+    }
   }
 
   Future<void> _openChatFromPush(ChatPushPayload payload) {
     return _openChatFromNotification(payload.idosoId, payload.peerId);
+  }
+
+  Future<void> _openMedicationFromPush(
+    MedicationCancellationPushPayload payload,
+  ) {
+    return _openMedicationNotification(payload.idosoId);
+  }
+
+  Future<void> _openMedicationNotification(String idosoId) async {
+    final usuario = ref.read(authSessionProvider);
+    if (usuario == null || usuario.id.isEmpty || idosoId.isEmpty) return;
+
+    final selected = ref.read(selectedIdosoProvider);
+    if (selected?.id != idosoId) {
+      try {
+        final idosos = await ref
+            .read(apiClientProvider)
+            .listarIdosos(usuarioId: usuario.id, forceRefresh: true);
+        final idoso = idosos.where((item) => item.id == idosoId).firstOrNull;
+        if (idoso == null) return;
+        ref.read(selectedIdosoProvider.notifier).state = idoso;
+      } catch (_) {
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    context.go('/medicamentos');
   }
 
   Future<void> _openChatFromNotification(

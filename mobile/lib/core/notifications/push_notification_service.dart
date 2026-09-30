@@ -28,6 +28,34 @@ class ChatPushPayload {
   bool get isValid => idosoId.isNotEmpty && peerId.isNotEmpty;
 }
 
+class MedicationCancellationPushPayload {
+  const MedicationCancellationPushPayload({
+    required this.idosoId,
+    required this.requestId,
+    required this.title,
+    required this.body,
+  });
+
+  factory MedicationCancellationPushPayload.fromMessage(
+    RemoteMessage message,
+  ) {
+    return MedicationCancellationPushPayload(
+      idosoId: message.data['idosoId']?.toString() ?? '',
+      requestId: message.data['solicitacaoId']?.toString() ?? '',
+      title: message.notification?.title ?? 'Solicitação de medicação',
+      body: message.notification?.body ??
+          'Há uma nova solicitação relacionada a uma dose.',
+    );
+  }
+
+  final String idosoId;
+  final String requestId;
+  final String title;
+  final String body;
+
+  bool get isValid => idosoId.isNotEmpty && requestId.isNotEmpty;
+}
+
 class PushNotificationService {
   PushNotificationService._();
 
@@ -35,6 +63,10 @@ class PushNotificationService {
 
   final _foregroundMessages = StreamController<ChatPushPayload>.broadcast();
   final _openedMessages = StreamController<ChatPushPayload>.broadcast();
+  final _foregroundMedicationMessages =
+      StreamController<MedicationCancellationPushPayload>.broadcast();
+  final _openedMedicationMessages =
+      StreamController<MedicationCancellationPushPayload>.broadcast();
 
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
@@ -47,6 +79,10 @@ class PushNotificationService {
 
   Stream<ChatPushPayload> get foregroundMessages => _foregroundMessages.stream;
   Stream<ChatPushPayload> get openedMessages => _openedMessages.stream;
+  Stream<MedicationCancellationPushPayload> get foregroundMedicationMessages =>
+      _foregroundMedicationMessages.stream;
+  Stream<MedicationCancellationPushPayload> get openedMedicationMessages =>
+      _openedMedicationMessages.stream;
 
   Future<void> configure({
     required ApiClient api,
@@ -77,10 +113,10 @@ class PushNotificationService {
       await FirebaseMessaging.instance.requestPermission();
 
       _foregroundSubscription = FirebaseMessaging.onMessage.listen(
-        (message) => _emitForeground(message.data),
+        _emitForeground,
       );
       _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
-        (message) => _emitOpened(message.data),
+        _emitOpened,
       );
       _tokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
         (_) => unawaited(_registerCurrentToken()),
@@ -88,7 +124,7 @@ class PushNotificationService {
 
       final initialMessage =
           await FirebaseMessaging.instance.getInitialMessage();
-      if (initialMessage != null) _emitOpened(initialMessage.data);
+      if (initialMessage != null) _emitOpened(initialMessage);
     } catch (_) {
       // Firebase remains optional until the project receives its production
       // configuration file. Polling continues to deliver the chat in foreground.
@@ -96,13 +132,23 @@ class PushNotificationService {
     }
   }
 
-  void _emitForeground(Map<String, dynamic> data) {
-    final payload = ChatPushPayload.fromData(data);
+  void _emitForeground(RemoteMessage message) {
+    if (message.data['type'] == 'medicamento_cancelamento') {
+      final payload = MedicationCancellationPushPayload.fromMessage(message);
+      if (payload.isValid) _foregroundMedicationMessages.add(payload);
+      return;
+    }
+    final payload = ChatPushPayload.fromData(message.data);
     if (payload.isValid) _foregroundMessages.add(payload);
   }
 
-  void _emitOpened(Map<String, dynamic> data) {
-    final payload = ChatPushPayload.fromData(data);
+  void _emitOpened(RemoteMessage message) {
+    if (message.data['type'] == 'medicamento_cancelamento') {
+      final payload = MedicationCancellationPushPayload.fromMessage(message);
+      if (payload.isValid) _openedMedicationMessages.add(payload);
+      return;
+    }
+    final payload = ChatPushPayload.fromData(message.data);
     if (payload.isValid) _openedMessages.add(payload);
   }
 
@@ -143,5 +189,7 @@ class PushNotificationService {
     _tokenSubscription?.cancel();
     unawaited(_foregroundMessages.close());
     unawaited(_openedMessages.close());
+    unawaited(_foregroundMedicationMessages.close());
+    unawaited(_openedMedicationMessages.close());
   }
 }

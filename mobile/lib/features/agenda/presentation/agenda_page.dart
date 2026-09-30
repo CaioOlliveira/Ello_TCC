@@ -10,6 +10,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
+import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 import 'agenda_form_page.dart';
 import 'agenda_models.dart';
@@ -86,7 +87,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   void _showNoEditPermission() {
-    _ignoreBottomMessage();
+    showEditPermissionDenied(context);
   }
 
   Future<void> _openForm({AgendaCompromisso? item}) async {
@@ -1339,5 +1340,3 @@ class _AgendaMessage extends StatelessWidget {
     );
   }
 }
-
-void _ignoreBottomMessage() {}

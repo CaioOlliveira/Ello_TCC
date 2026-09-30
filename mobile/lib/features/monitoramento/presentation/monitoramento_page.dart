@@ -42,7 +42,18 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (context) {
-        return _MonitoramentoPicker(initialIds: idoso.monitoramentos);
+        final availableIds = monitoramentoOptions
+            .where(
+              (option) =>
+                  idoso.podeVisualizarModulo(option.id) &&
+                  (option.id != 'Gastos' || idoso.ehDono == true),
+            )
+            .map((option) => option.id)
+            .toSet();
+        return _MonitoramentoPicker(
+          initialIds: idoso.monitoramentos,
+          availableIds: availableIds,
+        );
       },
     );
 
@@ -377,9 +388,13 @@ class _MessageState extends StatelessWidget {
 }
 
 class _MonitoramentoPicker extends StatefulWidget {
-  const _MonitoramentoPicker({required this.initialIds});
+  const _MonitoramentoPicker({
+    required this.initialIds,
+    required this.availableIds,
+  });
 
   final List<String> initialIds;
+  final Set<String> availableIds;
 
   @override
   State<_MonitoramentoPicker> createState() => _MonitoramentoPickerState();
@@ -420,6 +435,9 @@ class _MonitoramentoPickerState extends State<_MonitoramentoPicker> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final availableOptions = monitoramentoOptions
+        .where((option) => widget.availableIds.contains(option.id))
+        .toList();
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
@@ -454,24 +472,31 @@ class _MonitoramentoPickerState extends State<_MonitoramentoPicker> {
                 ),
                 const SizedBox(height: 8),
                 Expanded(
-                  child: GridView.builder(
-                    itemCount: monitoramentoOptions.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 13,
-                      crossAxisSpacing: 12,
-                      mainAxisExtent: 88,
-                    ),
-                    itemBuilder: (context, index) {
-                      final option = monitoramentoOptions[index];
-                      return _PickerOptionTile(
-                        option: option,
-                        selected: _selectedIds.contains(option.id),
-                        onTap: () => _toggle(option.id),
-                      );
-                    },
-                  ),
+                  child: availableOptions.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Nenhum monitoramento disponível para você.',
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : GridView.builder(
+                          itemCount: availableOptions.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 13,
+                            crossAxisSpacing: 12,
+                            mainAxisExtent: 88,
+                          ),
+                          itemBuilder: (context, index) {
+                            final option = availableOptions[index];
+                            return _PickerOptionTile(
+                              option: option,
+                              selected: _selectedIds.contains(option.id),
+                              onTap: () => _toggle(option.id),
+                            );
+                          },
+                        ),
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 8),

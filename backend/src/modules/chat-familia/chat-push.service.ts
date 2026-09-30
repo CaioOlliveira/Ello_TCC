@@ -293,3 +293,44 @@ const finalizarTokensInvalidos = async (
     [invalidTokens],
   );
 };
+
+export const enviarPushMedicamento = async ({
+  destinatarioId,
+  titulo,
+  mensagem,
+  idosoId,
+  solicitacaoId,
+}: {
+  destinatarioId: string;
+  titulo: string;
+  mensagem: string;
+  idosoId: string;
+  solicitacaoId: string;
+}) => {
+  const app = firebaseApp();
+  if (!app) return;
+
+  await garantirTabelasPushChat();
+  const devices = await getPool().query<{ token: string }>(
+    "select token from dispositivos_push where usuario_id = $1",
+    [destinatarioId],
+  );
+  const tokens = devices.rows.map((device) => device.token);
+  if (tokens.length === 0) return;
+
+  const response = await getMessaging(app).sendEachForMulticast({
+    tokens,
+    notification: { title: titulo, body: mensagem },
+    data: {
+      type: "medicamento_cancelamento",
+      idosoId,
+      solicitacaoId,
+    },
+    android: {
+      priority: "high",
+      collapseKey: `medicamento-cancelamento-${solicitacaoId}`,
+      notification: { channelId: "ello_messages" },
+    },
+  });
+  await finalizarTokensInvalidos(response.responses, tokens);
+};

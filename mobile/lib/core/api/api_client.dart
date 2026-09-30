@@ -1645,6 +1645,61 @@ class MedicamentoResumo {
   }
 }
 
+class SolicitacaoCancelamentoMedicamento {
+  const SolicitacaoCancelamentoMedicamento({
+    required this.id,
+    required this.idosoId,
+    required this.medicamentoId,
+    required this.administracaoId,
+    required this.solicitanteId,
+    required this.solicitanteNome,
+    required this.medicamentoNome,
+    required this.status,
+    required this.criadoEm,
+    this.dosagem,
+  });
+
+  factory SolicitacaoCancelamentoMedicamento.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return SolicitacaoCancelamentoMedicamento(
+      id: json['id']?.toString() ?? '',
+      idosoId: (json['idosoId'] ?? json['idoso_id'])?.toString() ?? '',
+      medicamentoId:
+          (json['medicamentoId'] ?? json['medicamento_id'])?.toString() ?? '',
+      administracaoId:
+          (json['administracaoId'] ?? json['administracao_id'])?.toString() ??
+              '',
+      solicitanteId:
+          (json['solicitanteId'] ?? json['solicitante_id'])?.toString() ?? '',
+      solicitanteNome:
+          (json['solicitanteNome'] ?? json['solicitante_nome'])?.toString() ??
+              'Cuidador',
+      medicamentoNome:
+          (json['medicamentoNome'] ?? json['medicamento_nome'])?.toString() ??
+              'Medicamento',
+      dosagem: json['dosagem']?.toString(),
+      status: json['status']?.toString() ?? 'pendente',
+      criadoEm: (DateTime.tryParse(
+                (json['criadoEm'] ?? json['criado_em'])?.toString() ?? '',
+              ) ??
+              DateTime.now())
+          .toLocal(),
+    );
+  }
+
+  final String id;
+  final String idosoId;
+  final String medicamentoId;
+  final String administracaoId;
+  final String solicitanteId;
+  final String solicitanteNome;
+  final String medicamentoNome;
+  final String? dosagem;
+  final String status;
+  final DateTime criadoEm;
+}
+
 class MedicamentosResumo {
   const MedicamentosResumo({
     required this.medicamentos,
@@ -4979,7 +5034,7 @@ class ApiClient {
     required String medicamentoId,
     required String administracaoId,
     required String idosoId,
-    String? registradoPorId,
+    required String accessToken,
   }) async {
     try {
       await _dio.delete<Map<String, dynamic>>(
@@ -4989,12 +5044,78 @@ class ApiClient {
         ),
         data: {
           'idosoId': idosoId,
-          if (registradoPorId != null && registradoPorId.isNotEmpty)
-            'registradoPorId': registradoPorId,
         },
+        options: _authenticatedOptions(accessToken),
       );
     } on DioException catch (error) {
       throw _toApiException(error, fallback: 'Erro ao cancelar a dose.');
+    }
+  }
+
+  Future<void> solicitarCancelamentoMedicamento({
+    required String medicamentoId,
+    required String administracaoId,
+    required String idosoId,
+    required String accessToken,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.solicitarCancelamentoMedicamento(
+          medicamentoId,
+          administracaoId,
+        ),
+        data: {'idosoId': idosoId},
+        options: _authenticatedOptions(accessToken),
+      );
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao solicitar o cancelamento da dose.',
+      );
+    }
+  }
+
+  Future<List<SolicitacaoCancelamentoMedicamento>>
+      listarSolicitacoesCancelamentoMedicamento({
+    required String idosoId,
+    required String accessToken,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        ApiEndpoints.solicitacoesCancelamentoMedicamento,
+        queryParameters: {'idosoId': idosoId},
+        options: _authenticatedOptions(accessToken),
+      );
+      final dados = response.data?['dados'];
+      if (dados is! List) return const [];
+      return dados
+          .whereType<Map<String, dynamic>>()
+          .map(SolicitacaoCancelamentoMedicamento.fromJson)
+          .toList();
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao consultar solicitações de cancelamento.',
+      );
+    }
+  }
+
+  Future<void> responderSolicitacaoCancelamentoMedicamento({
+    required String solicitacaoId,
+    required bool aprovar,
+    required String accessToken,
+  }) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        ApiEndpoints.responderCancelamentoMedicamento(solicitacaoId),
+        data: {'aprovar': aprovar},
+        options: _authenticatedOptions(accessToken),
+      );
+    } on DioException catch (error) {
+      throw _toApiException(
+        error,
+        fallback: 'Erro ao responder à solicitação.',
+      );
     }
   }
 

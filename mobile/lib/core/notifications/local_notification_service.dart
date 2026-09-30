@@ -136,8 +136,8 @@ class LocalNotificationService {
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
         'ello_messages',
-        'Mensagens do Ello',
-        channelDescription: 'Mensagens recebidas no Chat do Cuidado',
+        'Avisos do Ello',
+        channelDescription: 'Mensagens e solicitações recebidas no Ello',
         icon: 'ic_notification',
         importance: Importance.high,
         priority: Priority.high,

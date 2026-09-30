@@ -43,6 +43,8 @@ class ApiEndpoints {
   static const medicamentos = '/medicamentos';
   static const medicamentosResumo = '/medicamentos/resumo';
   static const medicamentosHistorico = '/medicamentos/historico';
+  static const solicitacoesCancelamentoMedicamento =
+      '/medicamentos/solicitacoes-cancelamento';
   static const pressao = '/pressao';
   static const pressaoResumo = '/pressao/resumo';
   static const pressaoHistorico = '/pressao/historico';
@@ -83,4 +85,11 @@ class ApiEndpoints {
     String administracaoId,
   ) =>
       '/medicamentos/$medicamentoId/administracoes/$administracaoId';
+  static String solicitarCancelamentoMedicamento(
+    String medicamentoId,
+    String administracaoId,
+  ) =>
+      '/medicamentos/$medicamentoId/administracoes/$administracaoId/solicitacoes-cancelamento';
+  static String responderCancelamentoMedicamento(String solicitacaoId) =>
+      '/medicamentos/solicitacoes-cancelamento/$solicitacaoId/responder';
 }

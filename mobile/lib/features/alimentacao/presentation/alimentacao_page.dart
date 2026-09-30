@@ -12,6 +12,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
+import '../../../shared/widgets/app_feedback.dart';
 
 enum _AlimentacaoView { lista, tipo, form, galeria }
 
@@ -106,7 +107,7 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
   }
 
   void _showNoEditPermission() {
-    _ignoreBottomMessage();
+    showEditPermissionDenied(context);
   }
 
   Future<void> _concluir(RefeicaoResumo refeicao) async {

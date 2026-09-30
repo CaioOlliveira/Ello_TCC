@@ -862,7 +862,7 @@ class _ParticipanteCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (membro.eAdministrador) ...[
+                        if (membro.eAdministrador && !membro.eCriador) ...[
                           const SizedBox(width: 5),
                           const Icon(
                             Icons.shield_rounded,

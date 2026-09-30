@@ -11,6 +11,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
+import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 enum _OxigenacaoMode { resumo, registrar, historico }
@@ -155,7 +156,7 @@ class _OxigenacaoPageState extends ConsumerState<OxigenacaoPage> {
   }
 
   void _showNoEditPermission() {
-    _ignoreBottomMessage();
+    showEditPermissionDenied(context);
   }
 
   Future<void> _salvar(IdosoResumo idoso) async {

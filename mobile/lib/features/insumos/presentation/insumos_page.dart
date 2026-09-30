@@ -14,6 +14,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
+import '../../../shared/widgets/app_feedback.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 part 'cadastro_insumo_page.dart';
@@ -102,7 +103,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
   }
 
   void _showNoEditPermission() {
-    _ignoreBottomMessage();
+    showEditPermissionDenied(context);
   }
 
   void _showCadastro() {

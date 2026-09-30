@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
 
+import { getAuthenticatedUserId } from "../../common/middlewares/authenticated-user.js";
 import { asyncHandler } from "../../common/utils/async-handler.js";
 import {
   getPagination,
@@ -12,7 +13,9 @@ import {
   criarHorarioMedicamentoSchema,
   criarMedicamentoSchema,
   historicoMedicamentosQuerySchema,
+  listarSolicitacoesCancelamentoSchema,
   registrarAdministracaoSchema,
+  responderSolicitacaoCancelamentoSchema,
   resumoMedicamentosQuerySchema,
   substituirHorariosMedicamentoSchema,
 } from "./medicamentos.schemas.js";
@@ -122,7 +125,50 @@ export const cancelarAdministracaoMedicamento: RequestHandler = asyncHandler(
       dados: await medicamentosService.cancelarAdministracao(
         id,
         administracaoId,
-        input,
+        input.idosoId,
+        getAuthenticatedUserId(req),
+      ),
+    });
+  },
+);
+
+export const solicitarCancelamentoAdministracao: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const { administracaoId } = administracaoParamSchema.parse(req.params);
+    const input = cancelarAdministracaoSchema.parse(req.body);
+    res.status(201).json({
+      dados: await medicamentosService.solicitarCancelamentoAdministracao(
+        id,
+        administracaoId,
+        input.idosoId,
+        getAuthenticatedUserId(req),
+      ),
+    });
+  },
+);
+
+export const listarSolicitacoesCancelamento: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { idosoId } = listarSolicitacoesCancelamentoSchema.parse(req.query);
+    res.json({
+      dados: await medicamentosService.listarSolicitacoesCancelamento(
+        idosoId,
+        getAuthenticatedUserId(req),
+      ),
+    });
+  },
+);
+
+export const responderSolicitacaoCancelamento: RequestHandler = asyncHandler(
+  async (req, res) => {
+    const { id: solicitacaoId } = idParamSchema.parse(req.params);
+    const input = responderSolicitacaoCancelamentoSchema.parse(req.body);
+    res.json({
+      dados: await medicamentosService.responderSolicitacaoCancelamento(
+        solicitacaoId,
+        input.aprovar,
+        getAuthenticatedUserId(req),
       ),
     });
   },

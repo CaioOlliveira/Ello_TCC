@@ -98,9 +98,33 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   bool _saving = false;
   List<Map<String, dynamic>> _administracoes = [];
   bool _carregandoDetalhe = false;
+  List<SolicitacaoCancelamentoMedicamento> _solicitacoesCancelamento = [];
+  String? _solicitacoesLoadedIdosoId;
+  bool _carregandoSolicitacoes = false;
+  Timer? _solicitacoesTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _solicitacoesTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) {
+        final idoso = ref.read(selectedIdosoProvider);
+        if (idoso?.ehDono == true && !_carregandoSolicitacoes) {
+          unawaited(
+            _loadSolicitacoesCancelamento(
+              idoso!.id,
+              showLoading: false,
+            ),
+          );
+        }
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _solicitacoesTimer?.cancel();
     _nomeController.dispose();
     _dosagemController.dispose();
     _estoqueController.dispose();
@@ -186,12 +210,21 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    _ignoreBottomMessage();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showSuccess(String message) {
     if (!mounted) return;
-    _ignoreBottomMessage();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: const Color(0xFF218A58),
+        ),
+      );
   }
 
   bool _canEditMedicamentos() {
@@ -200,7 +233,97 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   }
 
   void _showNoEditPermission() {
-    _showMessage('Você não tem permissão para editar medicamentos.');
+    _showMessage('Você não tem permissão para editar esta funcionalidade.');
+  }
+
+  void _ensureSolicitacoesCancelamento(IdosoResumo idoso) {
+    if (idoso.ehDono != true) {
+      _solicitacoesLoadedIdosoId = idoso.id;
+      _solicitacoesCancelamento = const [];
+      return;
+    }
+    if (_solicitacoesLoadedIdosoId == idoso.id) return;
+    _solicitacoesLoadedIdosoId = idoso.id;
+    unawaited(_loadSolicitacoesCancelamento(idoso.id));
+  }
+
+  Future<void> _loadSolicitacoesCancelamento(
+    String idosoId, {
+    bool showLoading = true,
+  }) async {
+    final session = ref.read(authSessionProvider);
+    if (session?.accessToken?.isEmpty != false) return;
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    if (showLoading) {
+      setState(() => _carregandoSolicitacoes = true);
+    } else {
+      _carregandoSolicitacoes = true;
+    }
+    try {
+      final solicitacoes = await ref
+          .read(apiClientProvider)
+          .listarSolicitacoesCancelamentoMedicamento(
+            idosoId: idosoId,
+            accessToken: session!.accessToken!,
+          );
+      if (!mounted || ref.read(selectedIdosoProvider)?.id != idosoId) return;
+      setState(() => _solicitacoesCancelamento = solicitacoes);
+    } catch (_) {
+      // O resumo continua disponível em uma falha temporária.
+    } finally {
+      if (mounted && showLoading) {
+        setState(() => _carregandoSolicitacoes = false);
+      } else {
+        _carregandoSolicitacoes = false;
+      }
+    }
+  }
+
+  Future<void> _responderSolicitacaoCancelamento(
+    SolicitacaoCancelamentoMedicamento solicitacao,
+    bool aprovar,
+  ) async {
+    final idoso = ref.read(selectedIdosoProvider);
+    final session = ref.read(authSessionProvider);
+    if (idoso?.ehDono != true) {
+      _showMessage('Somente o responsável pode responder à solicitação.');
+      return;
+    }
+    if (session?.accessToken?.isEmpty != false) {
+      _showMessage('Sua sessão expirou. Entre novamente para continuar.');
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(apiClientProvider)
+          .responderSolicitacaoCancelamentoMedicamento(
+            solicitacaoId: solicitacao.id,
+            aprovar: aprovar,
+            accessToken: session!.accessToken!,
+          );
+      if (!mounted) return;
+      setState(() {
+        _solicitacoesCancelamento.removeWhere(
+          (item) => item.id == solicitacao.id,
+        );
+      });
+      _invalidateHistorico();
+      _reloadResumo(idoso!.id);
+      _showSuccess(
+        aprovar
+            ? 'Cancelamento aprovado e dose reativada.'
+            : 'Solicitação de cancelamento recusada.',
+      );
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } catch (_) {
+      if (mounted) _showMessage('Não foi possível responder à solicitação.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<bool> _handleSystemBack() async {
@@ -545,6 +668,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     Map<String, dynamic> administracao,
   ) async {
     final idoso = ref.read(selectedIdosoProvider);
+    final session = ref.read(authSessionProvider);
     final medicamento = _selecionado;
     final administracaoId = administracao['id']?.toString() ?? '';
     if (idoso == null || medicamento == null || administracaoId.isEmpty) return;
@@ -552,13 +676,25 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       _showNoEditPermission();
       return;
     }
+    if (session?.accessToken?.isEmpty != false) {
+      _showMessage('Sua sessão expirou. Entre novamente para continuar.');
+      return;
+    }
+
+    final cancelaDiretamente = idoso.ehDono == true;
 
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancelar dose registrada'),
-        content: const Text(
-          'Deseja cancelar esta administração? A dose voltará ao estoque e o lembrete será reativado.',
+        title: Text(
+          cancelaDiretamente
+              ? 'Cancelar dose registrada'
+              : 'Solicitar cancelamento',
+        ),
+        content: Text(
+          cancelaDiretamente
+              ? 'Deseja cancelar esta administração? A dose voltará ao estoque e o lembrete será reativado.'
+              : 'O responsável pela ficha receberá uma solicitação e decidirá se a dose deve ser cancelada.',
         ),
         actions: [
           TextButton(
@@ -571,7 +707,9 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
               backgroundColor: const Color(0xFFD73A3A),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Cancelar dose'),
+            child: Text(
+              cancelaDiretamente ? 'Cancelar dose' : 'Enviar solicitação',
+            ),
           ),
         ],
       ),
@@ -581,11 +719,23 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
     setState(() => _saving = true);
     try {
       final client = ref.read(apiClientProvider);
+      if (!cancelaDiretamente) {
+        await client.solicitarCancelamentoMedicamento(
+          medicamentoId: medicamento.id,
+          administracaoId: administracaoId,
+          idosoId: idoso.id,
+          accessToken: session!.accessToken!,
+        );
+        if (!mounted) return;
+        _showSuccess('Solicitação enviada ao responsável pela ficha.');
+        return;
+      }
+
       await client.cancelarAdministracaoMedicamento(
         medicamentoId: medicamento.id,
         administracaoId: administracaoId,
         idosoId: idoso.id,
-        registradoPorId: ref.read(authSessionProvider)?.id,
+        accessToken: session!.accessToken!,
       );
       _invalidateHistorico();
       final results = await Future.wait<dynamic>([
@@ -610,13 +760,17 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         _administracoes = administracoes;
         _carregandoDetalhe = false;
       });
-      _showMessage('Administração cancelada.');
+      _showSuccess('Administração cancelada.');
     } on ApiException catch (error) {
       if (!mounted) return;
       _showMessage(error.message);
     } catch (_) {
       if (!mounted) return;
-      _showMessage('Não foi possível cancelar a dose.');
+      _showMessage(
+        cancelaDiretamente
+            ? 'Não foi possível cancelar a dose.'
+            : 'Não foi possível enviar a solicitação.',
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -699,6 +853,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   Widget _buildContent(IdosoResumo idoso) {
     _ensureResumo(idoso.id);
     _ensureHistorico(idoso.id);
+    _ensureSolicitacoesCancelamento(idoso);
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 260),
@@ -789,6 +944,7 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
                   administracoes: _administracoes,
                   carregando: _carregandoDetalhe,
                   saving: _saving,
+                  cancelaDiretamente: idoso.ehDono == true,
                   onBack: () => setState(() => _mode = _Mode.resumo),
                   onEdit: () => _openEditForm(_selecionado!),
                   onDelete: () => _remover(_selecionado!),
@@ -815,9 +971,13 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
 
                 return _ResumoView(
                   resumo: resumo,
+                  solicitacoes: _solicitacoesCancelamento,
+                  carregandoSolicitacoes: _carregandoSolicitacoes,
+                  saving: _saving,
                   onBack: () => context.go(moduleBackRoute(context)),
                   onAdd: _openCreateForm,
                   onOpen: _openDetalhe,
+                  onResponderSolicitacao: _responderSolicitacaoCancelamento,
                   onHistorico: () => setState(() => _mode = _Mode.historico),
                 );
               },
@@ -839,16 +999,25 @@ extension on _Periodo {
 class _ResumoView extends StatelessWidget {
   const _ResumoView({
     required this.resumo,
+    required this.solicitacoes,
+    required this.carregandoSolicitacoes,
+    required this.saving,
     required this.onBack,
     required this.onAdd,
     required this.onOpen,
+    required this.onResponderSolicitacao,
     required this.onHistorico,
   });
 
   final MedicamentosResumo resumo;
+  final List<SolicitacaoCancelamentoMedicamento> solicitacoes;
+  final bool carregandoSolicitacoes;
+  final bool saving;
   final VoidCallback onBack;
   final VoidCallback onAdd;
   final ValueChanged<MedicamentoResumo> onOpen;
+  final void Function(SolicitacaoCancelamentoMedicamento, bool)
+      onResponderSolicitacao;
   final VoidCallback onHistorico;
 
   @override
@@ -871,6 +1040,22 @@ class _ResumoView extends StatelessWidget {
                 : ListView(
                     padding: const EdgeInsets.only(bottom: 8),
                     children: [
+                      if (carregandoSolicitacoes)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: LinearProgressIndicator(
+                            color: Color(0xFF2FA8B8),
+                          ),
+                        ),
+                      for (final solicitacao in solicitacoes) ...[
+                        _SolicitacaoCancelamentoCard(
+                          solicitacao: solicitacao,
+                          saving: saving,
+                          onResponder: (aprovar) =>
+                              onResponderSolicitacao(solicitacao, aprovar),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       if (proximoMedicamento != null)
                         StaggeredEntry(
                           index: 0,
@@ -928,6 +1113,97 @@ class _ResumoView extends StatelessWidget {
               ),
               child: const Text('Ver Histórico'),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SolicitacaoCancelamentoCard extends StatelessWidget {
+  const _SolicitacaoCancelamentoCard({
+    required this.solicitacao,
+    required this.saving,
+    required this.onResponder,
+  });
+
+  final SolicitacaoCancelamentoMedicamento solicitacao;
+  final bool saving;
+  final ValueChanged<bool> onResponder;
+
+  @override
+  Widget build(BuildContext context) {
+    final horario =
+        '${solicitacao.criadoEm.hour.toString().padLeft(2, '0')}:${solicitacao.criadoEm.minute.toString().padLeft(2, '0')}';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: _cardDecoration(context).copyWith(
+        border: Border.all(color: const Color(0xFFE9A23B), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.notification_important_rounded,
+                color: Color(0xFFE28B22),
+                size: 22,
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Solicitação de cancelamento',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${solicitacao.solicitanteNome} quer cancelar a dose de ${solicitacao.medicamentoNome}${solicitacao.dosagem?.isNotEmpty == true ? ' (${solicitacao.dosagem})' : ''}.',
+            style: TextStyle(
+              color: adaptive(
+                context,
+                const Color(0xFF41525A),
+                AppDarkColors.textSecondary,
+              ),
+              fontSize: 13,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Solicitado às $horario',
+            style: TextStyle(
+              color: adaptive(
+                context,
+                const Color(0xFF78858B),
+                AppDarkColors.textMuted,
+              ),
+              fontSize: 11.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: saving ? null : () => onResponder(false),
+                  child: const Text('Recusar'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: saving ? null : () => onResponder(true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2FA8B8),
+                  ),
+                  child: const Text('Aprovar'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -2412,6 +2688,7 @@ class _DetalheView extends StatelessWidget {
     required this.administracoes,
     required this.carregando,
     required this.saving,
+    required this.cancelaDiretamente,
     required this.onBack,
     required this.onEdit,
     required this.onDelete,
@@ -2423,6 +2700,7 @@ class _DetalheView extends StatelessWidget {
   final List<Map<String, dynamic>> administracoes;
   final bool carregando;
   final bool saving;
+  final bool cancelaDiretamente;
   final VoidCallback onBack;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -2548,7 +2826,11 @@ class _DetalheView extends StatelessWidget {
                                 administracaoCancelavel,
                               ),
                       icon: const Icon(Icons.undo_rounded, size: 18),
-                      label: const Text('Cancelar dose registrada'),
+                      label: Text(
+                        cancelaDiretamente
+                            ? 'Cancelar dose registrada'
+                            : 'Solicitar cancelamento',
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFD73A3A),
                         side: const BorderSide(color: Color(0xFFD73A3A)),
