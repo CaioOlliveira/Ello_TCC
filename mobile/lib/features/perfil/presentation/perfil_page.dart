@@ -876,7 +876,7 @@ class _MenuCard extends StatelessWidget {
               icon: items[index].$1,
               label: items[index].$2,
               onTap: items[index].$3,
-              showDivider: index < items.length - 1,
+              showDivider: true,
             ),
           _SwitchItem(
             icon: Icons.dark_mode_outlined,
