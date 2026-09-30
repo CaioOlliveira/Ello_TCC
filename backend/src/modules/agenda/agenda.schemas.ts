@@ -102,7 +102,7 @@ const normalizarTarefaAgenda = (value: unknown) => {
 
 const tarefaAgendaSchema = z.object({
   idosoId: z.string().uuid("Idoso invalido."),
-  titulo: z.string().min(1, "Titulo e obrigatorio."),
+  titulo: z.string().min(1, "Título é obrigatório."),
   tags: z.array(z.string().min(1)).default([]),
   dataCompromisso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data invalida."),
   horaCompromisso: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Hora invalida."),
@@ -131,7 +131,7 @@ export const atualizarOcorrenciaEventoSchema = z.object({
   dataOcorrencia: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data da ocorrencia invalida."),
-  status: z.string().min(1, "Status e obrigatorio."),
+  status: z.string().min(1, "Status é obrigatório."),
 });
 
 export type CriarEventoInput = z.infer<typeof criarEventoSchema>;

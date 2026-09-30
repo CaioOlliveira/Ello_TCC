@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +10,7 @@ import '../../../core/api/api_exception.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/navigation/module_navigation.dart';
 import '../../../shared/widgets/app_page_header.dart';
+import 'gastos_pdf.dart';
 
 enum _GastosPeriodoFiltro { dia, semana, mes, ano, personalizado }
 
@@ -23,7 +22,7 @@ class GastosPage extends ConsumerStatefulWidget {
 }
 
 class _GastosPageState extends ConsumerState<GastosPage> {
-  _GastosPeriodoFiltro _filtro = _GastosPeriodoFiltro.mes;
+  _GastosPeriodoFiltro _filtro = _GastosPeriodoFiltro.dia;
   DateTime _referencia = DateTime.now();
   DateTimeRange? _periodoPersonalizado;
   GastosPeriodo? _dados;
@@ -50,7 +49,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
     if (idoso.ehDono != true || usuario?.accessToken?.isEmpty != false) {
       setState(() {
         _loading = false;
-        _error = 'Apenas o responsavel pela ficha pode acessar os gastos.';
+        _error = 'Apenas o responsável pela ficha pode acessar os gastos.';
       });
       return;
     }
@@ -76,7 +75,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
       setState(() => _error = error.message);
     } catch (_) {
       if (!mounted || loadToken != _loadToken) return;
-      setState(() => _error = 'Nao foi possivel carregar os gastos.');
+      setState(() => _error = 'Não foi possível carregar os gastos.');
     } finally {
       if (mounted && loadToken == _loadToken) setState(() => _loading = false);
     }
@@ -236,9 +235,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
 
     final usuario = ref.read(authSessionProvider);
     if (usuario?.accessToken?.isEmpty != false) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Entre novamente para excluir o gasto.')),
-      );
+      _ignoreBottomMessage();
       return;
     }
 
@@ -249,19 +246,13 @@ class _GastosPageState extends ConsumerState<GastosPage> {
           );
       _removeGastoLocal(gasto.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gasto excluido.')),
-      );
-    } on ApiException catch (error) {
+      _ignoreBottomMessage();
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel excluir o gasto.')),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -313,12 +304,10 @@ class _GastosPageState extends ConsumerState<GastosPage> {
     });
   }
 
-  Future<void> _exportSpreadsheet() async {
+  Future<void> _exportPdf() async {
     final dados = _dados;
     if (dados == null || dados.gastos.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao ha gastos para exportar.')),
-      );
+      _ignoreBottomMessage();
       return;
     }
 
@@ -326,39 +315,40 @@ class _GastosPageState extends ConsumerState<GastosPage> {
     try {
       final range = _rangeAtual();
       final fileName =
-          'gastos-${_isoDate(range.start)}-a-${_isoDate(range.end)}.xls';
-      final html = _buildStyledSpreadsheet(
+          'relatorio-gastos-${_isoDate(range.start)}-a-${_isoDate(range.end)}.pdf';
+      final periodo = _periodLabel(range, _filtro);
+      final idoso = ref.read(selectedIdosoProvider);
+      final pdfBytes = await buildGastosPdf(
         gastos: dados.gastos,
         total: dados.total,
-        periodo: _periodLabel(range, _filtro),
+        titulo: _pdfTitle(_filtro),
+        periodo: periodo,
+        introducao: _pdfIntroduction(_filtro, periodo),
+        nomeIdoso: idoso?.nome ?? 'Ficha de cuidados',
+        geradoEm: DateTime.now(),
       );
+      if (!mounted) return;
       final box = context.findRenderObject() as RenderBox?;
 
       await Share.shareXFiles(
         [
           XFile.fromData(
-            Uint8List.fromList(utf8.encode(html)),
+            pdfBytes,
             name: fileName,
-            mimeType: 'application/vnd.ms-excel',
+            mimeType: 'application/pdf',
           ),
         ],
-        text: 'Planilha de gastos do periodo ${_periodLabel(range, _filtro)}.',
-        subject: 'Gastos da ficha',
+        text: 'Relatório de gastos referente a $periodo.',
+        subject: _pdfTitle(_filtro),
         sharePositionOrigin:
             box == null ? null : box.localToGlobal(Offset.zero) & box.size,
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Planilha pronta para compartilhar.')),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nao foi possivel compartilhar a planilha.'),
-        ),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -440,7 +430,7 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                     SizedBox(
                       height: 48,
                       child: OutlinedButton.icon(
-                        onPressed: _exporting ? null : _exportSpreadsheet,
+                        onPressed: _exporting ? null : _exportPdf,
                         icon: _exporting
                             ? const SizedBox(
                                 width: 16,
@@ -448,8 +438,8 @@ class _GastosPageState extends ConsumerState<GastosPage> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Icon(Icons.table_chart_rounded),
-                        label: const Text('Gerar planilha'),
+                            : const Icon(Icons.picture_as_pdf_rounded),
+                        label: const Text('Gerar PDF'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: adaptive(
                             context,
@@ -555,11 +545,7 @@ class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
 
     if (idoso == null || usuario?.accessToken?.isEmpty != false) return;
     if (valor == null || valor <= 0 || descricao.isEmpty || fonte.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preencha valor, descricao e fonte do dinheiro.'),
-        ),
-      );
+      _ignoreBottomMessage();
       return;
     }
 
@@ -585,16 +571,12 @@ class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
             );
       if (!mounted) return;
       Navigator.of(context).pop(gasto);
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel salvar o gasto.')),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -651,7 +633,7 @@ class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
               const SizedBox(height: 12),
               _GastoInput(
                 controller: _descricaoController,
-                label: 'Descricao',
+                label: 'Descrição',
                 keyboardType: TextInputType.text,
               ),
               const SizedBox(height: 12),
@@ -693,7 +675,7 @@ class _NovoGastoSheetState extends ConsumerState<_NovoGastoSheet> {
                   child: Text(_saving
                       ? 'Salvando...'
                       : _editing
-                          ? 'Salvar alteracoes'
+                          ? 'Salvar alterações'
                           : 'Salvar'),
                 ),
               ),
@@ -795,11 +777,11 @@ class _FiltroTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const options = [
-      (_GastosPeriodoFiltro.dia, 'Diario'),
+      (_GastosPeriodoFiltro.dia, 'Diário'),
       (_GastosPeriodoFiltro.semana, 'Semana'),
-      (_GastosPeriodoFiltro.mes, 'Mes'),
+      (_GastosPeriodoFiltro.mes, 'Mês'),
       (_GastosPeriodoFiltro.ano, 'Ano'),
-      (_GastosPeriodoFiltro.personalizado, 'Periodo'),
+      (_GastosPeriodoFiltro.personalizado, 'Período'),
     ];
 
     return Container(
@@ -1089,7 +1071,7 @@ class _GastosEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        'Nenhum gasto no periodo selecionado.',
+        'Nenhum gasto no período selecionado.',
         textAlign: TextAlign.center,
         style: TextStyle(
           color: adaptive(
@@ -1130,110 +1112,6 @@ class _GastosError extends StatelessWidget {
   }
 }
 
-String _buildStyledSpreadsheet({
-  required List<GastoResumo> gastos,
-  required double total,
-  required String periodo,
-}) {
-  final rows = gastos.map((gasto) {
-    return '''
-      <tr>
-        <td>${_escapeHtml(_formatDate(gasto.dataGasto))}</td>
-        <td class="money">${_escapeHtml(_formatCurrency(gasto.valor))}</td>
-        <td>${_escapeHtml(gasto.descricao)}</td>
-        <td>${_escapeHtml(gasto.fonte)}</td>
-        <td>${_escapeHtml(gasto.criadoPorNome ?? '')}</td>
-        <td>${_escapeHtml('${_formatDate(gasto.criadoEm)} ${_formatTime(gasto.criadoEm)}')}</td>
-      </tr>
-    ''';
-  }).join();
-
-  return '''
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            color: #17324D;
-          }
-          .summary {
-            background: #E8F6F8;
-            border: 1px solid #9AD6DE;
-            padding: 16px;
-            margin-bottom: 16px;
-          }
-          .brand {
-            color: #3396A8;
-            font-size: 26px;
-            font-weight: 700;
-          }
-          .total {
-            color: #D94D4D;
-            font-size: 22px;
-            font-weight: 700;
-          }
-          table {
-            border-collapse: collapse;
-            width: 100%;
-          }
-          th {
-            background: #3396A8;
-            color: #FFFFFF;
-            font-weight: 700;
-            border: 1px solid #2B8796;
-            padding: 10px;
-            text-align: left;
-          }
-          td {
-            border: 1px solid #D9E8EB;
-            padding: 9px;
-          }
-          tr:nth-child(even) {
-            background: #F6FAFB;
-          }
-          .money {
-            color: #D94D4D;
-            font-weight: 700;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="summary">
-          <div class="brand">Ello - Gastos da ficha</div>
-          <div>Periodo: ${_escapeHtml(periodo)}</div>
-          <div class="total">Total: ${_escapeHtml(_formatCurrency(total))}</div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Valor</th>
-              <th>Descricao</th>
-              <th>Fonte</th>
-              <th>Registrado por</th>
-              <th>Criado em</th>
-            </tr>
-          </thead>
-          <tbody>
-            $rows
-          </tbody>
-        </table>
-      </body>
-    </html>
-  ''';
-}
-
-String _escapeHtml(String value) {
-  return value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-}
-
 double? _parseMoney(String value) {
   final raw = value.trim().replaceAll(' ', '');
   if (raw.isEmpty) return null;
@@ -1259,11 +1137,6 @@ String _formatDate(DateTime date) {
   return '${date.day.toString().padLeft(2, '0')}/'
       '${date.month.toString().padLeft(2, '0')}/'
       '${date.year.toString().padLeft(4, '0')}';
-}
-
-String _formatTime(DateTime date) {
-  return '${date.hour.toString().padLeft(2, '0')}:'
-      '${date.minute.toString().padLeft(2, '0')}';
 }
 
 String _formatCurrency(double value) {
@@ -1298,11 +1171,34 @@ String _periodLabel(DateTimeRange range, _GastosPeriodoFiltro filtro) {
   };
 }
 
+String _pdfTitle(_GastosPeriodoFiltro filtro) {
+  return switch (filtro) {
+    _GastosPeriodoFiltro.dia => 'Gastos do dia',
+    _GastosPeriodoFiltro.semana => 'Gastos da semana',
+    _GastosPeriodoFiltro.mes => 'Gastos do mês',
+    _GastosPeriodoFiltro.ano => 'Gastos do ano',
+    _GastosPeriodoFiltro.personalizado => 'Relatório de gastos',
+  };
+}
+
+String _pdfIntroduction(_GastosPeriodoFiltro filtro, String periodo) {
+  final intervalo = switch (filtro) {
+    _GastosPeriodoFiltro.dia => 'no dia $periodo',
+    _GastosPeriodoFiltro.semana => 'na semana de $periodo',
+    _GastosPeriodoFiltro.mes => 'durante $periodo',
+    _GastosPeriodoFiltro.ano => 'ao longo de $periodo',
+    _GastosPeriodoFiltro.personalizado => 'entre $periodo',
+  };
+  return 'Este relatório reúne, de forma simples e organizada, os gastos '
+      'registrados $intervalo. Use-o para acompanhar as despesas e compartilhar '
+      'as informações com quem participa do cuidado.';
+}
+
 String _monthName(int month) {
   const names = [
     'Janeiro',
     'Fevereiro',
-    'Marco',
+    'Março',
     'Abril',
     'Maio',
     'Junho',
@@ -1315,3 +1211,5 @@ String _monthName(int month) {
   ];
   return names[month - 1];
 }
+
+void _ignoreBottomMessage() {}

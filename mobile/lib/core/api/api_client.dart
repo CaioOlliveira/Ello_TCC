@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
@@ -124,7 +125,7 @@ class IdosoResumo {
   }
 
   List<String> get monitoramentosVisiveis {
-    if (temAcessoTotal || permissoesVisualizar.isEmpty) return monitoramentos;
+    if (temAcessoTotal) return monitoramentos;
     return monitoramentos
         .where((moduloId) => permissoesVisualizar.contains(moduloId))
         .toList();
@@ -718,7 +719,7 @@ class GlicemiaAlerta {
       status: json?['status']?.toString() ?? 'sem_registro',
       titulo: json?['titulo']?.toString() ?? 'Sem medição registrada',
       mensagem: json?['mensagem']?.toString() ??
-          'Registre a primeira glicemia para gerar alertas.',
+          'Registre a glicemia para acompanhar o histórico.',
       cor: json?['cor']?.toString() ?? 'neutro',
     );
   }
@@ -945,7 +946,7 @@ class PressaoAlerta {
       status: json?['status']?.toString() ?? 'sem_registro',
       titulo: json?['titulo']?.toString() ?? 'Sem medição registrada',
       mensagem: json?['mensagem']?.toString() ??
-          'Registre a primeira pressão para gerar alertas.',
+          'Registre a pressão para acompanhar o histórico.',
       cor: json?['cor']?.toString() ?? 'neutro',
     );
   }
@@ -1168,7 +1169,7 @@ class OxigenacaoAlerta {
       status: json?['status']?.toString() ?? 'sem_registro',
       titulo: json?['titulo']?.toString() ?? 'Sem medição registrada',
       mensagem: json?['mensagem']?.toString() ??
-          'Registre a primeira oxigenação para gerar alertas.',
+          'Registre a oxigenação para acompanhar o histórico.',
       cor: json?['cor']?.toString() ?? 'neutro',
     );
   }
@@ -1381,7 +1382,7 @@ class TemperaturaAlerta {
       status: json?['status']?.toString() ?? 'sem_registro',
       titulo: json?['titulo']?.toString() ?? 'Sem medição registrada',
       mensagem: json?['mensagem']?.toString() ??
-          'Registre a primeira temperatura para gerar alertas.',
+          'Registre a temperatura para acompanhar o histórico.',
       cor: json?['cor']?.toString() ?? 'neutro',
     );
   }
@@ -2222,8 +2223,8 @@ class ApiClient {
       : _dio = Dio(
           BaseOptions(
             baseUrl: baseUrl,
-            connectTimeout: const Duration(seconds: 18),
-            receiveTimeout: const Duration(seconds: 30),
+            connectTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 15),
             headers: {'Content-Type': 'application/json'},
           ),
         ) {
@@ -2257,6 +2258,7 @@ class ApiClient {
       <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
   static const _agendaCacheTtl = Duration(minutes: 2);
   static const _readCacheTtl = Duration(minutes: 2);
+  static const _readCacheMaxStale = Duration(minutes: 20);
 
   Future<T> _cachedRead<T>(
     String key,
@@ -2268,9 +2270,19 @@ class ApiClient {
       return cached.value as T;
     }
 
+    if (cached != null && cached.isFresh(_readCacheMaxStale)) {
+      unawaited(_refreshCachedRead<T>(key, loader));
+      return cached.value as T;
+    }
+
     final inFlight = _inFlightReads[key];
     if (inFlight != null) {
-      return await inFlight as T;
+      try {
+        return await inFlight as T;
+      } catch (_) {
+        if (cached != null) return cached.value as T;
+        rethrow;
+      }
     }
 
     final epoch = _cacheEpoch;
@@ -2287,6 +2299,36 @@ class ApiClient {
 
     try {
       return await future as T;
+    } catch (_) {
+      if (cached != null) return cached.value as T;
+      rethrow;
+    } finally {
+      if (identical(_inFlightReads[key], future)) {
+        _inFlightReads.remove(key);
+      }
+    }
+  }
+
+  Future<void> _refreshCachedRead<T>(
+    String key,
+    Future<T> Function() loader,
+  ) async {
+    if (_inFlightReads.containsKey(key)) return;
+    final epoch = _cacheEpoch;
+    final future = loader().then<Object?>((value) {
+      if (epoch == _cacheEpoch) {
+        _readCache[key] = _ApiMemoryCache(
+          value: value,
+          createdAt: DateTime.now(),
+        );
+      }
+      return value;
+    });
+    _inFlightReads[key] = future;
+    try {
+      await future;
+    } catch (_) {
+      // Mantém o cache antigo. A tela não precisa travar por falha transitória.
     } finally {
       if (identical(_inFlightReads[key], future)) {
         _inFlightReads.remove(key);
@@ -2299,7 +2341,7 @@ class ApiClient {
   Options _authenticatedOptions(String accessToken) {
     if (accessToken.trim().isEmpty) {
       throw const ApiException(
-        'Sua sessao expirou. Entre novamente para continuar.',
+        'Sua sessão expirou. Entre novamente para continuar.',
       );
     }
     return Options(headers: {'Authorization': 'Bearer $accessToken'});
@@ -2467,9 +2509,11 @@ class ApiClient {
     }
   }
 
-  Future<List<IdosoResumo>> listarIdosos({String? usuarioId}) async {
-    return _cachedRead<List<IdosoResumo>>('idosos:${usuarioId ?? ''}',
-        () async {
+  Future<List<IdosoResumo>> listarIdosos({
+    String? usuarioId,
+    bool forceRefresh = false,
+  }) async {
+    Future<List<IdosoResumo>> carregar() async {
       try {
         final response = await _dio.get<Map<String, dynamic>>(
           ApiEndpoints.idosos,
@@ -2491,7 +2535,24 @@ class ApiClient {
       } on DioException catch (error) {
         throw _toApiException(error, fallback: 'Erro ao listar fichas.');
       }
-    });
+    }
+
+    final cacheKey = 'idosos:${usuarioId ?? ''}';
+    if (forceRefresh) {
+      final epoch = _cacheEpoch;
+      final value = await carregar();
+      if (epoch == _cacheEpoch) {
+        _readCache[cacheKey] = _ApiMemoryCache(
+          value: value,
+          createdAt: DateTime.now(),
+        );
+      }
+      return value;
+    }
+    return _cachedRead<List<IdosoResumo>>(
+      cacheKey,
+      carregar,
+    );
   }
 
   Future<IdosoResumo> buscarIdoso({required String idosoId}) {
@@ -3060,30 +3121,35 @@ class ApiClient {
     required String usuarioId,
     String? idosoId,
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.iaConversas,
-        queryParameters: {
-          'usuarioId': usuarioId,
-          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
-        },
-      );
-      final data = response.data?['dados'];
+    return _cachedRead<List<AiConversa>>(
+      'ia:conversas:$usuarioId:${idosoId ?? ''}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.iaConversas,
+            queryParameters: {
+              'usuarioId': usuarioId,
+              if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+            },
+          );
+          final data = response.data?['dados'];
 
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(AiConversa.fromJson)
-            .toList();
-      }
+          if (data is List) {
+            return data
+                .whereType<Map<String, dynamic>>()
+                .map(AiConversa.fromJson)
+                .toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Não foi possível carregar os chats.',
-      );
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Não foi possível carregar os chats.',
+          );
+        }
+      },
+    );
   }
 
   Future<AiConversa> criarConversaIa({
@@ -3115,30 +3181,35 @@ class ApiClient {
     required String usuarioId,
     String? idosoId,
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.iaMensagens(conversaId),
-        queryParameters: {
-          'usuarioId': usuarioId,
-          if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
-        },
-      );
-      final data = response.data?['dados'];
+    return _cachedRead<List<AiMensagem>>(
+      'ia:mensagens:$conversaId:$usuarioId:${idosoId ?? ''}',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.iaMensagens(conversaId),
+            queryParameters: {
+              'usuarioId': usuarioId,
+              if (idosoId != null && idosoId.isNotEmpty) 'idosoId': idosoId,
+            },
+          );
+          final data = response.data?['dados'];
 
-      if (data is List) {
-        return data
-            .whereType<Map<String, dynamic>>()
-            .map(AiMensagem.fromJson)
-            .toList();
-      }
+          if (data is List) {
+            return data
+                .whereType<Map<String, dynamic>>()
+                .map(AiMensagem.fromJson)
+                .toList();
+          }
 
-      return const [];
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Não foi possível abrir este chat.',
-      );
-    }
+          return const [];
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Não foi possível abrir este chat.',
+          );
+        }
+      },
+    );
   }
 
   Future<FamiliaChatPagina> listarMensagensFamilia({
@@ -3202,34 +3273,39 @@ class ApiClient {
     required String fim,
     required String accessToken,
   }) async {
-    DioException? lastError;
+    return _cachedRead<GastosPeriodo>(
+      'gastos:$idosoId:$inicio:$fim:${accessToken.hashCode}',
+      () async {
+        DioException? lastError;
 
-    for (var attempt = 0; attempt < 3; attempt++) {
-      try {
-        final response = await _dio.get<Map<String, dynamic>>(
-          ApiEndpoints.gastos,
-          queryParameters: {
-            'idosoId': idosoId,
-            'inicio': inicio,
-            'fim': fim,
-          },
-          options: _authenticatedOptions(accessToken).copyWith(
-            receiveTimeout: const Duration(seconds: 40),
-          ),
+        for (var attempt = 0; attempt < 2; attempt++) {
+          try {
+            final response = await _dio.get<Map<String, dynamic>>(
+              ApiEndpoints.gastos,
+              queryParameters: {
+                'idosoId': idosoId,
+                'inicio': inicio,
+                'fim': fim,
+              },
+              options: _authenticatedOptions(accessToken),
+            );
+            final data = response.data?['dados'];
+            if (data is Map<String, dynamic>) {
+              return GastosPeriodo.fromJson(data);
+            }
+            return GastosPeriodo.fromJson(const <String, dynamic>{});
+          } on DioException catch (error) {
+            lastError = error;
+            if (!_isTransientNetworkError(error) || attempt == 1) break;
+            await Future<void>.delayed(const Duration(milliseconds: 450));
+          }
+        }
+
+        throw _toApiException(
+          lastError!,
+          fallback: 'Não foi possível carregar os gastos.',
         );
-        final data = response.data?['dados'];
-        if (data is Map<String, dynamic>) return GastosPeriodo.fromJson(data);
-        return GastosPeriodo.fromJson(const <String, dynamic>{});
-      } on DioException catch (error) {
-        lastError = error;
-        if (!_isTransientNetworkError(error) || attempt == 2) break;
-        await Future<void>.delayed(Duration(milliseconds: 700 * (attempt + 1)));
-      }
-    }
-
-    throw _toApiException(
-      lastError!,
-      fallback: 'Nao foi possivel carregar os gastos.',
+      },
     );
   }
 
@@ -3259,7 +3335,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel salvar o gasto.',
+        fallback: 'Não foi possível salvar o gasto.',
       );
     }
   }
@@ -3289,7 +3365,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel atualizar o gasto.',
+        fallback: 'Não foi possível atualizar o gasto.',
       );
     }
   }
@@ -3306,7 +3382,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'Nao foi possivel excluir o gasto.',
+        fallback: 'Não foi possível excluir o gasto.',
       );
     }
   }
@@ -3360,7 +3436,7 @@ class ApiClient {
     } on DioException catch (error) {
       throw _toApiException(
         error,
-        fallback: 'NÃ£o foi possÃ­vel carregar a foto do contato.',
+        fallback: 'Não foi possível carregar a foto do contato.',
       );
     }
   }
@@ -3556,27 +3632,32 @@ class ApiClient {
     required String usuarioId,
     required String idosoId,
   }) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        ApiEndpoints.iaRelatorioInicial,
-        queryParameters: {
-          'usuarioId': usuarioId,
-          'idosoId': idosoId,
-        },
-      );
-      final dados = response.data?['dados'];
+    return _cachedRead<AiRelatorioInicial>(
+      'ia:relatorio-inicial:$usuarioId:$idosoId',
+      () async {
+        try {
+          final response = await _dio.get<Map<String, dynamic>>(
+            ApiEndpoints.iaRelatorioInicial,
+            queryParameters: {
+              'usuarioId': usuarioId,
+              'idosoId': idosoId,
+            },
+          );
+          final dados = response.data?['dados'];
 
-      if (dados is Map<String, dynamic>) {
-        return AiRelatorioInicial.fromJson(dados);
-      }
+          if (dados is Map<String, dynamic>) {
+            return AiRelatorioInicial.fromJson(dados);
+          }
 
-      return AiRelatorioInicial.fromJson(const <String, dynamic>{});
-    } on DioException catch (error) {
-      throw _toApiException(
-        error,
-        fallback: 'Não foi possível carregar o relatório da IA.',
-      );
-    }
+          return AiRelatorioInicial.fromJson(const <String, dynamic>{});
+        } on DioException catch (error) {
+          throw _toApiException(
+            error,
+            fallback: 'Não foi possível carregar o relatório da IA.',
+          );
+        }
+      },
+    );
   }
 
   Future<List<InsumoResumo>> listarInsumos({

@@ -80,6 +80,7 @@ type IdosoRow = {
   criado_por_id: string | null;
   eh_dono?: boolean | null;
   e_administrador?: boolean | null;
+  funcao?: string | null;
   permissoes?: unknown;
   url_foto: string | null;
   peso_kg: string | number | null;
@@ -135,8 +136,9 @@ const mapearIdoso = (row: IdosoRow): Idoso => {
   const permissoesTotais = ["Ficha", ...monitoramentos];
   const ehDono = Boolean(row.eh_dono);
   const eAdministrador = Boolean(row.e_administrador);
+  const ehFamiliar = row.funcao === "familiar";
   const permissoes =
-    ehDono || eAdministrador
+    ehDono || eAdministrador || ehFamiliar
       ? { visualizar: permissoesTotais, editar: permissoesTotais }
       : normalizarPermissoes(row.permissoes, permissoesTotais);
 
@@ -311,6 +313,7 @@ export const idososService = {
             else dono.dono_id = $1::uuid
           end as eh_dono,
           coalesce(acesso.e_administrador, false) as e_administrador,
+          acesso.funcao,
           acesso.permissoes,
           nome_completo as nome,
           url_foto,
@@ -353,7 +356,7 @@ export const idososService = {
           ) as dono_id
         ) dono on true
         left join lateral (
-          select mf.e_administrador, mf.permissoes
+          select mf.e_administrador, mf.funcao, mf.permissoes
           from membros_ficha mf
           where mf.idoso_id = fichas_idosos.id
             and mf.usuario_id = $1::uuid
@@ -393,6 +396,7 @@ export const idososService = {
           dono.dono_id as criado_por_id,
           dono.dono_id = $1::uuid as eh_dono,
           coalesce(acesso.e_administrador, false) as e_administrador,
+          acesso.funcao,
           acesso.permissoes,
           nome_completo as nome,
           url_foto,
@@ -435,7 +439,7 @@ export const idososService = {
           ) as dono_id
         ) dono on true
         left join lateral (
-          select mf.e_administrador, mf.permissoes
+          select mf.e_administrador, mf.funcao, mf.permissoes
           from membros_ficha mf
           where mf.idoso_id = fichas_idosos.id
             and mf.usuario_id = $1::uuid

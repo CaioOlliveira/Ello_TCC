@@ -14,7 +14,7 @@ export const listarGastosQuerySchema = z
       return input.inicio <= input.fim;
     },
     {
-      message: "Periodo invalido.",
+      message: "Período inválido.",
       path: ["fim"],
     },
   );
@@ -25,8 +25,8 @@ export const criarGastoSchema = z.object({
     .number()
     .positive("Informe um valor maior que zero.")
     .max(999999999, "Valor muito alto."),
-  descricao: z.string().trim().min(1, "Descricao e obrigatoria.").max(180),
-  fonte: z.string().trim().min(1, "Fonte do dinheiro e obrigatoria.").max(120),
+  descricao: z.string().trim().min(1, "Descrição é obrigatória.").max(180),
+  fonte: z.string().trim().min(1, "Fonte do dinheiro é obrigatória.").max(120),
   dataGasto: dateSchema,
 });
 

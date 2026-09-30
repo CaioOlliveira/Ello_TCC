@@ -263,6 +263,14 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     context.go(_isEditing ? _backRoute : _newFichaBackRoute);
   }
 
+  Future<bool> _handleSystemBack() async {
+    if (_currentStep > 0) {
+      _handleBack();
+      return false;
+    }
+    return true;
+  }
+
   void _toggleMonitoramento(String id) {
     setState(() {
       if (_monitoramentosSelecionados.contains(id)) {
@@ -399,43 +407,49 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor:
-          adaptive(context, const Color(0xFFFBFBFB), AppDarkColors.bg),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context)
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
-        child: SafeArea(
-          child: Column(
-            children: [
-              _CadastroHeader(
-                onBack: _handleBack,
-                stepIndex: _currentStep,
-                totalSteps: _totalSteps,
-                stepTitle: _stepTitles[_currentStep],
-                editing: _isEditing,
-                personText: _personText,
-              ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 260),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    final slide = Tween<Offset>(
-                      begin: const Offset(0.05, 0),
-                      end: Offset.zero,
-                    ).animate(animation);
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(position: slide, child: child),
-                    );
-                  },
-                  child: _buildStep(),
+    return PopScope(
+      canPop: _currentStep == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleSystemBack();
+      },
+      child: Scaffold(
+        backgroundColor:
+            adaptive(context, const Color(0xFFFBFBFB), AppDarkColors.bg),
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: isDarkMode(context)
+              ? SystemUiOverlayStyle.light
+              : SystemUiOverlayStyle.dark,
+          child: SafeArea(
+            child: Column(
+              children: [
+                _CadastroHeader(
+                  onBack: _handleBack,
+                  stepIndex: _currentStep,
+                  totalSteps: _totalSteps,
+                  stepTitle: _stepTitles[_currentStep],
+                  editing: _isEditing,
+                  personText: _personText,
                 ),
-              ),
-            ],
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      final slide = Tween<Offset>(
+                        begin: const Offset(0.05, 0),
+                        end: Offset.zero,
+                      ).animate(animation);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(position: slide, child: child),
+                      );
+                    },
+                    child: _buildStep(),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

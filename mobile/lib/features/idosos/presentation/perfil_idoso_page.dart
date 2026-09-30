@@ -245,9 +245,7 @@ class _CompartilharFichaSheetState
     if (codigo == null) return;
     await Clipboard.setData(ClipboardData(text: codigo));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Código copiado.')),
-    );
+    _ignoreBottomMessage();
   }
 
   @override
@@ -812,35 +810,19 @@ String _formatPhone(String value) {
 Future<void> _callPhone(BuildContext context, String phone) async {
   final digits = _phoneNumberForCall(phone);
   if (digits.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Telefone não informado.')),
-    );
+    _ignoreBottomMessage();
     return;
-  }
-
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    try {
-      final startedCall =
-          await _phoneChannel.invokeMethod<bool>('call', {'phone': digits});
-      if (startedCall == true) return;
-    } on PlatformException {
-      // Falls back to opening the dialer below.
-    }
   }
 
   final uri = Uri(scheme: 'tel', path: digits);
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (launched && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Confirme a chamada no telefone.')),
-    );
+    _ignoreBottomMessage();
     return;
   }
 
   if (!launched && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Não foi possível abrir o telefone.')),
-    );
+    _ignoreBottomMessage();
   }
 }
 
@@ -853,4 +835,4 @@ String _phoneNumberForCall(String phone) {
   return normalized.replaceAll(RegExp(r'\D'), '');
 }
 
-const _phoneChannel = MethodChannel('ello/phone');
+void _ignoreBottomMessage() {}

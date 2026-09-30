@@ -50,17 +50,9 @@ Future<Uint8List?> pickAvatarImage(BuildContext context) async {
     if (!context.mounted) return null;
 
     return showAvatarCropDialog(context, bytes);
-  } catch (error) {
+  } catch (_) {
     if (!context.mounted) return null;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          error is FormatException
-              ? error.message
-              : 'Não foi possível selecionar a imagem.',
-        ),
-      ),
-    );
+    _ignoreBottomMessage();
     return null;
   }
 }
@@ -148,11 +140,7 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível ajustar a imagem.'),
-        ),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -170,7 +158,9 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
             child: SizedBox.square(
               dimension: _boxSize,
               child: DecoratedBox(
-                decoration: BoxDecoration(color: adaptive(context, const Color(0xFFEAF5F6), AppDarkColors.tintedInfo)),
+                decoration: BoxDecoration(
+                    color: adaptive(context, const Color(0xFFEAF5F6),
+                        AppDarkColors.tintedInfo)),
                 child: InteractiveViewer(
                   constrained: false,
                   minScale: 1,
@@ -193,7 +183,10 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
           Text(
             'Arraste e aproxime para enquadrar a foto.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: adaptive(context, const Color(0xFF5E6E72), AppDarkColors.textSecondary)),
+            style: TextStyle(
+                fontSize: 13,
+                color: adaptive(context, const Color(0xFF5E6E72),
+                    AppDarkColors.textSecondary)),
           ),
         ],
       ),
@@ -283,3 +276,5 @@ Future<ui.Image> _decodeImage(Uint8List bytes) {
   ui.decodeImageFromList(bytes, completer.complete);
   return completer.future;
 }
+
+void _ignoreBottomMessage() {}

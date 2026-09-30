@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/theme/app_palette.dart';
@@ -30,6 +31,8 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
 
   var _loading = false;
   _DashboardResumo _resumo = const _DashboardResumo();
+  _DashboardCoringa _coringa = _DashboardCoringa.insulina;
+  String? _coringaIdosoId;
 
   @override
   void initState() {
@@ -40,6 +43,7 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
   Future<void> _load({bool force = false}) async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
+    await _restoreCoringa(idoso.id);
 
     if (force) {
       ref.read(apiClientProvider).clearCache();
@@ -60,6 +64,9 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
         api.listarRefeicoes(idosoId: idoso.id),
         api.getResumoGlicemia(idosoId: idoso.id),
         api.getResumoMedicamentosConsolidado(idosoId: idoso.id),
+        api.getResumoPressao(idosoId: idoso.id),
+        api.getResumoOxigenacao(idosoId: idoso.id),
+        api.getResumoTemperatura(idosoId: idoso.id),
       ]);
 
       if (!mounted) return;
@@ -69,6 +76,9 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
         refeicoes: results[2] as List<RefeicaoResumo>,
         glicemia: results[3] as GlicemiaResumo,
         medicamentos: results[4] as MedicamentosResumo,
+        pressao: results[5] as PressaoResumo,
+        oxigenacao: results[6] as OxigenacaoResumo,
+        temperatura: results[7] as TemperaturaResumo,
         dica: cached?.resumo.dica ?? _resumo.dica,
       );
 
@@ -89,19 +99,35 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
       ));
 
       _loadTip(api, idoso.id);
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível carregar o resumo.')),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _restoreCoringa(String idosoId) async {
+    if (_coringaIdosoId == idosoId) return;
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_coringaPreferenceKey(idosoId));
+    final value = _coringaFromName(saved);
+    if (!mounted) return;
+    setState(() {
+      _coringa = value ?? _DashboardCoringa.insulina;
+      _coringaIdosoId = idosoId;
+    });
+  }
+
+  Future<void> _saveCoringa(_DashboardCoringa value) async {
+    final idosoId = ref.read(selectedIdosoProvider)?.id;
+    setState(() => _coringa = value);
+    if (idosoId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_coringaPreferenceKey(idosoId), value.name);
   }
 
   Future<void> _loadTip(ApiClient api, String idosoId) async {
@@ -237,13 +263,15 @@ class _DashboardIdosoPageState extends ConsumerState<DashboardIdosoPage> {
                   ),
                   StaggeredEntry(
                     index: 7,
-                    child: _SummaryCard(
-                      icon: Icons.vaccines_outlined,
-                      title: 'Insulina:',
-                      value: _resumo.insulinaLabel,
-                      valueColor: const Color(0xFF168FA1),
+                    child: _ConfigurableSummaryCard(
+                      data: _coringaData(_resumo, _coringa),
+                      selected: _coringa,
+                      onSelected: _saveCoringa,
                       onTap: () => context.go(
-                        routeWithOrigin('/glicemia', 'dashboard'),
+                        routeWithOrigin(
+                          _coringaData(_resumo, _coringa).route,
+                          'dashboard',
+                        ),
                       ),
                     ),
                   ),
@@ -543,6 +571,127 @@ class _MedicationAlert extends StatelessWidget {
   }
 }
 
+enum _DashboardCoringa { insulina, glicemia, pressao, oxigenacao, temperatura }
+
+class _DashboardCoringaData {
+  const _DashboardCoringaData({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.route,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final String route;
+}
+
+_DashboardCoringaData _coringaData(
+  _DashboardResumo resumo,
+  _DashboardCoringa selected,
+) {
+  return switch (selected) {
+    _DashboardCoringa.insulina => _DashboardCoringaData(
+        icon: Icons.vaccines_outlined,
+        title: 'Insulina:',
+        value: resumo.insulinaLabel,
+        route: '/glicemia',
+      ),
+    _DashboardCoringa.glicemia => _DashboardCoringaData(
+        icon: Icons.water_drop_outlined,
+        title: 'Glicemia:',
+        value: resumo.glicemiaLabel,
+        route: '/glicemia',
+      ),
+    _DashboardCoringa.pressao => _DashboardCoringaData(
+        icon: Icons.monitor_heart_outlined,
+        title: 'Pressão:',
+        value: resumo.pressaoLabel,
+        route: '/pressao',
+      ),
+    _DashboardCoringa.oxigenacao => _DashboardCoringaData(
+        icon: Icons.air_rounded,
+        title: 'Oxigenação:',
+        value: resumo.oxigenacaoLabel,
+        route: '/oxigenacao',
+      ),
+    _DashboardCoringa.temperatura => _DashboardCoringaData(
+        icon: Icons.thermostat_rounded,
+        title: 'Temperatura:',
+        value: resumo.temperaturaLabel,
+        route: '/temperatura',
+      ),
+  };
+}
+
+String _coringaMenuLabel(_DashboardCoringa value) {
+  return switch (value) {
+    _DashboardCoringa.insulina => 'Insulina',
+    _DashboardCoringa.glicemia => 'Glicemia',
+    _DashboardCoringa.pressao => 'Pressão',
+    _DashboardCoringa.oxigenacao => 'Oxigenação',
+    _DashboardCoringa.temperatura => 'Temperatura',
+  };
+}
+
+String _coringaPreferenceKey(String idosoId) {
+  return 'dashboard_coringa_v1_$idosoId';
+}
+
+_DashboardCoringa? _coringaFromName(String? value) {
+  if (value == null) return null;
+  for (final item in _DashboardCoringa.values) {
+    if (item.name == value) return item;
+  }
+  return null;
+}
+
+class _ConfigurableSummaryCard extends StatelessWidget {
+  const _ConfigurableSummaryCard({
+    required this.data,
+    required this.selected,
+    required this.onSelected,
+    required this.onTap,
+  });
+
+  final _DashboardCoringaData data;
+  final _DashboardCoringa selected;
+  final ValueChanged<_DashboardCoringa> onSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SummaryCard(
+      icon: data.icon,
+      title: data.title,
+      value: data.value,
+      valueColor: const Color(0xFF168FA1),
+      onTap: onTap,
+      trailing: PopupMenuButton<_DashboardCoringa>(
+        tooltip: 'Escolher resumo',
+        initialValue: selected,
+        icon: Icon(
+          Icons.more_vert_rounded,
+          color: adaptive(
+            context,
+            const Color(0xFF607178),
+            AppDarkColors.textSecondary,
+          ),
+        ),
+        onSelected: onSelected,
+        itemBuilder: (context) => [
+          for (final item in _DashboardCoringa.values)
+            PopupMenuItem(
+              value: item,
+              child: Text(_coringaMenuLabel(item)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.icon,
@@ -550,6 +699,7 @@ class _SummaryCard extends StatelessWidget {
     required this.value,
     required this.valueColor,
     required this.onTap,
+    this.trailing,
   });
 
   final IconData icon;
@@ -557,6 +707,7 @@ class _SummaryCard extends StatelessWidget {
   final String value;
   final Color valueColor;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -602,6 +753,10 @@ class _SummaryCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 4),
+                  trailing!,
+                ],
               ],
             ),
           ),
@@ -861,6 +1016,10 @@ class _DashboardResumo {
     this.humorLabel = 'não registrado ainda',
     this.ultimaRefeicaoLabel = 'não registrado ainda',
     this.insulinaLabel = 'não registrado ainda',
+    this.glicemiaLabel = 'não registrado ainda',
+    this.pressaoLabel = 'não registrado ainda',
+    this.oxigenacaoLabel = 'não registrado ainda',
+    this.temperaturaLabel = 'não registrado ainda',
     this.proximoCompromissoTitulo = 'Nenhum compromisso',
     this.proximoCompromissoDetalhes = 'Agenda livre por enquanto',
     this.dica =
@@ -873,6 +1032,9 @@ class _DashboardResumo {
     required List<RefeicaoResumo> refeicoes,
     required GlicemiaResumo glicemia,
     required MedicamentosResumo medicamentos,
+    required PressaoResumo pressao,
+    required OxigenacaoResumo oxigenacao,
+    required TemperaturaResumo temperatura,
     required String dica,
   }) {
     final nextAppointment = _nextAppointment(compromissos);
@@ -895,6 +1057,10 @@ class _DashboardResumo {
       insulinaLabel: hasInsulinToday
           ? '${latestInsulin.tipoInsulina} normal'
           : 'não registrado ainda',
+      glicemiaLabel: _glicemiaDashboardLabel(glicemia),
+      pressaoLabel: _pressaoDashboardLabel(pressao),
+      oxigenacaoLabel: _oxigenacaoDashboardLabel(oxigenacao),
+      temperaturaLabel: _temperaturaDashboardLabel(temperatura),
       proximoCompromissoTitulo: nextAppointment?.title ?? 'Nenhum compromisso',
       proximoCompromissoDetalhes:
           nextAppointment?.details ?? 'Agenda livre por enquanto',
@@ -909,6 +1075,10 @@ class _DashboardResumo {
   final String humorLabel;
   final String ultimaRefeicaoLabel;
   final String insulinaLabel;
+  final String glicemiaLabel;
+  final String pressaoLabel;
+  final String oxigenacaoLabel;
+  final String temperaturaLabel;
   final String proximoCompromissoTitulo;
   final String proximoCompromissoDetalhes;
   final String dica;
@@ -921,6 +1091,10 @@ class _DashboardResumo {
     String? humorLabel,
     String? ultimaRefeicaoLabel,
     String? insulinaLabel,
+    String? glicemiaLabel,
+    String? pressaoLabel,
+    String? oxigenacaoLabel,
+    String? temperaturaLabel,
     String? proximoCompromissoTitulo,
     String? proximoCompromissoDetalhes,
     String? dica,
@@ -936,6 +1110,10 @@ class _DashboardResumo {
       humorLabel: humorLabel ?? this.humorLabel,
       ultimaRefeicaoLabel: ultimaRefeicaoLabel ?? this.ultimaRefeicaoLabel,
       insulinaLabel: insulinaLabel ?? this.insulinaLabel,
+      glicemiaLabel: glicemiaLabel ?? this.glicemiaLabel,
+      pressaoLabel: pressaoLabel ?? this.pressaoLabel,
+      oxigenacaoLabel: oxigenacaoLabel ?? this.oxigenacaoLabel,
+      temperaturaLabel: temperaturaLabel ?? this.temperaturaLabel,
       proximoCompromissoTitulo:
           proximoCompromissoTitulo ?? this.proximoCompromissoTitulo,
       proximoCompromissoDetalhes:
@@ -943,6 +1121,33 @@ class _DashboardResumo {
       dica: dica ?? this.dica,
     );
   }
+}
+
+String _glicemiaDashboardLabel(GlicemiaResumo resumo) {
+  final media = resumo.mediaDia ?? resumo.analise.mediaUltimos7Dias;
+  if (media == null) return 'não registrado ainda';
+  return '${media.round()} mg/dL';
+}
+
+String _pressaoDashboardLabel(PressaoResumo resumo) {
+  final sistolica =
+      resumo.mediaSistolicaDia ?? resumo.analise.mediaUltimos7Dias;
+  final diastolica =
+      resumo.mediaDiastolicaDia ?? resumo.analise.mediaDiastolicaUltimos7Dias;
+  if (sistolica == null || diastolica == null) return 'não registrado ainda';
+  return '${sistolica.round()}/${diastolica.round()} mmHg';
+}
+
+String _oxigenacaoDashboardLabel(OxigenacaoResumo resumo) {
+  final spo2 = resumo.mediaSaturacaoDia ?? resumo.analise.mediaUltimos7Dias;
+  if (spo2 == null) return 'não registrado ainda';
+  return '${spo2.round()}% SpO2';
+}
+
+String _temperaturaDashboardLabel(TemperaturaResumo resumo) {
+  final media = resumo.mediaTemperaturaDia ?? resumo.analise.mediaUltimos7Dias;
+  if (media == null) return 'não registrado ainda';
+  return '${_formatDecimal(media)} °C';
 }
 
 class _DashboardCacheEntry {
@@ -1094,6 +1299,12 @@ String _formatTime(DateTime date) {
   return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 }
 
+String _formatDecimal(double value) {
+  final text =
+      value % 1 == 0 ? value.toStringAsFixed(0) : value.toStringAsFixed(1);
+  return text.replaceAll('.', ',');
+}
+
 BoxDecoration _dashboardCardDecoration({Color color = Colors.white}) {
   return BoxDecoration(
     color: color,
@@ -1118,3 +1329,5 @@ Uint8List? _dataImageBytes(String? value) {
     return null;
   }
 }
+
+void _ignoreBottomMessage() {}

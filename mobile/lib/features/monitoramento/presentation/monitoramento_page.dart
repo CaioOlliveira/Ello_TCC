@@ -29,11 +29,7 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
       return;
     }
     if (!idoso.podeEditarFicha) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Você não tem permissão para editar esta ficha.'),
-        ),
-      );
+      _ignoreBottomMessage();
       return;
     }
 
@@ -71,18 +67,12 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
         monitoramentos: selectedIds,
       );
       ref.invalidate(idososDoUsuarioProvider);
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível atualizar os monitoramentos.'),
-        ),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -91,21 +81,11 @@ class _MonitoramentoPageState extends ConsumerState<MonitoramentoPage> {
   @override
   Widget build(BuildContext context) {
     final idoso = ref.watch(selectedIdosoProvider);
-    final visibleModuleIds = idoso == null
-        ? const <String>[]
-        : idoso.monitoramentosVisiveis
-            .where((id) => idoso.ehDono == true || id != 'Gastos')
-            .toList();
+    final visibleModuleIds =
+        idoso == null ? const <String>[] : idoso.monitoramentosVisiveis;
     final options = idoso == null
         ? const <MonitoramentoOption>[]
-        : [
-            ...monitoramentoOptionsByIds(visibleModuleIds),
-            if (idoso.ehDono == true)
-              for (final option in monitoramentoOptions)
-                if (option.id == 'Gastos' &&
-                    !visibleModuleIds.contains('Gastos'))
-                  option,
-          ];
+        : monitoramentoOptionsByIds(visibleModuleIds);
     final canManageMonitoramentos = idoso?.podeEditarFicha ?? false;
     final hasFullAccess = idoso?.temAcessoTotal ?? false;
 
@@ -310,14 +290,14 @@ class _MonitoramentoTileContent extends StatelessWidget {
                   children: [
                     Text(
                       option.title,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: adaptive(
                             context, Colors.black, AppDarkColors.textPrimary),
-                        fontSize: 15.5,
+                        fontSize: 14.5,
                         fontWeight: FontWeight.w800,
-                        height: 1.05,
+                        height: 1.12,
                       ),
                     ),
                     const SizedBox(height: 5),
@@ -615,3 +595,5 @@ class _PickerOptionTile extends StatelessWidget {
     );
   }
 }
+
+void _ignoreBottomMessage() {}

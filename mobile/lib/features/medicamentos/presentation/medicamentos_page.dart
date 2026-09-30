@@ -186,19 +186,12 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    _ignoreBottomMessage();
   }
 
   void _showSuccess(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF28A745),
-        content: Text(message),
-      ),
-    );
+    _ignoreBottomMessage();
   }
 
   bool _canEditMedicamentos() {
@@ -208,6 +201,14 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
 
   void _showNoEditPermission() {
     _showMessage('Você não tem permissão para editar medicamentos.');
+  }
+
+  Future<bool> _handleSystemBack() async {
+    if (_mode != _Mode.resumo) {
+      setState(() => _mode = _Mode.resumo);
+      return false;
+    }
+    return true;
   }
 
   Future<void> _openCreateForm() async {
@@ -411,16 +412,12 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();
       _reloadResumo(idoso.id);
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível salvar o medicamento.')),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -495,16 +492,12 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
         idosoId: idoso.id,
         medicamentoId: medicamento.id,
       );
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível registrar a dose.')),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -666,11 +659,9 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();
       _reloadResumo(idoso.id);
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -678,20 +669,26 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
   Widget build(BuildContext context) {
     final idoso = ref.watch(selectedIdosoProvider);
 
-    return Scaffold(
-      backgroundColor:
-          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context)
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: idoso == null
-                  ? _NoIdosoState(onGoBack: () => context.go('/idosos'))
-                  : _buildContent(idoso),
+    return PopScope(
+      canPop: _mode == _Mode.resumo,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleSystemBack();
+      },
+      child: Scaffold(
+        backgroundColor:
+            adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: isDarkMode(context)
+              ? SystemUiOverlayStyle.light
+              : SystemUiOverlayStyle.dark,
+          child: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: idoso == null
+                    ? _NoIdosoState(onGoBack: () => context.go('/idosos'))
+                    : _buildContent(idoso),
+              ),
             ),
           ),
         ),
@@ -3196,3 +3193,5 @@ DateTime? _dateOnly(DateTime? date) {
   if (date == null) return null;
   return DateTime(date.year, date.month, date.day);
 }
+
+void _ignoreBottomMessage() {}

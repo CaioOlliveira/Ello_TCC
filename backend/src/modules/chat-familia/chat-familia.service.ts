@@ -355,7 +355,7 @@ export const chatFamiliaService = {
       if (!mensagem) {
         throw new AppError(
           "CHAT_MENSAGEM_NAO_CRIADA",
-          "Nao foi possivel criar a mensagem.",
+          "Não foi possível criar a mensagem.",
           500,
         );
       }
@@ -698,7 +698,7 @@ async function validarContatoAtivoOuComHistorico(
   if (!result.rows[0]?.permitido) {
     throw new AppError(
       "CHAT_SEM_ACESSO",
-      "Contato sem acesso a esta ficha e sem historico de conversa.",
+      "Contato sem acesso a esta ficha e sem histórico de conversa.",
       403,
     );
   }
@@ -719,7 +719,7 @@ async function validarResponsavelFicha(idosoId: string, usuarioId: string) {
   if (!result.rows[0]?.permitido) {
     throw new AppError(
       "CHAT_APAGAR_APENAS_RESPONSAVEL",
-      "Apenas o responsavel pela ficha pode apagar esta conversa.",
+      "Apenas o responsável pela ficha pode apagar esta conversa.",
       403,
     );
   }

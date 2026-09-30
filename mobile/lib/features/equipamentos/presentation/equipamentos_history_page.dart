@@ -51,18 +51,12 @@ class _EquipamentosHistoryPageState
       setState(() {
         _items = data.map(_EquipmentHistoryItem.fromJson).toList();
       });
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível carregar o histórico.'),
-        ),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -714,3 +708,5 @@ bool _isWithin(DateTime date, DateTime now, Duration range) {
   final difference = now.difference(date);
   return !difference.isNegative && difference <= range;
 }
+
+void _ignoreBottomMessage() {}

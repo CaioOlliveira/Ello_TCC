@@ -163,7 +163,7 @@ export const convitesService = {
     if (ficha.rows[0]?.criado_por_id === input.usadoPorId) {
       throw new AppError(
         "CONVITE_PROPRIO",
-        "Voce ja e o responsavel por essa ficha.",
+        "Você já é o responsável por essa ficha.",
         400,
       );
     }

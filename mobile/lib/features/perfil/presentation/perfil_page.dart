@@ -479,9 +479,7 @@ class _AlterarSenhaPageState extends ConsumerState<AlterarSenhaPage> {
       _senhaAtualController.clear();
       _novaSenhaController.clear();
       _confirmacaoController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Senha alterada com sucesso.')),
-      );
+      _ignoreBottomMessage();
       context.go(_perfilRouteFromCurrent(context));
     } on ApiException catch (error) {
       if (mounted) setState(() => _erro = error.message);
@@ -610,7 +608,7 @@ class SobreAppPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _PerfilHeader(
-                  title: 'Sobre o App',
+                  title: 'Sobre nós',
                   onBack: () => context.go(_perfilRouteFromCurrent(context))),
               const SizedBox(height: 18),
               _Panel(
@@ -647,6 +645,34 @@ class SobreAppPage extends StatelessWidget {
                         height: 1.35,
                       ),
                     ),
+                    const SizedBox(height: 18),
+                    const _SobreSection(
+                      icon: Icons.favorite_border_rounded,
+                      title: 'Para que serve',
+                      body:
+                          'O app ajuda familiares e cuidadores a acompanhar a rotina de uma pessoa idosa com mais clareza. Ele reúne monitoramentos de saúde, alimentação, remédios, agenda, gastos, insumos, equipamentos, contatos de emergência e conversas em família.',
+                    ),
+                    const SizedBox(height: 12),
+                    const _SobreSection(
+                      icon: Icons.fact_check_outlined,
+                      title: 'Como usar',
+                      body:
+                          'Crie ou selecione uma ficha, marque quais módulos fazem parte do acompanhamento e registre as informações sempre que algo acontecer. Na tela inicial, use o resumo do dia e o menu de três pontos para escolher qual indicador acompanhar rapidamente.',
+                    ),
+                    const SizedBox(height: 12),
+                    const _SobreSection(
+                      icon: Icons.smart_toy_outlined,
+                      title: 'IA e histórico',
+                      body:
+                          'A CoraIA usa as informações cadastradas no app para apoiar a interpretação da rotina: mensagens do chat com cuidadores, datas, registros de saúde, alimentação, gastos, agenda e demais módulos disponíveis para a ficha selecionada.',
+                    ),
+                    const SizedBox(height: 12),
+                    const _SobreSection(
+                      icon: Icons.support_agent_rounded,
+                      title: 'Boas práticas',
+                      body:
+                          'Mantenha os registros atualizados, confira os dados antes de salvar e use os contatos de emergência quando precisar agir rapidamente. O app apoia o cuidado, mas não substitui orientação médica ou atendimento de urgência.',
+                    ),
                   ],
                 ),
               ),
@@ -654,6 +680,73 @@ class SobreAppPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SobreSection extends StatelessWidget {
+  const _SobreSection({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: adaptive(
+              context,
+              const Color(0xFFE3F7FA),
+              AppDarkColors.surfaceAlt,
+            ),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: const Color(0xFF0B8DA0), size: 21),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: adaptive(
+                    context,
+                    const Color(0xFF073248),
+                    AppDarkColors.textPrimary,
+                  ),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                body,
+                style: TextStyle(
+                  color: adaptive(
+                    context,
+                    const Color(0xFF4F6268),
+                    AppDarkColors.textSecondary,
+                  ),
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -769,7 +862,7 @@ class _MenuCard extends StatelessWidget {
       ),
       (
         Icons.info_outline_rounded,
-        'Sobre o App',
+        'Sobre nós',
         () => context.go('/perfil/sobre$suffix'),
       ),
     ];
@@ -1269,3 +1362,5 @@ String _perfilRouteFromCurrent(BuildContext context) {
   final from = GoRouterState.of(context).uri.queryParameters['from'];
   return from == null ? '/perfil' : '/perfil?from=$from';
 }
+
+void _ignoreBottomMessage() {}

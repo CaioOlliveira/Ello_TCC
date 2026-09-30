@@ -92,7 +92,7 @@ async function validarResponsavelFicha(idosoId: string, usuarioId: string) {
   if (!result.rows[0]?.permitido) {
     throw new AppError(
       "GASTOS_APENAS_RESPONSAVEL",
-      "Apenas o responsavel pela ficha pode acessar os gastos.",
+      "Apenas o responsável pela ficha pode acessar os gastos.",
       403,
     );
   }
@@ -214,7 +214,7 @@ export const gastosService = {
       if (index < 0) {
         throw new AppError(
           "GASTO_NAO_ENCONTRADO",
-          "Gasto nao encontrado.",
+          "Gasto não encontrado.",
           404,
         );
       }
@@ -238,7 +238,7 @@ export const gastosService = {
     );
     const rowAtual = atual.rows[0];
     if (!rowAtual) {
-      throw new AppError("GASTO_NAO_ENCONTRADO", "Gasto nao encontrado.", 404);
+      throw new AppError("GASTO_NAO_ENCONTRADO", "Gasto não encontrado.", 404);
     }
 
     await validarResponsavelFicha(rowAtual.idoso_id, input.usuarioId);

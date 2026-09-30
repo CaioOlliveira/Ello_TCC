@@ -39,7 +39,7 @@ export const criarMensagemFamiliaSchema = z
   })
   .refine(
     (input) => Boolean(input.mensagem?.length) || Boolean(input.anexo),
-    "Mensagem ou imagem e obrigatoria.",
+    "Mensagem ou imagem é obrigatória.",
   );
 
 export const marcarMensagensLidasSchema = z.object({

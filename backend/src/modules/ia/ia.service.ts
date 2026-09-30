@@ -179,10 +179,7 @@ export const iaService = {
           contents: [
             {
               role: "user",
-              parts: [
-                { text: `${prompt}${instrucaoExtra}` },
-                ...partesImagem,
-              ],
+              parts: [{ text: `${prompt}${instrucaoExtra}` }, ...partesImagem],
             },
           ],
         });
@@ -814,8 +811,10 @@ function compactarContextoParaPrompt(contexto: Record<string, unknown> | null) {
   const alimentacao = lerObjeto(contexto.alimentacao);
   const hidratacao = lerObjeto(contexto.hidratacao);
   const humor = lerObjeto(contexto.humor);
+  const gastos = lerObjeto(contexto.gastos);
   const medicamentos = lerObjeto(contexto.medicamentos);
   const equipamentos = lerObjeto(contexto.equipamentos);
+  const chatFamilia = lerObjeto(contexto.chatFamilia);
 
   return sanitizarObjeto({
     geradoEm: contexto.geradoEm,
@@ -841,6 +840,15 @@ function compactarContextoParaPrompt(contexto: Record<string, unknown> | null) {
       totalRegistrosRecentes: humor?.totalRegistrosRecentes,
       registrosRecentes: lerArray(humor?.registrosRecentes).slice(0, 8),
     },
+    sono: lerArray(contexto.sono).slice(0, 8),
+    pressaoArterial: lerArray(contexto.pressaoArterial).slice(0, 12),
+    oxigenacao: lerArray(contexto.oxigenacao).slice(0, 12),
+    temperatura: lerArray(contexto.temperatura).slice(0, 12),
+    gastos: {
+      totalPeriodo: gastos?.totalPeriodo,
+      totalRegistrosCarregados: gastos?.totalRegistrosCarregados,
+      registrosRecentes: lerArray(gastos?.registrosRecentes).slice(0, 14),
+    },
     agenda: lerArray(contexto.agenda).slice(0, 8),
     medicamentos: {
       cadastrados: lerArray(medicamentos?.cadastrados).slice(0, 12),
@@ -855,6 +863,13 @@ function compactarContextoParaPrompt(contexto: Record<string, unknown> | null) {
         0,
         6,
       ),
+    },
+    historicoAlteracoesRecentes: lerArray(
+      contexto.historicoAlteracoesRecentes,
+    ).slice(0, 12),
+    chatFamilia: {
+      regraPrivacidade: chatFamilia?.regraPrivacidade,
+      mensagensRecentes: lerArray(chatFamilia?.mensagensRecentes).slice(0, 24),
     },
   }) as Record<string, unknown>;
 }
@@ -982,6 +997,8 @@ async function montarContextoInternoIdoso(
     sono,
     pressao,
     oxigenacao,
+    temperatura,
+    gastos,
     agenda,
     medicamentos,
     administracoesMedicamentos,
@@ -989,7 +1006,7 @@ async function montarContextoInternoIdoso(
     equipamentos,
     manutencoesEquipamentos,
     historicoAlteracoes,
-    conversasFamiliaDoUsuario,
+    mensagensChatFamilia,
   ] = await Promise.all([
     consultarLinhas(
       `
@@ -1112,6 +1129,26 @@ async function montarContextoInternoIdoso(
         limit 12
       `,
       [idosoId, desde30Dias.toISOString()],
+    ),
+    consultarLinhas(
+      `
+        select temperatura_celsius, medido_em, observacoes
+        from registros_temperatura
+        where idoso_id = $1 and medido_em >= $2
+        order by medido_em desc
+        limit 12
+      `,
+      [idosoId, desde30Dias.toISOString()],
+    ),
+    consultarLinhas(
+      `
+        select valor, descricao, fonte, data_gasto, criado_em
+        from gastos_ficha
+        where idoso_id = $1
+        order by data_gasto desc, criado_em desc
+        limit 50
+      `,
+      [idosoId],
     ),
     consultarLinhas(
       `
@@ -1239,42 +1276,38 @@ async function montarContextoInternoIdoso(
       `,
       [idosoId, desde14Dias.toISOString()],
     ),
-    usuarioId
-      ? consultarLinhas(
-          `
-            select
-              case
-                when m.remetente_id = $2 then destinatario.nome
-                else remetente.nome
-              end as conversa_com,
-              case
-                when m.remetente_id = $2 then 'usuario_atual'
-                else 'outro_participante'
-              end as remetente,
-              m.conteudo,
-              m.criado_em
-            from mensagens_chat_familia m
-            join usuarios remetente on remetente.id = m.remetente_id
-            join usuarios destinatario on destinatario.id = m.destinatario_id
-            where m.idoso_id = $1
-              and (m.remetente_id = $2 or m.destinatario_id = $2)
-            order by m.criado_em desc
-            limit 24
-          `,
-          [idosoId, usuarioId],
-        )
-      : Promise.resolve([]),
+    consultarLinhas(
+      `
+        select
+          remetente.nome as remetente_nome,
+          destinatario.nome as destinatario_nome,
+          m.conteudo,
+          m.criado_em
+        from mensagens_chat_familia m
+        join usuarios remetente on remetente.id = m.remetente_id
+        join usuarios destinatario on destinatario.id = m.destinatario_id
+        where m.idoso_id = $1
+        order by m.criado_em desc
+        limit 32
+      `,
+      [idosoId],
+    ),
   ]);
 
   const glicemias = sanitizarLinhas(glicemia);
+  const gastosRecentes = sanitizarLinhas(gastos);
   const valoresGlicemia = glicemias
     .map((registro) => Number(registro.valor_mg_dl))
     .filter((valor) => Number.isFinite(valor));
+  const totalGastosPeriodo = gastosRecentes.reduce(
+    (total, gasto) => total + numeroOuZero(gasto.valor),
+    0,
+  );
 
   return sanitizarObjeto({
     geradoEm: now.toISOString(),
     janelaPrincipal:
-      "últimos 30 dias; alimentação, hidratação e histórico em janelas menores quando indicado",
+      "últimos 30 dias; gastos carregados pelo histórico mais recente disponível; alimentação, hidratação e histórico em janelas menores quando indicado",
     idoso: sanitizarLinhas(idoso)[0] ?? null,
     glicemia: {
       resumo: resumirGlicemia(valoresGlicemia),
@@ -1299,6 +1332,12 @@ async function montarContextoInternoIdoso(
     sono: sanitizarLinhas(sono),
     pressaoArterial: sanitizarLinhas(pressao),
     oxigenacao: sanitizarLinhas(oxigenacao),
+    temperatura: sanitizarLinhas(temperatura),
+    gastos: {
+      totalPeriodo: totalGastosPeriodo,
+      totalRegistrosCarregados: gastosRecentes.length,
+      registrosRecentes: gastosRecentes,
+    },
     agenda: sanitizarLinhas(agenda),
     medicamentos: {
       cadastrados: sanitizarLinhas(medicamentos).map((medicamento) => {
@@ -1316,10 +1355,11 @@ async function montarContextoInternoIdoso(
       manutencoesRecentes: sanitizarLinhas(manutencoesEquipamentos),
     },
     historicoAlteracoesRecentes: sanitizarLinhas(historicoAlteracoes),
-    conversasFamiliaDoUsuario: {
+    chatFamilia: {
       regraPrivacidade:
-        "Somente mensagens de conversas em que o usuário atual participa. Não há acesso a conversas privadas entre outras pessoas.",
-      mensagensRecentes: sanitizarLinhas(conversasFamiliaDoUsuario),
+        "Mensagens recentes do chat da família vinculadas a esta ficha.",
+      totalMensagensRecentes: mensagensChatFamilia.length,
+      mensagensRecentes: sanitizarLinhas(mensagensChatFamilia),
     },
   }) as Record<string, unknown>;
 }

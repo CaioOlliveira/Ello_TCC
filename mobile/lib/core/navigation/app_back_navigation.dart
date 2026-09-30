@@ -47,6 +47,14 @@ class AppBackNavigation {
       return true;
     }
 
+    final originDestination = _originBackDestination(_locationOf(router));
+    if (originDestination != null) {
+      _removeDestinationFromHistory(originDestination);
+      _handlingSystemBack = true;
+      router.go(originDestination);
+      return true;
+    }
+
     if (_previousLocations.isEmpty) return false;
 
     final destination = _previousLocations.removeLast();
@@ -102,6 +110,25 @@ class AppBackNavigation {
   bool _shouldTrack(String location) {
     final path = Uri.tryParse(location)?.path ?? location;
     return path != '/' && path != '/login';
+  }
+
+  String? _originBackDestination(String location) {
+    final uri = Uri.tryParse(location);
+    final from = uri?.queryParameters['from'];
+    return switch (from) {
+      'dashboard' => '/dashboard',
+      'monitoramento' => '/monitoramento',
+      _ => null,
+    };
+  }
+
+  void _removeDestinationFromHistory(String destination) {
+    final index = _previousLocations.lastIndexWhere((location) {
+      return (Uri.tryParse(location)?.path ?? location) == destination;
+    });
+    if (index >= 0) {
+      _previousLocations.removeRange(index, _previousLocations.length);
+    }
   }
 }
 

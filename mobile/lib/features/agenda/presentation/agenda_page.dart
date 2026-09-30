@@ -86,11 +86,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   void _showNoEditPermission() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Você não tem permissão para editar a agenda.'),
-      ),
-    );
+    _ignoreBottomMessage();
   }
 
   Future<void> _openForm({AgendaCompromisso? item}) async {
@@ -1343,3 +1339,5 @@ class _AgendaMessage extends StatelessWidget {
     );
   }
 }
+
+void _ignoreBottomMessage() {}

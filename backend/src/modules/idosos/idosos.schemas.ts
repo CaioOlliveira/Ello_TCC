@@ -31,12 +31,12 @@ const sexoSchema = z.preprocess(
   normalizarSexo,
   z.enum(valoresSexo, {
     invalid_type_error: "Sexo invalido.",
-    required_error: "Sexo e obrigatorio.",
+    required_error: "Sexo é obrigatório.",
   }),
 );
 
 export const idosoParamsSchema = z.object({
-  idosoId: z.string().min(1, "Idoso e obrigatorio."),
+  idosoId: z.string().min(1, "Idoso é obrigatório."),
 });
 
 export const listarIdososQuerySchema = z.object({
@@ -51,7 +51,7 @@ export const contatoEmergenciaSchema = z.object({
 });
 
 export const criarIdosoSchema = z.object({
-  nomeCompleto: z.string().min(1, "Nome completo e obrigatorio."),
+  nomeCompleto: z.string().min(1, "Nome completo é obrigatório."),
   dataNascimento: z.string().date("Data de nascimento invalida.").optional(),
   urlFoto: z.string().nullable().optional(),
   pesoKg: z.number().positive().optional(),

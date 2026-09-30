@@ -49,18 +49,12 @@ class _AgendaHistoryPageState extends ConsumerState<AgendaHistoryPage> {
       setState(() {
         _items = data.map(_AgendaHistoryItem.fromJson).toList();
       });
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível carregar o histórico da agenda.'),
-        ),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -847,3 +841,5 @@ String _actionSubtitle(_AgendaHistoryItem item, String title) {
       return title;
   }
 }
+
+void _ignoreBottomMessage() {}

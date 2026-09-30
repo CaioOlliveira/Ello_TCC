@@ -360,7 +360,7 @@ class _OwnerAccessGate extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Acesso do responsavel',
+                  'Acesso do responsável',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
@@ -369,7 +369,7 @@ class _OwnerAccessGate extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Somente o responsavel pela ficha pode ver os gastos.',
+                  'Somente o responsável pela ficha pode ver os gastos.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 14, color: Color(0xFF65757C)),
                 ),
@@ -480,6 +480,29 @@ class _ModuleAccessGate extends ConsumerWidget {
   }
 }
 
+bool _sameIdosoAccess(IdosoResumo current, IdosoResumo next) {
+  return current.ehDono == next.ehDono &&
+      current.eAdministrador == next.eAdministrador &&
+      _sameStringList(current.monitoramentos, next.monitoramentos) &&
+      _sameStringSet(
+        current.permissoesVisualizar,
+        next.permissoesVisualizar,
+      ) &&
+      _sameStringSet(current.permissoesEditar, next.permissoesEditar);
+}
+
+bool _sameStringList(List<String> current, List<String> next) {
+  if (current.length != next.length) return false;
+  for (var index = 0; index < current.length; index++) {
+    if (current[index] != next[index]) return false;
+  }
+  return true;
+}
+
+bool _sameStringSet(List<String> current, List<String> next) {
+  return current.length == next.length && current.toSet().containsAll(next);
+}
+
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({required this.child, super.key});
 
@@ -498,6 +521,8 @@ class _AppShellState extends ConsumerState<AppShell>
   String? _pendingChatKey;
   String? _lastWarmupIdosoId;
   String? _lastSavedNavigationKey;
+  Timer? _permissionsSyncTimer;
+  bool _syncingSelectedIdoso = false;
 
   @override
   void initState() {
@@ -520,12 +545,18 @@ class _AppShellState extends ConsumerState<AppShell>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final payload = LocalNotificationService.instance.takeLaunchPayload();
       if (payload != null) _openChatFromPayload(payload);
+      _syncSelectedIdoso();
     });
+    _permissionsSyncTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _syncSelectedIdoso(),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _permissionsSyncTimer?.cancel();
     _localNotificationSubscription?.cancel();
     _pushOpenedSubscription?.cancel();
     _pushForegroundSubscription?.cancel();
@@ -538,6 +569,50 @@ class _AppShellState extends ConsumerState<AppShell>
           state != AppLifecycleState.paused &&
               state != AppLifecycleState.detached,
         );
+    if (state == AppLifecycleState.resumed) {
+      _syncSelectedIdoso();
+    }
+  }
+
+  Future<void> _syncSelectedIdoso() async {
+    if (_syncingSelectedIdoso || !mounted) return;
+    final usuario = ref.read(authSessionProvider);
+    final selecionado = ref.read(selectedIdosoProvider);
+    if (usuario == null || usuario.id.isEmpty || selecionado == null) return;
+
+    _syncingSelectedIdoso = true;
+    try {
+      final fichas = await ref.read(apiClientProvider).listarIdosos(
+            usuarioId: usuario.id,
+            forceRefresh: true,
+          );
+      if (!mounted) return;
+      if (ref.read(selectedIdosoProvider)?.id != selecionado.id) return;
+
+      IdosoResumo? atualizado;
+      for (final ficha in fichas) {
+        if (ficha.id == selecionado.id) {
+          atualizado = ficha;
+          break;
+        }
+      }
+
+      if (atualizado == null) {
+        ref.read(selectedIdosoProvider.notifier).state = null;
+        ref.invalidate(idososDoUsuarioProvider);
+        context.go('/idosos');
+        return;
+      }
+
+      if (!_sameIdosoAccess(selecionado, atualizado)) {
+        ref.read(selectedIdosoProvider.notifier).state = atualizado;
+        ref.invalidate(idososDoUsuarioProvider);
+      }
+    } catch (_) {
+      // Uma falha temporaria de rede nao deve remover os acessos atuais.
+    } finally {
+      _syncingSelectedIdoso = false;
+    }
   }
 
   Future<void> _openChatFromPayload(String payload) async {

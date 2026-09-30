@@ -88,17 +88,21 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
     _load();
   }
 
+  Future<bool> _handleSystemBack() async {
+    if (_view != _InsumosView.lista) {
+      _showList();
+      return false;
+    }
+    return true;
+  }
+
   bool _canEditInsumos() {
     return ref.read(selectedIdosoProvider)?.podeEditarModulo('Insumos') ??
         false;
   }
 
   void _showNoEditPermission() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Você não tem permissão para editar insumos.'),
-      ),
-    );
+    _ignoreBottomMessage();
   }
 
   void _showCadastro() {
@@ -189,9 +193,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
 
     final usuarioId = ref.read(authSessionProvider)?.id;
     if (usuarioId == null || usuarioId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Entre novamente para excluir o insumo.')),
-      );
+      _ignoreBottomMessage();
       return;
     }
 
@@ -202,16 +204,12 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
           );
       if (!mounted) return;
       _showList();
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível excluir o insumo.')),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -230,9 +228,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
 
       if (!mounted) return;
       if (vencidos.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não há insumos vencidos para listar.')),
-        );
+        _ignoreBottomMessage();
         return;
       }
 
@@ -282,9 +278,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível gerar o PDF.')),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -292,68 +286,75 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
   Widget build(BuildContext context) {
     final idoso = ref.watch(selectedIdosoProvider);
 
-    return Scaffold(
-      backgroundColor:
-          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context)
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 260),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.03),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
+    return PopScope(
+      canPop: _view == _InsumosView.lista,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleSystemBack();
+      },
+      child: Scaffold(
+        backgroundColor:
+            adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: isDarkMode(context)
+              ? SystemUiOverlayStyle.light
+              : SystemUiOverlayStyle.dark,
+          child: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.03),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
                   ),
-                ),
-                child: KeyedSubtree(
-                  key: ValueKey(_view),
-                  child: switch (_view) {
-                    _InsumosView.lista => _InsumosListView(
-                        insumos: _insumos,
-                        loading: _loading,
-                        error: _error,
-                        onRetry: _load,
-                        onBack: () => context.go(moduleBackRoute(context)),
-                        onAdd: _showCadastro,
-                        onHistory: () => context.push(
-                          routeWithCurrentOrigin(context, '/historico/insumos'),
+                  child: KeyedSubtree(
+                    key: ValueKey(_view),
+                    child: switch (_view) {
+                      _InsumosView.lista => _InsumosListView(
+                          insumos: _insumos,
+                          loading: _loading,
+                          error: _error,
+                          onRetry: _load,
+                          onBack: () => context.go(moduleBackRoute(context)),
+                          onAdd: _showCadastro,
+                          onHistory: () => context.push(
+                            routeWithCurrentOrigin(
+                                context, '/historico/insumos'),
+                          ),
+                          onGeneratePdf: _generateExpiredPdf,
+                          onOpen: _showDetalhe,
+                          selectedFilter: _selectedFilter,
+                          onFilterChanged: _selectFilter,
                         ),
-                        onGeneratePdf: _generateExpiredPdf,
-                        onOpen: _showDetalhe,
-                        selectedFilter: _selectedFilter,
-                        onFilterChanged: _selectFilter,
-                      ),
-                    _InsumosView.cadastro => _InsumoFormView(
-                        idosoId: idoso?.id ?? '',
-                        onCancel: _showList,
-                        onSaved: _onCreated,
-                      ),
-                    _InsumosView.detalhe => _InsumoDetailView(
-                        insumo: _selected,
-                        onBack: _showList,
-                        onAtualizar: _showAtualizar,
-                        onDelete: _deleteSelected,
-                      ),
-                    _InsumosView.atualizar => _InsumoStockView(
-                        insumo: _selected,
-                        usuarioId: ref.watch(authSessionProvider)?.id,
-                        onCancel: () =>
-                            setState(() => _view = _InsumosView.detalhe),
-                        onSaved: _onUpdated,
-                      ),
-                  },
+                      _InsumosView.cadastro => _InsumoFormView(
+                          idosoId: idoso?.id ?? '',
+                          onCancel: _showList,
+                          onSaved: _onCreated,
+                        ),
+                      _InsumosView.detalhe => _InsumoDetailView(
+                          insumo: _selected,
+                          onBack: _showList,
+                          onAtualizar: _showAtualizar,
+                          onDelete: _deleteSelected,
+                        ),
+                      _InsumosView.atualizar => _InsumoStockView(
+                          insumo: _selected,
+                          usuarioId: ref.watch(authSessionProvider)?.id,
+                          onCancel: () =>
+                              setState(() => _view = _InsumosView.detalhe),
+                          onSaved: _onUpdated,
+                        ),
+                    },
+                  ),
                 ),
               ),
             ),
@@ -1126,3 +1127,5 @@ String _imageExtension(String fileName) {
   if (lower.endsWith('.webp')) return 'webp';
   return 'jpeg';
 }
+
+void _ignoreBottomMessage() {}

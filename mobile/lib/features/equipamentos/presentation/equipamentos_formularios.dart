@@ -123,11 +123,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
       );
     } on PlatformException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível abrir o seletor de arquivos.'),
-        ),
-      );
+      _ignoreBottomMessage();
       return;
     }
     if (result == null) return;
@@ -135,9 +131,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
     final file = result.files.single;
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione um arquivo PDF.')),
-      );
+      _ignoreBottomMessage();
       return;
     }
 
@@ -148,9 +142,7 @@ class _EquipamentoFormState extends State<_EquipamentoForm> {
 
     if (bytes == null || bytes.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível ler o PDF.')),
-      );
+      _ignoreBottomMessage();
       return;
     }
 

@@ -23,8 +23,10 @@ class _ModuloPermissao {
 final _modulosPermissao = [
   const _ModuloPermissao(id: 'Ficha', titulo: 'Ficha da pessoa idosa'),
   for (final option in monitoramentoOptions)
-    _ModuloPermissao(id: option.id, titulo: option.title),
+    if (option.id != 'Gastos')
+      _ModuloPermissao(id: option.id, titulo: option.title),
 ];
+final _modulosPermitidos = _modulosPermissao.map((modulo) => modulo.id).toSet();
 
 class PermissoesDetalhadasPage extends ConsumerStatefulWidget {
   const PermissoesDetalhadasPage({super.key, required this.membroId});
@@ -64,8 +66,11 @@ class _PermissoesDetalhadasPageState
       if (!mounted) return;
       setState(() {
         _membro = membro;
-        _visualizar = membro.permissoesVisualizar.toSet();
-        _editar = membro.permissoesEditar.toSet();
+        _visualizar = membro.permissoesVisualizar
+            .where(_modulosPermitidos.contains)
+            .toSet();
+        _editar =
+            membro.permissoesEditar.where(_modulosPermitidos.contains).toSet();
         _loading = false;
         _sujo = false;
       });
@@ -101,17 +106,14 @@ class _PermissoesDetalhadasPageState
       if (context.canPop()) {
         context.pop();
       }
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
       setState(() => _salvando = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
       setState(() => _salvando = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível salvar.')),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -616,3 +618,5 @@ Uint8List? _dataImageBytes(String? value) {
     return null;
   }
 }
+
+void _ignoreBottomMessage() {}

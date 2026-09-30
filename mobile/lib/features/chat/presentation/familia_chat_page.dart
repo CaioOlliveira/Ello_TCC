@@ -503,13 +503,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
     final idoso = ref.read(selectedIdosoProvider);
     if (usuario == null || idoso == null) return;
     if (!_canDeleteConversation) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Remova o cuidador da ficha antes de apagar esta conversa.',
-          ),
-        ),
-      );
+      _ignoreBottomMessage();
       return;
     }
 
@@ -608,16 +602,12 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       );
       if (!mounted) return;
       context.go('/chat');
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível apagar esta conversa.')),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -652,12 +642,11 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
     if (shouldClear != true || !mounted) return;
 
     try {
-      final clearedOnServer =
-          await ref.read(apiClientProvider).limparConversaFamilia(
-                idosoId: idoso.id,
-                outroUsuarioId: _peer.id,
-                accessToken: usuario.accessToken!,
-              );
+      await ref.read(apiClientProvider).limparConversaFamilia(
+            idosoId: idoso.id,
+            outroUsuarioId: _peer.id,
+            accessToken: usuario.accessToken!,
+          );
       final clearedUntil =
           _messages.isEmpty ? DateTime.now() : _messages.last.createdAt;
 
@@ -677,25 +666,13 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
         _nextCursor = null;
       });
       unawaited(ref.read(chatInboxProvider.notifier).refresh());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            clearedOnServer
-                ? 'Conversa limpa para voce.'
-                : 'Conversa limpa neste aparelho.',
-          ),
-        ),
-      );
-    } on ApiException catch (error) {
+      _ignoreBottomMessage();
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel limpar a conversa.')),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -794,12 +771,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       });
       await _persistMessages();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Mensagem nao enviada. Toque no aviso para tentar novamente.'),
-        ),
-      );
+      _ignoreBottomMessage();
       unawaited(ref.read(chatInboxProvider.notifier).refresh());
     } finally {
       _sendingMessageIds.remove(message.id);
@@ -857,11 +829,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       final bytes = await image.readAsBytes();
       if (bytes.length > 1100000) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('A imagem precisa ter no maximo 1 MB.'),
-          ),
-        );
+        _ignoreBottomMessage();
         return;
       }
       if (!mounted) return;
@@ -873,9 +841,7 @@ class _FamiliaChatDetailPageState extends ConsumerState<FamiliaChatDetailPage>
       });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível anexar a imagem.')),
-      );
+      _ignoreBottomMessage();
     }
   }
 
@@ -2376,3 +2342,5 @@ Uint8List? _decodeDataUrl(String? value) {
     return null;
   }
 }
+
+void _ignoreBottomMessage() {}

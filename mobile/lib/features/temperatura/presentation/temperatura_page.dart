@@ -144,12 +144,16 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
     return Navigator.of(context, rootNavigator: true).context;
   }
 
+  Future<bool> _handleSystemBack() async {
+    if (_mode != _TemperaturaMode.resumo) {
+      setState(() => _mode = _TemperaturaMode.resumo);
+      return false;
+    }
+    return true;
+  }
+
   void _showNoEditPermission() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Você não tem permissão para editar este registro.'),
-      ),
-    );
+    _ignoreBottomMessage();
   }
 
   Future<void> _salvar(IdosoResumo idoso) async {
@@ -181,20 +185,13 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
       setState(() => _mode = _TemperaturaMode.resumo);
       _reloadResumo(idoso.id);
       _reloadHistorico(idoso.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Temperatura registrada.')),
-      );
-    } on ApiException catch (error) {
+      _ignoreBottomMessage();
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      _ignoreBottomMessage();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Não foi possível registrar a temperatura.')),
-      );
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -204,20 +201,26 @@ class _TemperaturaPageState extends ConsumerState<TemperaturaPage> {
   Widget build(BuildContext context) {
     final idoso = ref.watch(selectedIdosoProvider);
 
-    return Scaffold(
-      backgroundColor:
-          adaptive(context, const Color(0xFFF7F7F7), AppDarkColors.bg),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context)
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: idoso == null
-                  ? _NoIdosoState(onGoBack: () => context.go('/idosos'))
-                  : _buildContent(idoso),
+    return PopScope(
+      canPop: _mode == _TemperaturaMode.resumo,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleSystemBack();
+      },
+      child: Scaffold(
+        backgroundColor:
+            adaptive(context, const Color(0xFFF7F7F7), AppDarkColors.bg),
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: isDarkMode(context)
+              ? SystemUiOverlayStyle.light
+              : SystemUiOverlayStyle.dark,
+          child: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: idoso == null
+                    ? _NoIdosoState(onGoBack: () => context.go('/idosos'))
+                    : _buildContent(idoso),
+              ),
             ),
           ),
         ),
@@ -393,7 +396,7 @@ class _ResumoTemperaturaView extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Expanded(
-            child: resumo.totalRegistros == 0
+            child: resumo.totalRegistrosGeral == 0
                 ? _PrimeiraMedicaoState(
                     idosoNome: idoso.nome,
                     hasPreviousRecords: resumo.totalRegistrosGeral > 0,
@@ -657,8 +660,6 @@ class _MediaTemperaturaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final media =
         resumo.mediaTemperaturaDia ?? resumo.analise.mediaUltimos7Dias;
-    final ultima = resumo.ultima;
-    final alertColor = _alertColor(resumo.alerta.cor);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(15, 12, 15, 11),
@@ -680,64 +681,17 @@ class _MediaTemperaturaCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 _AnimatedTemperaturaValue(value: media),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: alertColor.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        resumo.alerta.cor == 'ok'
-                            ? Icons.check_circle_rounded
-                            : Icons.warning_rounded,
-                        color: alertColor,
-                        size: 15,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          resumo.alerta.mensagem,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: alertColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
           const SizedBox(width: 10),
-          Column(
+          const Column(
             children: [
-              const Icon(
+              Icon(
                 Icons.thermostat_rounded,
                 color: Color(0xFF148A9C),
                 size: 44,
               ),
-              if (ultima != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _formatTime(ultima.medidoEm),
-                  style: const TextStyle(
-                    color: Color(0xFF148A9C),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
             ],
           ),
         ],
@@ -998,71 +952,53 @@ class _AnalysisCard extends StatelessWidget {
       color:
           adaptive(context, const Color(0xFFC9E7ED), AppDarkColors.tintedInfo),
       borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'A análise detalhada por IA ainda está em treinamento.',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 11, 12, 11),
+        child: Row(
+          children: [
+            Container(
+              width: 53,
+              height: 53,
+              decoration: const BoxDecoration(
+                color: Color(0xFF25A1B2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.thermostat_rounded,
+                color: Colors.white,
+                size: 32,
               ),
             ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 9, 11, 9),
-          child: Row(
-            children: [
-              Container(
-                width: 53,
-                height: 53,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF25A1B2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.thermostat_rounded,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Análise de temperatura',
-                      style: TextStyle(
-                        color: adaptive(context, const Color(0xFF2F4853),
-                            AppDarkColors.textPrimary),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Análise de temperatura',
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF2F4853),
+                          AppDarkColors.textPrimary),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      resumo.analise.texto,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: adaptive(context, const Color(0xFF2F4853),
-                            AppDarkColors.textPrimary),
-                        fontSize: 10,
-                        height: 1.08,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    resumo.analise.texto,
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: adaptive(context, const Color(0xFF2F4853),
+                          AppDarkColors.textPrimary),
+                      fontSize: 13,
+                      height: 1.2,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: adaptive(context, const Color(0xFF073248),
-                    AppDarkColors.textPrimary),
-                size: 30,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1830,16 +1766,6 @@ ButtonStyle _primaryButtonStyle() {
   );
 }
 
-Color _alertColor(String cor) {
-  return switch (cor) {
-    'ok' => const Color(0xFF28A745),
-    'atencao' => const Color(0xFFE49A20),
-    'critico' => const Color(0xFFD73A3A),
-    'alerta' => const Color(0xFFD73A3A),
-    _ => const Color(0xFF607178),
-  };
-}
-
 Color _badgeColor(String cor) {
   return switch (cor) {
     'normal' => const Color(0xFF28A745),
@@ -1874,3 +1800,5 @@ String _formatTime(DateTime date) {
 String _formatTemperatura(double value) {
   return value.toStringAsFixed(1).replaceAll('.', ',');
 }
+
+void _ignoreBottomMessage() {}

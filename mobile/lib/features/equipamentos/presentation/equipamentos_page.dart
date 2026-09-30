@@ -324,9 +324,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
   int _compare(Equipamento a, Equipamento b) => a.nome.compareTo(b.nome);
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    _ignoreBottomMessage();
   }
 
   void _back() {
@@ -340,6 +338,12 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
       return;
     }
     setState(() => _view = _EquipamentosView.lista);
+  }
+
+  Future<bool> _handleSystemBack() async {
+    if (_view == _EquipamentosView.lista) return true;
+    _back();
+    return false;
   }
 
   @override
@@ -445,46 +449,52 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
               );
     }
 
-    return Scaffold(
-      backgroundColor:
-          adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: isDarkMode(context)
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AppPageHeader(title: pageTitle, onBack: _back),
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 260),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (transitionChild, animation) =>
-                            FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.03),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: transitionChild,
+    return PopScope(
+      canPop: _view == _EquipamentosView.lista,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleSystemBack();
+      },
+      child: Scaffold(
+        backgroundColor:
+            adaptive(context, const Color(0xFFFAFAFA), AppDarkColors.bg),
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: isDarkMode(context)
+              ? SystemUiOverlayStyle.light
+              : SystemUiOverlayStyle.dark,
+          child: SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AppPageHeader(title: pageTitle, onBack: _back),
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 260),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          transitionBuilder: (transitionChild, animation) =>
+                              FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, 0.03),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: transitionChild,
+                            ),
+                          ),
+                          child: KeyedSubtree(
+                            key: ValueKey(_view),
+                            child: child,
                           ),
                         ),
-                        child: KeyedSubtree(
-                          key: ValueKey(_view),
-                          child: child,
-                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -689,3 +699,5 @@ class _EquipamentoCard extends StatelessWidget {
     );
   }
 }
+
+void _ignoreBottomMessage() {}

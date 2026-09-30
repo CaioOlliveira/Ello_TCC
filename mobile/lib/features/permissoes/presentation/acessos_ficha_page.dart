@@ -91,9 +91,7 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
     if (codigo == null || codigo.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: codigo));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Código copiado.')),
-    );
+    _ignoreBottomMessage();
   }
 
   Future<void> _aprovar(SolicitacaoPendente solicitacao) async {
@@ -104,10 +102,9 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
             usuarioId: ref.read(authSessionProvider)?.id,
           );
       await _carregar();
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _acaoEmAndamentoId = null);
     }
@@ -121,10 +118,9 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
             usuarioId: ref.read(authSessionProvider)?.id,
           );
       await _carregar();
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _acaoEmAndamentoId = null);
     }
@@ -140,10 +136,9 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
             atualizadoPorId: ref.read(authSessionProvider)?.id,
           );
       await _carregar();
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _acaoEmAndamentoId = null);
     }
@@ -159,10 +154,9 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
             atualizadoPorId: ref.read(authSessionProvider)?.id,
           );
       await _carregar();
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _acaoEmAndamentoId = null);
     }
@@ -199,10 +193,9 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
             usuarioId: ref.read(authSessionProvider)?.id,
           );
       await _carregar();
-    } on ApiException catch (error) {
+    } on ApiException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      _ignoreBottomMessage();
     } finally {
       if (mounted) setState(() => _acaoEmAndamentoId = null);
     }
@@ -1275,3 +1268,5 @@ Uint8List? _dataImageBytes(String? value) {
     return null;
   }
 }
+
+void _ignoreBottomMessage() {}

@@ -25,6 +25,7 @@ const defaultMonitoramentoIds = [
   'Alimentacao',
   'Equipamentos',
   'Insumos',
+  'Gastos',
   'Glicemia',
 ];
 
