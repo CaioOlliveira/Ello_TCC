@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b2733" />
+  <meta name="description" content="Ello: aplicativo criado para apoiar a organização do cuidado de pessoas idosas." />
+  <title>Ello — Projeto de TCC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23098291'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial' font-size='34' fill='white'%3Ee%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+
+  <header class="site-header" id="inicio">
+    <div class="nav-shell">
+      <a class="brand" href="#inicio" aria-label="Ello, início">ello</a>
+      <nav aria-label="Navegação principal">
+        <a href="#projeto">Projeto</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#participe">Formulários</a>
+      </nav>
+      <a class="header-button" href="https://drive.google.com/file/d/1i6svngvK1AmQaFih2HhW6MUUuNDsFApM/view?usp=sharing" target="_blank" rel="noopener noreferrer">Baixar app</a>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <section class="hero">
+      <div class="section-shell hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Trabalho de conclusão de curso</span>
+          <h1>Cuidar também é organizar.</h1>
+          <p>O Ello é um aplicativo criado para ajudar na organização do cuidado de pessoas idosas. Ele reúne informações importantes da rotina em um só lugar.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://drive.google.com/file/d/1i6svngvK1AmQaFih2HhW6MUUuNDsFApM/view?usp=sharing" target="_blank" rel="noopener noreferrer">Baixar o aplicativo</a>
+            <a class="button secondary" href="https://github.com/CaioOlliveira/Ello_TCC.git" target="_blank" rel="noopener noreferrer">Ver no GitHub</a>
+          </div>
+        </div>
+        <div class="hero-image">
+          <img src="./assets/ello-symbol.jpeg" alt="Símbolo do aplicativo Ello" width="500" height="500" />
+        </div>
+      </div>
+    </section>
+
+    <section class="about section-shell" id="projeto">
+      <span class="section-label">Sobre o projeto</span>
+      <div class="about-grid">
+        <h2>Uma forma simples de acompanhar a rotina de cuidado.</h2>
+        <div>
+          <p>O projeto foi desenvolvido para facilitar o registro e a consulta de informações relacionadas à pessoa idosa. A proposta é apoiar familiares e cuidadores no dia a dia, com uma experiência direta e fácil de entender.</p>
+          <p>O aplicativo foi desenvolvido em Flutter e conta com uma API em Node.js.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="resources" id="recursos">
+      <div class="section-shell">
+        <span class="section-label">O que o Ello reúne</span>
+        <div class="resource-list">
+          <article><span>01</span><div><h3>Informações da rotina</h3><p>Registros organizados para facilitar o acompanhamento cotidiano.</p></div></article>
+          <article><span>02</span><div><h3>Dados de cuidado</h3><p>Acompanhamento de glicemia, refeições, insumos e outras informações importantes.</p></div></article>
+          <article><span>03</span><div><h3>Apoio para cuidadores</h3><p>Uma visão mais clara para quem participa da rede de cuidado da pessoa idosa.</p></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="purpose">
+      <div class="section-shell purpose-grid">
+        <div class="purpose-logo">
+          <img src="./assets/ello-wordmark.jpg" alt="Logotipo Ello" width="640" height="640" loading="lazy" />
+        </div>
+        <div class="purpose-copy">
+          <span class="section-label light">Nosso objetivo</span>
+          <h2>Tecnologia como apoio para um cuidado mais tranquilo.</h2>
+          <p>O Ello busca reduzir a dificuldade de organizar informações e tornar a rotina de quem cuida mais prática.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="participate section-shell" id="participe">
+      <span class="section-label">Participe da pesquisa</span>
+      <div class="participate-header">
+        <h2>Ajude a avaliar o projeto.</h2>
+        <p>Os dois formulários abaixo serão usados para reunir opiniões sobre o aplicativo e sobre a proposta do TCC.</p>
+      </div>
+      <div class="form-grid">
+        <article class="form-card">
+          <span>Formulário 01</span>
+          <h3>Avaliação do aplicativo</h3>
+          <p>Para quem testou o Ello e quer contar como foi a experiência.</p>
+          <a class="form-button" href="https://docs.google.com/forms/d/e/1FAIpQLSdGOQyiLN1nRoBoyh5SCKNZEsRMTlleEyYNj_OhshfG1kC1Zg/viewform?usp=publish-editor" target="_blank" rel="noopener noreferrer">Responder formulário</a>
+        </article>
+        <article class="form-card">
+          <span>Formulário 02</span>
+          <h3>Pesquisa sobre o projeto</h3>
+          <p>Para compartilhar uma opinião sobre a proposta e a relevância do TCC.</p>
+          <button type="button" data-form-name="Pesquisa sobre o projeto">Responder formulário</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="links-section">
+      <div class="section-shell links-row">
+        <div><span class="section-label light">Links do projeto</span><h2>Conheça o Ello.</h2></div>
+        <div class="project-links">
+          <a href="https://drive.google.com/file/d/1i6svngvK1AmQaFih2HhW6MUUuNDsFApM/view?usp=sharing" target="_blank" rel="noopener noreferrer">Aplicativo <span>↗</span></a>
+          <a href="https://github.com/CaioOlliveira/Ello_TCC.git" target="_blank" rel="noopener noreferrer">GitHub <span>↗</span></a>
+          <a href="https://www.instagram.com/ello.tcc?stkn=dTRoZnpmd3R5ZHE1" target="_blank" rel="noopener noreferrer">Instagram <span>↗</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="section-shell footer-row"><a class="brand" href="#inicio">ello</a><p>Projeto de TCC · 2026</p></div></footer>
+
+  <dialog id="form-dialog" aria-labelledby="dialog-title">
+    <button class="dialog-close" type="button" aria-label="Fechar">×</button>
+    <span class="dialog-label">Formulário</span>
+    <h2 id="dialog-title">Link em breve</h2>
+    <p>O botão está pronto. Falta apenas adicionar o endereço do formulário.</p>
+    <button class="dialog-confirm" type="button">Entendi</button>
+  </dialog>
+  <script src="./script.js"></script>
+</body>
+</html>
