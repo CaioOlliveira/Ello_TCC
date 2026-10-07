@@ -10,6 +10,21 @@ permissions:
   contents: read
 
 jobs:
+  site:
+    name: Site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Verificar arquivos estáticos
+        run: |
+          test -s site/index.html
+          test -s site/styles.css
+          test -s site/assets/ello-symbol.jpeg
+          test -s site/assets/ello-wordmark.jpg
+
   backend:
     name: API
     runs-on: ubuntu-latest

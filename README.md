@@ -39,28 +39,33 @@ O Ello nasceu como Trabalho de Conclusão de Curso (TCC) para simplificar a roti
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" />
   <img alt="Firebase" src="https://img.shields.io/badge/Firebase-DD2C00?style=for-the-badge&logo=firebase&logoColor=white" />
+  <img alt="HTML5" src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" />
+  <img alt="CSS" src="https://img.shields.io/badge/CSS-663399?style=for-the-badge&logo=css&logoColor=white" />
+  <img alt="Vercel" src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" />
 </div>
 
 | Camada      | Tecnologias                                       |
 | ----------- | ------------------------------------------------- |
 | Aplicativo  | Flutter, Dart, Riverpod, GoRouter e Dio           |
 | API         | Node.js, TypeScript, Express e Zod                |
+| Site        | HTML5 e CSS3                                      |
 | Dados       | PostgreSQL hospedado no Supabase                  |
 | Integrações | Firebase Cloud Messaging, Google Sign-In e Gemini |
 | Qualidade   | Vitest, Supertest, ESLint e Flutter Test          |
-| Deploy      | Docker e Railway                                  |
+| Deploy      | Docker, Railway e Vercel                          |
 
 ## Arquitetura
 
 ```mermaid
 flowchart LR
+    S[Site institucional] -.->|Divulgação| A[App Flutter]
     A[App Flutter] -->|HTTPS / JSON| B[API Express]
     B --> C[(PostgreSQL / Supabase)]
     B -.-> D[Google Gemini]
     B -.-> E[Firebase Cloud Messaging]
 ```
 
-O repositório é um monorepo: o aplicativo fica em `mobile/` e a API em `backend/`. A API expõe endpoints REST sob o prefixo `/api/v1` e, sem `DATABASE_URL`, parte dos módulos utiliza dados em memória para facilitar o desenvolvimento.
+O repositório é um monorepo: o aplicativo fica em `mobile/`, a API em `backend/` e o site institucional em `site/`. A API expõe endpoints REST sob o prefixo `/api/v1` e, sem `DATABASE_URL`, parte dos módulos utiliza dados em memória para facilitar o desenvolvimento.
 
 ## Como executar
 
@@ -118,6 +123,15 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
 
 No emulador Android, `10.0.2.2` aponta para o `localhost` do computador. Em um aparelho físico, substitua esse endereço pelo IP local da máquina. Sem o `--dart-define`, o aplicativo usa a API publicada configurada no projeto.
 
+### 4. Visualize o site institucional
+
+```bash
+cd ..
+python -m http.server 4173 --directory site
+```
+
+Abra `http://localhost:4173`. As instruções de publicação estão no [README do site](./site/README.md).
+
 ## Testes e qualidade
 
 ```bash
@@ -146,6 +160,7 @@ Ello_TCC/
 ├── mobile/              # aplicativo Flutter
 │   ├── lib/features/    # funcionalidades do aplicativo
 │   └── test/            # testes Flutter
+├── site/                # landing page institucional publicada no Vercel
 ├── docs/                # arquitetura e guias técnicos
 ├── .github/workflows/   # integração contínua
 └── README.md
@@ -156,6 +171,7 @@ Ello_TCC/
 - [Arquitetura](./docs/arquitetura.md)
 - [Guia da API para Postman](./docs/api-postman.md)
 - [Chat e notificações](./docs/chat-notificacoes.md)
+- [Site e publicação no Vercel](./site/README.md)
 - [Como contribuir](./CONTRIBUTING.md)
 
 ## Versionamento

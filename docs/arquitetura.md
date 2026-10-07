@@ -1,9 +1,10 @@
 # Arquitetura
 
-O Ello é organizado como um monorepo com duas aplicações principais: o cliente Flutter em `mobile/` e a API REST em `backend/`.
+O Ello é organizado como um monorepo com três componentes: o cliente Flutter em `mobile/`, a API REST em `backend/` e a landing page institucional em `site/`.
 
 ```mermaid
 flowchart LR
+    S[Site institucional / Vercel] -.->|Divulgação e download| A[Aplicativo Flutter]
     A[Aplicativo Flutter] -->|HTTPS / JSON| B[API Node.js + Express]
     B --> C[(PostgreSQL no Supabase)]
     B -.-> D[Google Gemini]
@@ -15,6 +16,10 @@ flowchart LR
 O Flutter centraliza tema, rotas e providers em `lib/app`. As funcionalidades ficam separadas em `lib/features`, enquanto integrações compartilhadas, autenticação, notificações e acesso HTTP ficam em `lib/core`.
 
 O aplicativo usa Riverpod para estado, GoRouter para navegação e Dio para comunicação com a API. A URL da API é definida em tempo de compilação com `API_BASE_URL`.
+
+## Site institucional
+
+A pasta `site/` contém uma landing page estática em HTML e CSS. Ela concentra os links de download, formulários da pesquisa, Instagram e GitHub do projeto. No Vercel, essa pasta deve ser configurada como **Root Directory**.
 
 ## API
 
