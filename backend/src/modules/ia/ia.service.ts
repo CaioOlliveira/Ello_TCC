@@ -977,7 +977,7 @@ function numeroOuZero(value: unknown) {
 
 async function montarContextoInternoIdoso(
   idosoId?: string | null,
-  usuarioId?: string | null,
+  _usuarioId?: string | null,
 ): Promise<Record<string, unknown> | null> {
   if (!idosoId || !isDatabaseEnabled) return null;
 

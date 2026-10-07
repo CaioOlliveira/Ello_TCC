@@ -1,35 +1,36 @@
 # Ello API
 
-API Node.js com TypeScript e Express para o projeto Ello.
+API REST do Ello, desenvolvida com Node.js, TypeScript e Express. A documentação geral e as instruções completas estão no [README principal](../README.md).
 
-## Configuracao
+## Configuração
 
-Copie `.env.example` para `.env` e preencha a senha do banco nas URLs do Supabase:
-
-```env
-PORT=3000
-NODE_ENV=development
-CORS_ORIGIN=*
-DATABASE_URL=postgresql://postgres.gsjiteadtvhlkuexeyvk:SUA_SENHA@aws-1-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true
-DIRECT_URL=postgresql://postgres.gsjiteadtvhlkuexeyvk:SUA_SENHA@aws-1-us-east-2.pooler.supabase.com:5432/postgres
-DEMO_USUARIO_ID=
-```
-
-`DATABASE_URL` usa o pooler em modo transacao e e usada pela API. `DIRECT_URL` fica documentada para uso futuro em migracoes.
-
-Como ainda nao existe autenticacao real, registros que exigem `registrado_por_id` usam esta ordem:
-
-1. `registradoPorId` enviado no corpo da requisicao.
-2. `DEMO_USUARIO_ID` no `.env`.
-3. Primeiro usuario encontrado na tabela `usuarios`.
-
-Se `DATABASE_URL` nao for configurada, a API continua usando dados ficticios em memoria.
-
-## Execucao
+Crie o arquivo de ambiente local:
 
 ```bash
-npm install
+cp .env.example .env
+```
+
+O arquivo `.env.example` documenta as opções de banco, autenticação, Google Sign-In, Gemini e Firebase. Não versione credenciais reais.
+
+Sem `DATABASE_URL`, parte dos módulos usa dados em memória para facilitar o desenvolvimento. Com a variável configurada, a API acessa o PostgreSQL hospedado no Supabase.
+
+## Execução
+
+```bash
+npm ci
 npm run dev
 ```
 
-Rotas usam o prefixo `/api/v1`.
+A API inicia, por padrão, em `http://localhost:3000/api/v1`. O endpoint `GET /api/v1/health` pode ser usado para verificar o serviço.
+
+## Comandos
+
+| Comando         | Descrição                                |
+| --------------- | ---------------------------------------- |
+| `npm run dev`   | inicia o servidor com recarga automática |
+| `npm run lint`  | verifica o padrão do código              |
+| `npm test`      | executa os testes automatizados          |
+| `npm run build` | compila o TypeScript para `dist/`        |
+| `npm start`     | inicia a versão compilada                |
+
+Consulte também o [guia da API para Postman](../docs/api-postman.md).

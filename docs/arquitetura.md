@@ -1,36 +1,48 @@
 # Arquitetura
 
-O Ello usa uma arquitetura simples e expansivel:
+O Ello é organizado como um monorepo com duas aplicações principais: o cliente Flutter em `mobile/` e a API REST em `backend/`.
 
-```text
-Flutter
-  -> requisicoes HTTP com Dio
-  -> API Node.js com Express
-  -> PostgreSQL no Supabase via DATABASE_URL
+```mermaid
+flowchart LR
+    A[Aplicativo Flutter] -->|HTTPS / JSON| B[API Node.js + Express]
+    B --> C[(PostgreSQL no Supabase)]
+    B -.-> D[Google Gemini]
+    B -.-> E[Firebase Cloud Messaging]
 ```
 
-O aplicativo Flutter centraliza tema, rotas e providers na pasta `lib/app`. As funcionalidades ficam separadas em `lib/features`, com espaco para camadas `data`, `domain` e `presentation`.
+## Aplicativo
 
-A API Node.js usa Express com rotas modulares, validacao com Zod e tratamento centralizado de erros. Quando `DATABASE_URL` existe, os services acessam o PostgreSQL do Supabase com `pg`. Quando a variavel nao existe, alguns modulos mantem fallback em memoria para facilitar testes e desenvolvimento inicial.
+O Flutter centraliza tema, rotas e providers em `lib/app`. As funcionalidades ficam separadas em `lib/features`, enquanto integrações compartilhadas, autenticação, notificações e acesso HTTP ficam em `lib/core`.
 
-Nao ha Prisma, ORM ou autenticacao real nesta fase.
+O aplicativo usa Riverpod para estado, GoRouter para navegação e Dio para comunicação com a API. A URL da API é definida em tempo de compilação com `API_BASE_URL`.
 
-## Execucao
+## API
 
-Backend:
+A API usa Express, TypeScript e rotas modulares sob o prefixo `/api/v1`. Zod valida as entradas e middlewares centralizam autenticação, tratamento de erros e respostas para rotas inexistentes.
+
+Os módulos ficam em `src/modules`, geralmente separados em rotas, controllers, services e schemas. A autenticação suporta credenciais e Google Sign-In, com tokens de sessão assinados pela API.
+
+## Dados e integrações
+
+Quando `DATABASE_URL` está configurada, os serviços acessam diretamente o PostgreSQL hospedado no Supabase por meio do driver `pg`. Alguns fluxos têm fallback em memória sem banco, útil para testes e desenvolvimento inicial.
+
+Integrações opcionais:
+
+- Google Gemini para os recursos da assistente Cora;
+- Firebase Cloud Messaging para notificações push;
+- Railway para hospedagem da API.
+
+## Execução local
 
 ```bash
+# API
 cd backend
-npm install
+cp .env.example .env
+npm ci
 npm run dev
-```
 
-Flutter:
-
-```bash
+# Aplicativo, em outro terminal
 cd mobile
 flutter pub get
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
 ```
-
-`10.0.2.2` e usado pelo emulador Android para acessar o `localhost` do computador. Em dispositivo fisico, use o IP local do computador. Em producao, use uma URL HTTPS.

@@ -3,6 +3,9 @@
 Thumbs.db
 *.log
 .env
+.env.*
+!.env.example
+output/
 
 # Node
 node_modules/
@@ -15,6 +18,14 @@ coverage/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+
+# Segredos e credenciais de assinatura
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+key.properties
 
 # IDE
 .idea/
