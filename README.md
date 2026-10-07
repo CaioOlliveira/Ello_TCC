@@ -8,6 +8,7 @@
   </p>
   <p>
     <a href="https://github.com/CaioOlliveira/Ello_TCC/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/CaioOlliveira/Ello_TCC/actions/workflows/ci.yml/badge.svg" /></a>
+    <a href="https://site-ello-rho.vercel.app"><img alt="Site" src="https://img.shields.io/badge/acessar-site-147D8C?style=flat-square&logo=vercel&logoColor=white" /></a>
     <img alt="Status" src="https://img.shields.io/badge/status-em%20desenvolvimento-147D8C?style=flat-square" />
     <img alt="Versão" src="https://img.shields.io/badge/vers%C3%A3o-0.1.0-0E6F7E?style=flat-square" />
   </p>

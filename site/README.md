@@ -2,6 +2,8 @@
 
 Landing page estática usada para apresentar o projeto, divulgar os formulários da pesquisa e concentrar os links públicos do Ello.
 
+**Produção:** [site-ello-rho.vercel.app](https://site-ello-rho.vercel.app)
+
 ## Desenvolvimento local
 
 Você pode abrir `index.html` diretamente no navegador ou iniciar um servidor estático:

@@ -6,6 +6,7 @@ Thumbs.db
 .env.*
 !.env.example
 output/
+.vercel/
 
 # Node
 node_modules/
