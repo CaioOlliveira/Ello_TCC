@@ -7,6 +7,9 @@
     agenda, comunicação familiar e relatórios em um só lugar.
   </p>
   <p>
+    <strong>🌐 <a href="https://site-ello-rho.vercel.app">Conheça o site oficial do Ello</a></strong>
+  </p>
+  <p>
     <a href="https://github.com/CaioOlliveira/Ello_TCC/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/CaioOlliveira/Ello_TCC/actions/workflows/ci.yml/badge.svg" /></a>
     <a href="https://site-ello-rho.vercel.app"><img alt="Site" src="https://img.shields.io/badge/acessar-site-147D8C?style=flat-square&logo=vercel&logoColor=white" /></a>
     <img alt="Status" src="https://img.shields.io/badge/status-em%20desenvolvimento-147D8C?style=flat-square" />
@@ -125,6 +128,8 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
 No emulador Android, `10.0.2.2` aponta para o `localhost` do computador. Em um aparelho físico, substitua esse endereço pelo IP local da máquina. Sem o `--dart-define`, o aplicativo usa a API publicada configurada no projeto.
 
 ### 4. Visualize o site institucional
+
+O site oficial está publicado em **[site-ello-rho.vercel.app](https://site-ello-rho.vercel.app)**.
 
 ```bash
 cd ..
