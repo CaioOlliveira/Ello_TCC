@@ -124,6 +124,43 @@ class LocalNotificationService {
     await prefs.setString(_idsKey, jsonEncode(groups));
   }
 
+  Future<void> cancelReminderGroupsForIdoso(String idosoId) async {
+    if (idosoId.isEmpty) return;
+    await Future.wait([
+      cancelGroup('agenda:$idosoId'),
+      cancelGroup('medicamentos:$idosoId'),
+    ]);
+  }
+
+  Future<void> reconcileReminderGroups(
+    Iterable<String> activeIdosoIds,
+  ) async {
+    if (kIsWeb) return;
+    await initialize();
+
+    final activeIds = activeIdosoIds.where((id) => id.isNotEmpty).toSet();
+    final prefs = await SharedPreferences.getInstance();
+    final groups = _readGroups(prefs);
+    final staleGroups = staleReminderGroups(groups.keys, activeIds);
+
+    if (activeIds.isEmpty) {
+      // Também remove alarmes antigos que tenham perdido o registro no
+      // SharedPreferences, como pode acontecer após o banco ser zerado.
+      await _plugin.cancelAllPendingNotifications();
+    } else {
+      for (final group in staleGroups) {
+        for (final id in groups[group] ?? const <int>[]) {
+          await _plugin.cancel(id: id);
+        }
+      }
+    }
+
+    for (final group in staleGroups) {
+      groups.remove(group);
+    }
+    await prefs.setString(_idsKey, jsonEncode(groups));
+  }
+
   Future<void> showNow({
     required int id,
     required String title,
@@ -239,6 +276,22 @@ class LocalNotificationService {
       return {};
     }
   }
+}
+
+Set<String> staleReminderGroups(
+  Iterable<String> groups,
+  Iterable<String> activeIdosoIds,
+) {
+  final activeIds = activeIdosoIds.toSet();
+  return groups.where((group) {
+    const prefixes = ['agenda:', 'medicamentos:'];
+    for (final prefix in prefixes) {
+      if (group.startsWith(prefix)) {
+        return !activeIds.contains(group.substring(prefix.length));
+      }
+    }
+    return false;
+  }).toSet();
 }
 
 int stableNotificationId(String value) {

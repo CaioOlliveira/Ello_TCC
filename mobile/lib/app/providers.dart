@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/auth/google_auth_service.dart';
 import '../core/config/app_config.dart';
+import '../core/notifications/local_notification_service.dart';
 import '../features/chat/application/chat_inbox_controller.dart';
 
 class UsuarioSessao {
@@ -213,14 +214,30 @@ final selectedIdosoProvider = StateProvider<IdosoResumo?>((ref) => null);
 
 final idososDoUsuarioProvider = FutureProvider<List<IdosoResumo>>((
   ref,
-) {
+) async {
   final usuario = ref.watch(authSessionProvider);
 
   if (usuario == null || usuario.id.isEmpty) {
-    return Future.value(const []);
+    try {
+      await LocalNotificationService.instance.reconcileReminderGroups(
+        const [],
+      );
+    } catch (_) {
+      // A limpeza local não deve bloquear a tela de autenticação.
+    }
+    return const [];
   }
 
-  return ref.watch(apiClientProvider).listarIdosos(usuarioId: usuario.id);
+  final idosos =
+      await ref.watch(apiClientProvider).listarIdosos(usuarioId: usuario.id);
+  try {
+    await LocalNotificationService.instance.reconcileReminderGroups(
+      idosos.map((idoso) => idoso.id),
+    );
+  } catch (_) {
+    // A limpeza local não deve impedir o carregamento das fichas.
+  }
+  return idosos;
 });
 
 final fichasAdministradasProvider = FutureProvider<List<IdosoResumo>>((ref) {

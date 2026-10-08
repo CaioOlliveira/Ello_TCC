@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_exception.dart';
+import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../shared/widgets/action_icon_button.dart';
 import '../../../shared/widgets/app_page_header.dart';
@@ -229,6 +230,13 @@ class _FichasGrid extends ConsumerWidget {
             id: idoso.id,
             usuarioId: usuarioId,
           );
+      try {
+        await LocalNotificationService.instance
+            .cancelReminderGroupsForIdoso(idoso.id);
+      } catch (_) {
+        // A ficha já foi removida; a reconciliação ao recarregar tentará
+        // novamente caso o sistema operacional não aceite o cancelamento.
+      }
       if (!context.mounted) return;
       if (ref.read(selectedIdosoProvider)?.id == idoso.id) {
         ref.read(selectedIdosoProvider.notifier).state = null;

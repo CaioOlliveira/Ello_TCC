@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/notifications/local_notification_service.dart';
 import '../../../core/theme/app_palette.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -65,6 +66,13 @@ class _SplashPageState extends ConsumerState<SplashPage>
     try {
       final idosos =
           await ref.read(apiClientProvider).listarIdosos(usuarioId: usuario.id);
+      try {
+        await LocalNotificationService.instance.reconcileReminderGroups(
+          idosos.map((idoso) => idoso.id),
+        );
+      } catch (_) {
+        // A limpeza dos alarmes antigos não deve impedir a navegação.
+      }
       if (!mounted) return;
 
       IdosoResumo? selected;
