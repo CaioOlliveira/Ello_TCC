@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const criarMedicamentoSchema = z.object({
+const medicamentoSchema = z.object({
   idosoId: z.string().uuid("Idoso inválido."),
   nome: z.string().min(1, "Nome é obrigatório."),
   dosagem: z.string().optional(),
@@ -15,7 +15,30 @@ export const criarMedicamentoSchema = z.object({
   registradoPorId: z.string().uuid().optional(),
 });
 
-export const atualizarMedicamentoSchema = criarMedicamentoSchema.partial();
+const validarPeriodoMedicamento = (
+  dados: { dataInicio?: string; dataFim?: string },
+  context: z.RefinementCtx,
+) => {
+  if (
+    dados.dataInicio &&
+    dados.dataFim &&
+    dados.dataFim < dados.dataInicio
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["dataFim"],
+      message: "A data de término não pode ser anterior à data de início.",
+    });
+  }
+};
+
+export const criarMedicamentoSchema = medicamentoSchema.superRefine(
+  validarPeriodoMedicamento,
+);
+
+export const atualizarMedicamentoSchema = medicamentoSchema
+  .partial()
+  .superRefine(validarPeriodoMedicamento);
 
 export const criarHorarioMedicamentoSchema = z.object({
   tipoFrequencia: z.string().min(1),

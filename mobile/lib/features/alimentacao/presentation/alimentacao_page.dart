@@ -110,24 +110,6 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
     showEditPermissionDenied(context);
   }
 
-  Future<void> _concluir(RefeicaoResumo refeicao) async {
-    if (!_canEditAlimentacao()) {
-      _showNoEditPermission();
-      return;
-    }
-    try {
-      await ref.read(apiClientProvider).concluirRefeicao(
-            id: refeicao.id,
-            usuarioId: ref.read(authSessionProvider)?.id,
-          );
-      if (!mounted) return;
-      _load();
-    } on ApiException {
-      if (!mounted) return;
-      _ignoreBottomMessage();
-    }
-  }
-
   Future<void> _saveWeight(double pesoKg) async {
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) return;
@@ -536,7 +518,6 @@ class _AlimentacaoPageState extends ConsumerState<AlimentacaoPage> {
                         _view = _AlimentacaoView.form;
                       });
                     },
-                    onConclude: _concluir,
                   ),
                 _AlimentacaoView.tipo => _MealTypePickerView(
                     selected: _draftTipo,
@@ -600,7 +581,6 @@ class _AlimentacaoListView extends StatelessWidget {
     required this.onAdd,
     required this.onDetails,
     required this.onEdit,
-    required this.onConclude,
     this.error,
   });
 
@@ -622,7 +602,6 @@ class _AlimentacaoListView extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<RefeicaoResumo> onDetails;
   final ValueChanged<RefeicaoResumo> onEdit;
-  final ValueChanged<RefeicaoResumo> onConclude;
 
   @override
   Widget build(BuildContext context) {
@@ -704,7 +683,6 @@ class _AlimentacaoListView extends StatelessWidget {
                       refeicao: refeicao,
                       onDetails: () => onDetails(refeicao),
                       onEdit: () => onEdit(refeicao),
-                      onConclude: () => onConclude(refeicao),
                     ),
                 const SizedBox(height: 88),
               ],
@@ -1421,25 +1399,19 @@ class _MealCard extends StatelessWidget {
     required this.refeicao,
     required this.onDetails,
     required this.onEdit,
-    required this.onConclude,
   });
 
   final RefeicaoResumo refeicao;
   final VoidCallback onDetails;
   final VoidCallback onEdit;
-  final VoidCallback onConclude;
 
   @override
   Widget build(BuildContext context) {
-    final filled = !refeicao.concluida;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
-        color: filled
-            ? adaptive(
-                context, const Color(0xFFD5EEF3), AppDarkColors.tintedInfo)
-            : adaptive(context, Colors.white, AppDarkColors.surface),
+        color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
@@ -1473,16 +1445,6 @@ class _MealCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (!refeicao.concluida)
-                      Text(
-                        'Pendente',
-                        style: TextStyle(
-                          color: adaptive(context, const Color(0xFF073248),
-                              AppDarkColors.textPrimary),
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
                   ],
                 ),
                 Text(
@@ -1507,11 +1469,6 @@ class _MealCard extends StatelessWidget {
                     _TinyButton(label: 'Ver detalhes', onTap: onDetails),
                     const SizedBox(width: 6),
                     _TinyButton(label: 'Editar', onTap: onEdit),
-                    const SizedBox(width: 6),
-                    _TinyButton(
-                      label: refeicao.concluida ? 'Concluída' : 'Concluir',
-                      onTap: refeicao.concluida ? null : onConclude,
-                    ),
                   ],
                 ),
               ],
@@ -1783,14 +1740,18 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
   Future<void> _selectDate() async {
     final now = DateTime.now();
     final current = _parseDate(_dataController.text) ?? now;
+    final firstDate = DateTime(now.year - 5);
+    final lastDate = DateTime(now.year + 1);
     final selected = await showDatePicker(
       context: context,
       locale: const Locale('pt', 'BR'),
-      firstDate: DateTime(now.year, now.month, now.day),
-      lastDate: DateTime(now.year + 1),
-      initialDate: current.isBefore(DateTime(now.year, now.month, now.day))
-          ? now
-          : current,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      initialDate: current.isBefore(firstDate)
+          ? firstDate
+          : current.isAfter(lastDate)
+              ? lastDate
+              : current,
     );
     if (selected == null) return;
     _dataController.text = _formatDate(selected);
@@ -1820,19 +1781,6 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
     final scheduled = _scheduledDateTime();
     if (scheduled == null) {
       setState(() => _error = 'Informe data e hora válidas.');
-      return;
-    }
-    final now = DateTime.now();
-    final currentMinute = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      now.hour,
-      now.minute,
-    );
-    if (scheduled.isBefore(currentMinute)) {
-      setState(
-          () => _error = 'A data e hora não podem ser anteriores a agora.');
       return;
     }
     if (_alimentos.isEmpty) {
@@ -1909,10 +1857,37 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
                     icon: const Icon(Icons.swap_horiz_rounded),
                   ),
           ),
-          Text(
-            _tipo,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: adaptive(
+                context,
+                const Color(0xFFE7F6F8),
+                AppDarkColors.tintedInfo,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF9DDCE5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(_mealIcon(_tipo), color: const Color(0xFF098CA1)),
+                const SizedBox(width: 10),
+                Text(
+                  _tipo,
+                  style: TextStyle(
+                    color: adaptive(
+                      context,
+                      const Color(0xFF073248),
+                      AppDarkColors.textPrimary,
+                    ),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
           ),
           Row(
             children: [
@@ -1938,37 +1913,27 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
             ],
           ),
           const SizedBox(height: 18),
-          const Text('Alimentos consumidos',
-              style: TextStyle(fontWeight: FontWeight.w800)),
+          const Text(
+            'O que foi consumido?',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Busque um alimento ou digite um novo item.',
+            style: TextStyle(
+              color: adaptive(context, const Color(0xFF66777D),
+                  AppDarkColors.textSecondary),
+              fontSize: 12.5,
+            ),
+          ),
           const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: _PlainInput(
-                  controller: _alimentoController,
-                  focusNode: _foodFocusNode,
-                  hintText: 'Buscar alimento',
-                  prefixIcon: Icons.search,
-                  onTap: () => setState(() => _showFoodOptions = true),
-                  onChanged: (_) => setState(() => _showFoodOptions = true),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _PlainInput(
-                  controller: _pesoController,
-                  hintText: 'g',
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  _addFood();
-                },
-                icon: const Icon(Icons.add_circle, color: Color(0xFF098CA1)),
-              ),
-            ],
+          _PlainInput(
+            controller: _alimentoController,
+            focusNode: _foodFocusNode,
+            hintText: 'Ex: arroz, feijão ou sopa',
+            prefixIcon: Icons.search,
+            onTap: () => setState(() => _showFoodOptions = true),
+            onChanged: (_) => setState(() => _showFoodOptions = true),
           ),
           if (_showFoodOptions) ...[
             const SizedBox(height: 8),
@@ -1988,6 +1953,29 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
               onSaveNew: _saveTypedFoodOption,
             ),
           ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _PlainInput(
+                  controller: _pesoController,
+                  hintText: 'Quantidade em gramas (opcional)',
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: _addFood,
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: const Text('Adicionar'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  backgroundColor: const Color(0xFF098CA1),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
           for (final alimento in _alimentos)
             _FoodChip(
@@ -2002,20 +1990,24 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
             onRemove: () => setState(() => _recordatorio = null),
           ),
           const SizedBox(height: 18),
-          const Text('Consumo', style: TextStyle(fontWeight: FontWeight.w800)),
+          const Text(
+            'Como foi o consumo?',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 8),
-          Row(
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 3.4,
             children: [
               for (final option in _acceptanceOptions)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 7),
-                    child: _AcceptanceButton(
-                      option: option,
-                      selected: _aceitacao == option.id,
-                      onTap: () => setState(() => _aceitacao = option.id),
-                    ),
-                  ),
+                _AcceptanceButton(
+                  option: option,
+                  selected: _aceitacao == option.id,
+                  onTap: () => setState(() => _aceitacao = option.id),
                 ),
             ],
           ),
@@ -2040,7 +2032,7 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
               ),
             ),
           ],
-          const SizedBox(height: 90),
+          const SizedBox(height: 32),
           SizedBox(
             height: 50,
             child: FilledButton(
@@ -2061,9 +2053,15 @@ class _RefeicaoFormViewState extends ConsumerState<_RefeicaoFormView> {
                         strokeWidth: 2,
                       ),
                     )
-                  : const Text('Salvar',
-                      style:
-                          TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                  : Text(
+                      widget.initial == null
+                          ? 'Registrar refeição'
+                          : 'Salvar alterações',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 8),

@@ -125,9 +125,15 @@ class IdosoResumo {
   }
 
   List<String> get monitoramentosVisiveis {
-    if (temAcessoTotal) return monitoramentos;
+    if (ehDono == true) return monitoramentos;
+    if (eAdministrador == true) {
+      return monitoramentos.where((moduloId) => moduloId != 'Gastos').toList();
+    }
     return monitoramentos
-        .where((moduloId) => permissoesVisualizar.contains(moduloId))
+        .where(
+          (moduloId) =>
+              moduloId != 'Gastos' && permissoesVisualizar.contains(moduloId),
+        )
         .toList();
   }
 

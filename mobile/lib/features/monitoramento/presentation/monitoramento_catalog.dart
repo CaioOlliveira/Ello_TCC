@@ -27,6 +27,9 @@ const defaultMonitoramentoIds = [
   'Insumos',
   'Gastos',
   'Glicemia',
+  'Pressao',
+  'Oxigenacao',
+  'Temperatura',
 ];
 
 const monitoramentoOptions = [

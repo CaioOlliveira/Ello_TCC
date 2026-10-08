@@ -184,6 +184,68 @@ class _FichasGrid extends ConsumerWidget {
 
   final List<IdosoResumo> idosos;
 
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    IdosoResumo idoso,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Apagar ficha?'),
+        content: Text(
+          'A ficha de ${idoso.nome} e todos os registros vinculados serão '
+          'apagados permanentemente. Essa ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: const Text('Apagar ficha'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFC0392B),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final usuarioId = ref.read(authSessionProvider)?.id;
+    if (usuarioId == null || usuarioId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Entre novamente para apagar a ficha.')),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(apiClientProvider).removerIdoso(
+            id: idoso.id,
+            usuarioId: usuarioId,
+          );
+      if (!context.mounted) return;
+      if (ref.read(selectedIdosoProvider)?.id == idoso.id) {
+        ref.read(selectedIdosoProvider.notifier).state = null;
+      }
+      ref.invalidate(idososDoUsuarioProvider);
+      ref.invalidate(fichasAdministradasProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ficha de ${idoso.nome} apagada.')),
+      );
+    } on ApiException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
@@ -217,6 +279,9 @@ class _FichasGrid extends ConsumerWidget {
             index: index,
             child: _IdosoPoster(
               idoso: idoso,
+              onDelete: idoso.ehDono == true
+                  ? () => _confirmDelete(context, ref, idoso)
+                  : null,
               onTap: () {
                 ref.read(selectedIdosoProvider.notifier).state = idoso;
                 context.go('/dashboard');
@@ -244,10 +309,15 @@ List<Color> _gradientFor(String seed) {
 }
 
 class _IdosoPoster extends StatefulWidget {
-  const _IdosoPoster({required this.idoso, required this.onTap});
+  const _IdosoPoster({
+    required this.idoso,
+    required this.onTap,
+    this.onDelete,
+  });
 
   final IdosoResumo idoso;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
   @override
   State<_IdosoPoster> createState() => _IdosoPosterState();
@@ -323,6 +393,24 @@ class _IdosoPosterState extends State<_IdosoPoster> {
                   ),
                 ),
               ),
+              if (widget.onDelete != null)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.black.withValues(alpha: 0.48),
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      onPressed: widget.onDelete,
+                      tooltip: 'Apagar ficha',
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(
                 left: 12,
                 right: 12,

@@ -460,6 +460,15 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       return;
     }
 
+    if (_dataInicio != null &&
+        _dataFim != null &&
+        _dataFim!.isBefore(_dataInicio!)) {
+      _showMessage(
+        'A data de término não pode ser anterior à data de início.',
+      );
+      return;
+    }
+
     final dose = double.tryParse(
       _doseController.text.trim().replaceAll(',', '.'),
     );
@@ -535,9 +544,9 @@ class _MedicamentosPageState extends ConsumerState<MedicamentosPage> {
       setState(() => _mode = _Mode.resumo);
       _invalidateHistorico();
       _reloadResumo(idoso.id);
-    } on ApiException {
+    } on ApiException catch (error) {
       if (!mounted) return;
-      _ignoreBottomMessage();
+      _showMessage(error.message);
     } catch (_) {
       if (!mounted) return;
       _ignoreBottomMessage();

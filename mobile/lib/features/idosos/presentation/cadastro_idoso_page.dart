@@ -475,7 +475,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
           subtitle: 'Registre condições, limitações e alergias',
           onPrimary: _goNext,
           primaryLabel: 'Continuar',
-          showBack: true,
           content: _saudeFields(),
         );
       case 2:
@@ -484,7 +483,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
           subtitle: 'Quem acionar em caso de emergência',
           onPrimary: _goNext,
           primaryLabel: _isEditing ? 'Salvar' : 'Continuar',
-          showBack: true,
           content: _contatoFields(),
         );
       default:
@@ -505,7 +503,6 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
     required String subtitle,
     required VoidCallback onPrimary,
     required String primaryLabel,
-    bool showBack = false,
     GlobalKey<FormState>? formKey,
   }) {
     final card = Container(
@@ -566,65 +563,32 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
             ),
           ],
           const SizedBox(height: 25),
-          Row(
-            children: [
-              if (showBack) ...[
-                Expanded(
-                  child: SizedBox(
-                    height: 44,
-                    child: OutlinedButton(
-                      onPressed: _loading ? null : _handleBack,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF3CB1C3),
-                        side: BorderSide(
-                          color: adaptive(context, const Color(0xFF8BD2DC),
-                              AppDarkColors.border),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(17),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      child: const Icon(Icons.chevron_left_rounded),
-                    ),
-                  ),
+          SizedBox(
+            height: 44,
+            child: FilledButton(
+              onPressed: _loading ? null : onPrimary,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF3CB1C3),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(17),
                 ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                flex: showBack ? 2 : 1,
-                child: SizedBox(
-                  height: 44,
-                  child: FilledButton(
-                    onPressed: _loading ? null : onPrimary,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF3CB1C3),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(17),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    child: _loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(primaryLabel),
-                  ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
+              child: _loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(primaryLabel),
+            ),
           ),
         ],
       ),
@@ -706,13 +670,9 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         const _FieldLabel('Nome completo'),
         _InputBox(
           controller: _nomeController,
-          hintText: 'Ex: Mônica aparecida da silva',
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Informe o nome completo.';
-            }
-            return null;
-          },
+          hintText: 'Ex: Mônica Aparecida da Silva',
+          textCapitalization: TextCapitalization.words,
+          validator: _validateFullName,
         ),
         const SizedBox(height: 10),
         Row(
@@ -791,7 +751,7 @@ class _CadastroIdosoPageState extends ConsumerState<CadastroIdosoPage> {
         const _FieldLabel('Limitações'),
         _InputBox(
           controller: _limitacoesController,
-          hintText: 'Ex:Penicilina',
+          hintText: 'Ex: membro amputado, mobilidade reduzida',
         ),
         const SizedBox(height: 10),
         const _FieldLabel('Alergias'),
@@ -1206,6 +1166,7 @@ class _InputBox extends StatelessWidget {
     this.suffixIcon,
     this.onTap,
     this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
     this.minLines = 1,
     this.maxLines = 1,
   });
@@ -1218,6 +1179,7 @@ class _InputBox extends StatelessWidget {
   final IconData? suffixIcon;
   final VoidCallback? onTap;
   final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
   final int minLines;
   final int maxLines;
 
@@ -1232,6 +1194,7 @@ class _InputBox extends StatelessWidget {
         readOnly: readOnly,
         onTap: onTap,
         inputFormatters: inputFormatters,
+        textCapitalization: textCapitalization,
         minLines: minLines,
         maxLines: maxLines,
         style: TextStyle(
@@ -1647,6 +1610,19 @@ class _PhoneInputFormatter extends TextInputFormatter {
       selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
+}
+
+String? _validateFullName(String? value) {
+  final name = value?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
+  if (name.isEmpty) return 'Informe o nome completo.';
+  if (!RegExp(r"^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '\-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$")
+      .hasMatch(name)) {
+    return 'Use somente letras no nome.';
+  }
+  if (name.split(' ').length < 2) {
+    return 'Informe nome e sobrenome.';
+  }
+  return null;
 }
 
 String? _toIsoDate(String value) {

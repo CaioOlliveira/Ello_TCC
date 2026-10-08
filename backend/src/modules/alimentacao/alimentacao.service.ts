@@ -117,7 +117,11 @@ export const alimentacaoService = {
 
   async criar(input: CriarRefeicaoInput) {
     if (!isDatabaseEnabled) {
-      return { id: "refeicao-1", ...input };
+      return {
+        id: "refeicao-1",
+        ...input,
+        concluidaEm: new Date().toISOString(),
+      };
     }
 
     const registradoPorId = await resolverUsuarioRegistroId(
@@ -141,9 +145,10 @@ export const alimentacaoService = {
           aceitacao,
           recordatorio,
           observacoes,
-          registrado_por_id
+          registrado_por_id,
+          concluida_em
         )
-        values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10)
+        values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, now())
         returning *
       `,
       [

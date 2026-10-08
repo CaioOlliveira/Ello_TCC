@@ -2,6 +2,19 @@ import { z } from "zod";
 
 const valoresSexo = ["Feminino", "Masculino", "Outro"] as const;
 
+const nomeCompletoSchema = z
+  .string()
+  .trim()
+  .min(1, "Nome completo é obrigatório.")
+  .regex(
+    /^[\p{L}]+(?:[ '\-][\p{L}]+)*$/u,
+    "O nome deve conter somente letras.",
+  )
+  .refine(
+    (nome) => nome.split(/\s+/).length >= 2,
+    "Informe nome e sobrenome.",
+  );
+
 export const normalizarSexo = (value: unknown) => {
   if (typeof value !== "string") return value;
   const normalized = value
@@ -51,7 +64,7 @@ export const contatoEmergenciaSchema = z.object({
 });
 
 export const criarIdosoSchema = z.object({
-  nomeCompleto: z.string().min(1, "Nome completo é obrigatório."),
+  nomeCompleto: nomeCompletoSchema,
   dataNascimento: z.string().date("Data de nascimento invalida.").optional(),
   urlFoto: z.string().nullable().optional(),
   pesoKg: z.number().positive().optional(),
