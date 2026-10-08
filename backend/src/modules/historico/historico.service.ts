@@ -31,6 +31,25 @@ type HistoricoRow = {
   dados_novos: unknown;
 };
 
+const dataConsumoAlimentacaoSql = `
+  coalesce(
+    h.dados_novos ->> 'dataConsumo',
+    h.dados_anteriores ->> 'dataConsumo',
+    h.dados_novos ->> 'data_consumo',
+    h.dados_anteriores ->> 'data_consumo'
+  )
+`;
+
+const dataEventoHistoricoSql = `
+  case
+    when h.tipo_entidade = 'registros_alimentacao'
+      and left(coalesce(${dataConsumoAlimentacaoSql}, ''), 10)
+        ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+    then left(${dataConsumoAlimentacaoSql}, 10)::date
+    else (h.criado_em at time zone 'America/Sao_Paulo')::date
+  end
+`;
+
 export const historicoService = {
   async listar({ idosoId, tipo, inicio, fim, limite }: ListarHistoricoQuery) {
     if (!isDatabaseEnabled) return [];
@@ -147,8 +166,8 @@ export const historicoService = {
           end
         where h.idoso_id::text = $1
           and h.tipo_entidade = any($2::text[])
-          and h.criado_em >= $3::date
-          and h.criado_em < ($4::date + interval '1 day')
+          and (${dataEventoHistoricoSql}) >= $3::date
+          and (${dataEventoHistoricoSql}) <= $4::date
         order by h.criado_em desc
         limit $5
       `,
