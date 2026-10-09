@@ -5,6 +5,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val expectedGoogleWebClientId =
+    "318821887059-iukcc2mai6klc7ml1a1h121ev37rvsvm.apps.googleusercontent.com"
+val expectedGoogleAndroidPackage = "com.example.ello_mobile"
+
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
@@ -55,4 +59,36 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+
+val verifyGoogleOAuthConfig by tasks.registering {
+    group = "verification"
+    description = "Verifies the Google OAuth IDs required by Android sign-in."
+
+    val stringsFile = file("src/main/res/values/strings.xml")
+    val googleServicesFile = file("google-services.json")
+    val dartConfigFile = rootProject.file("../lib/core/config/app_config.dart")
+
+    inputs.files(stringsFile, googleServicesFile, dartConfigFile)
+
+    doLast {
+        check(android.defaultConfig.applicationId == expectedGoogleAndroidPackage) {
+            "Google OAuth package mismatch: expected $expectedGoogleAndroidPackage."
+        }
+        check(stringsFile.readText().contains(expectedGoogleWebClientId)) {
+            "default_web_client_id is missing or incorrect in strings.xml."
+        }
+        check(dartConfigFile.readText().contains(expectedGoogleWebClientId)) {
+            "Google Web Client ID is missing or incorrect in AppConfig."
+        }
+        check(googleServicesFile.readText().contains(
+            "\"package_name\": \"$expectedGoogleAndroidPackage\"",
+        )) {
+            "google-services.json does not match the Android application ID."
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(verifyGoogleOAuthConfig)
 }
