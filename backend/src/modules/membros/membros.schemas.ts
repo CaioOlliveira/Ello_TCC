@@ -6,7 +6,7 @@ export const permissoesSchema = z.object({
 });
 
 export const criarMembroSchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   usuarioId: z.string().uuid("Usuário inválido."),
   funcao: z.string().min(1),
   relacao: z.string().optional(),
@@ -22,7 +22,7 @@ export const criarMembroSchema = z.object({
 export const atualizarMembroSchema = criarMembroSchema.partial();
 
 export const listarParticipantesQuerySchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
 });
 
 export const registrarPresencaSchema = z.object({

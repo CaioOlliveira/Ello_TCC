@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuthenticatedUser } from "../../common/middlewares/authenticated-user.js";
 
 import {
   atualizarCompromisso,
@@ -11,6 +12,7 @@ import {
 } from "./agenda.controller.js";
 
 export const agendaRoutes = Router();
+agendaRoutes.use(requireAuthenticatedUser);
 
 agendaRoutes.get("/", listarCompromissos);
 agendaRoutes.get("/historico", listarHistoricoAgenda);

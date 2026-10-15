@@ -23,7 +23,7 @@ const valorPulsoSchema = z
   .max(250, "Valor máximo permitido é 250 bpm.");
 
 export const criarOxigenacaoSchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
   saturacao: valorSaturacaoSchema,
   pulso: valorPulsoSchema.optional(),
   medidoEm: dataNaoFuturaSchema,
@@ -34,7 +34,7 @@ export const criarOxigenacaoSchema = z.object({
 export const atualizarOxigenacaoSchema = criarOxigenacaoSchema.partial();
 
 export const resumoOxigenacaoQuerySchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
   dataReferencia: z.string().date().optional(),
   periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
 });

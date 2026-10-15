@@ -16,7 +16,7 @@ export const listarInsumosQuerySchema = z.object({
 });
 
 export const criarInsumoSchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   nome: z.string().min(1, "Nome é obrigatório."),
   tipoUnidade: z.string().min(1, "Tipo de unidade é obrigatório."),
   quantidadePorUnidade: z.number().positive().nullable().optional(),

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireFichaAccessFromQuery } from "../../common/auth/ficha-access.js";
 
 import {
   atualizarOxigenacao,
@@ -14,7 +15,7 @@ export const oxigenacaoRoutes = Router();
 
 oxigenacaoRoutes.get("/", listarOxigenacoes);
 oxigenacaoRoutes.get("/resumo", obterResumoOxigenacao);
-oxigenacaoRoutes.get("/historico", obterHistoricoOxigenacao);
+oxigenacaoRoutes.get("/historico", requireFichaAccessFromQuery, obterHistoricoOxigenacao);
 oxigenacaoRoutes.post("/", criarOxigenacao);
 oxigenacaoRoutes.get("/:id", buscarOxigenacao);
 oxigenacaoRoutes.patch("/:id", atualizarOxigenacao);

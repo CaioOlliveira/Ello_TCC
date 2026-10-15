@@ -43,7 +43,7 @@ const historicoTipoSchema = z
   .pipe(z.enum(tiposHistorico));
 
 export const listarHistoricoQuerySchema = z.object({
-  idosoId: z.string().uuid("Idoso invalido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   tipo: historicoTipoSchema,
   inicio: z.string().date("Data inicial invalida."),
   fim: z.string().date("Data final invalida."),

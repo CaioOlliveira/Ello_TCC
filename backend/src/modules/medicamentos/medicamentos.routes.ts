@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { requireAuthenticatedUser } from "../../common/middlewares/authenticated-user.js";
+import { requireFichaAccessFromQuery } from "../../common/auth/ficha-access.js";
 import {
   atualizarMedicamento,
   buscarMedicamento,
@@ -25,7 +26,7 @@ export const medicamentosRoutes = Router();
 medicamentosRoutes.get("/", listarMedicamentos);
 medicamentosRoutes.post("/", criarMedicamento);
 medicamentosRoutes.get("/resumo", obterResumoMedicamentos);
-medicamentosRoutes.get("/historico", obterHistoricoMedicamentos);
+medicamentosRoutes.get("/historico", requireFichaAccessFromQuery, obterHistoricoMedicamentos);
 medicamentosRoutes.get(
   "/solicitacoes-cancelamento",
   requireAuthenticatedUser,

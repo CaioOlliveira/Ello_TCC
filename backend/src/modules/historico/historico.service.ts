@@ -166,6 +166,15 @@ export const historicoService = {
           end
         where h.idoso_id::text = $1
           and h.tipo_entidade = any($2::text[])
+          and (h.usuario_id is null or exists (
+            select 1 from fichas_idosos f
+            where f.id::text = h.idoso_id::text
+              and (f.criado_por_id::text = h.usuario_id::text or exists (
+                select 1 from membros_ficha mf
+                where mf.idoso_id = f.id and mf.usuario_id::text = h.usuario_id::text
+                  and mf.status = 'ativo'
+              ))
+          ))
           and (${dataEventoHistoricoSql}) >= $3::date
           and (${dataEventoHistoricoSql}) <= $4::date
         order by h.criado_em desc

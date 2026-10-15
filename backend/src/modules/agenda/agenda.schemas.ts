@@ -101,7 +101,7 @@ const normalizarTarefaAgenda = (value: unknown) => {
 };
 
 const tarefaAgendaSchema = z.object({
-  idosoId: z.string().uuid("Idoso invalido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   titulo: z.string().min(1, "Título é obrigatório."),
   tags: z.array(z.string().min(1)).default([]),
   dataCompromisso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data invalida."),

@@ -575,12 +575,12 @@ function descreverPessoaRelacionada(
   const sexo = textoOuPadrao(idoso?.sexo, "").toLowerCase();
 
   if (sexo === "feminino") {
-    return `A conversa está relacionada à idosa chamada ${idosoNome}.`;
+    return `A conversa está relacionada à paciente chamada ${idosoNome}.`;
   }
   if (sexo === "masculino") {
-    return `A conversa está relacionada ao idoso chamado ${idosoNome}.`;
+    return `A conversa está relacionada ao paciente chamado ${idosoNome}.`;
   }
-  return `A conversa está relacionada à pessoa idosa chamada ${idosoNome}.`;
+  return `A conversa está relacionada ao paciente chamado ${idosoNome}.`;
 }
 
 function montarPartesImagem(
@@ -703,9 +703,9 @@ function montarRelatorioInicial(contexto: Record<string, unknown> | null) {
 
 function rotuloPessoaSelecionada(sexo: unknown) {
   const normalized = textoOuPadrao(sexo, "").toLowerCase();
-  if (normalized === "feminino") return "idosa selecionada";
-  if (normalized === "masculino") return "idoso selecionado";
-  return "pessoa idosa selecionada";
+  if (normalized === "feminino") return "paciente selecionada";
+  if (normalized === "masculino") return "paciente selecionado";
+  return "paciente selecionado";
 }
 
 function montarRespostaFallbackIa(

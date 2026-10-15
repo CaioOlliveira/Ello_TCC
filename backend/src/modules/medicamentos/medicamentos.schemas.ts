@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const medicamentoSchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   nome: z.string().min(1, "Nome é obrigatório."),
   dosagem: z.string().optional(),
   formato: z.string().optional(),
@@ -49,7 +49,7 @@ export const criarHorarioMedicamentoSchema = z.object({
 });
 
 export const registrarAdministracaoSchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   horarioPrevisto: z.string().datetime(),
   administradoEm: z.string().datetime().optional(),
   status: z.string().min(1),
@@ -59,11 +59,11 @@ export const registrarAdministracaoSchema = z.object({
 });
 
 export const cancelarAdministracaoSchema = z.object({
-  idosoId: z.string().uuid("Idoso inv\u00e1lido."),
+  idosoId: z.string().uuid("Paciente inv\u00e1lido."),
 });
 
 export const listarSolicitacoesCancelamentoSchema = z.object({
-  idosoId: z.string().uuid("Idoso inv\u00e1lido."),
+  idosoId: z.string().uuid("Paciente inv\u00e1lido."),
 });
 
 export const responderSolicitacaoCancelamentoSchema = z.object({
@@ -88,11 +88,11 @@ export const substituirHorariosMedicamentoSchema = z.object({
 });
 
 export const resumoMedicamentosQuerySchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
 });
 
 export const historicoMedicamentosQuerySchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
   dataReferencia: z.string().date().optional(),
   periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
 });

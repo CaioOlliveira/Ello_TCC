@@ -89,7 +89,20 @@ export const agendaService = {
 
   async listarHistorico(limit: number, offset: number, idosoId?: string) {
     const params: unknown[] = ["tarefas"];
-    const filters = ["h.tipo_entidade = $1"];
+    const filters = [
+      "h.tipo_entidade = $1",
+      `(
+      h.usuario_id is null or exists (
+        select 1 from fichas_idosos f
+        where f.id::text = h.idoso_id::text
+          and (f.criado_por_id::text = h.usuario_id::text or exists (
+            select 1 from membros_ficha mf
+            where mf.idoso_id = f.id and mf.usuario_id::text = h.usuario_id::text
+              and mf.status = 'ativo'
+          ))
+      )
+    )`,
+    ];
 
     if (idosoId) {
       params.push(idosoId);
@@ -182,6 +195,7 @@ export const agendaService = {
       dadosNovos: evento,
     });
 
+    let lembreteErro = false;
     if (input.ativarLembrete) {
       const antecedencia = input.antecedenciaLembreteMinutos ?? 30;
       // Data e hora da agenda representam o horário civil brasileiro. Sem o
@@ -194,33 +208,36 @@ export const agendaService = {
       const programadoPara = new Date(
         `${input.dataCompromisso}T${horaComSegundos}-03:00`,
       );
-      programadoPara.setMinutes(
-        programadoPara.getMinutes() - antecedencia,
-      );
+      programadoPara.setMinutes(programadoPara.getMinutes() - antecedencia);
 
-      await notificacoesService.criar({
-        idosoId: input.idosoId,
-        usuarioId: criadoPorId,
-        titulo: `Lembrete: ${input.titulo}`,
-        mensagem: `O compromisso "${input.titulo}" esta chegando.`,
-        tipoNotificacao: "agenda",
-        tipoEntidadeRelacionada: table,
-        entidadeRelacionadaId: String(evento.id),
-        programadoPara: programadoPara.toISOString(),
-      });
+      try {
+        await notificacoesService.criar({
+          idosoId: input.idosoId,
+          usuarioId: criadoPorId,
+          titulo: `Lembrete: ${input.titulo}`,
+          mensagem: `O compromisso "${input.titulo}" esta chegando.`,
+          tipoNotificacao: "agenda",
+          tipoEntidadeRelacionada: table,
+          entidadeRelacionadaId: String(evento.id),
+          programadoPara: programadoPara.toISOString(),
+        });
+      } catch {
+        lembreteErro = true;
+      }
     }
 
-    return this.buscarPorId(String(evento.id));
+    return { ...(await this.buscarPorId(String(evento.id))), lembreteErro };
   },
 
   async atualizar(id: string, input: AtualizarEventoInput) {
     const anterior = await this.buscarPorId(id);
+    const { criadoPorId: usuarioId, ...alteracoes } = input;
     const atualizado = await updateRow<
       AtualizarEventoInput,
       Record<string, unknown>
-    >(table, id, input, fields, ...notFound);
+    >(table, id, alteracoes, fields, ...notFound);
     await registrarHistorico({
-      usuarioId: input.criadoPorId,
+      usuarioId,
       idosoId: String(atualizado.idoso_id ?? ""),
       acao: "atualizar",
       tipoEntidade: table,
@@ -231,7 +248,11 @@ export const agendaService = {
     return this.buscarPorId(String(atualizado.id));
   },
 
-  async atualizarOcorrencia(id: string, input: AtualizarOcorrenciaEventoInput) {
+  async atualizarOcorrencia(
+    id: string,
+    input: AtualizarOcorrenciaEventoInput,
+    usuarioId: string,
+  ) {
     const anterior = await this.buscarPorId(id);
     await this.garantirTabelaOcorrencias();
 
@@ -258,6 +279,7 @@ export const agendaService = {
 
     const atualizado = await this.buscarPorId(id);
     await registrarHistorico({
+      usuarioId,
       idosoId: String(atualizado.idoso_id ?? anterior.idoso_id ?? ""),
       acao: "atualizar_ocorrencia",
       tipoEntidade: table,
@@ -276,10 +298,11 @@ export const agendaService = {
     return atualizado;
   },
 
-  async remover(id: string) {
+  async remover(id: string, usuarioId: string) {
     const anterior = await this.buscarPorId(id);
     await deleteRow(table, id, ...notFound);
     await registrarHistorico({
+      usuarioId,
       idosoId: String(anterior.idoso_id ?? ""),
       acao: "remover",
       tipoEntidade: table,

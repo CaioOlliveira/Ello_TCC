@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const criarRelatorioSchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   tipoRelatorio: z.string().min(1, "Tipo é obrigatório."),
   periodoInicio: z.string().date(),
   periodoFim: z.string().date(),

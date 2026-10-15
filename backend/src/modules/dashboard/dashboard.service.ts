@@ -207,7 +207,7 @@ async function buscarContextoIdoso(idosoId: string) {
   );
 
   const idoso = result.rows[0];
-  if (!idoso) return "Contexto: idoso não encontrado.";
+  if (!idoso) return "Contexto: paciente não encontrado.";
 
   return [
     `Nome: ${idoso.nome ?? "não informado"}.`,

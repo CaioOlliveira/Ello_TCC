@@ -7,6 +7,7 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./common/middlewares/error-handler.js";
 import { notFound } from "./common/middlewares/not-found.js";
 import { routes } from "./routes/index.js";
+import { attachRequestUser } from "./common/auth/request-user.js";
 
 export const app = express();
 
@@ -21,6 +22,6 @@ app.use(
   ),
 );
 
-app.use("/api/v1", routes);
+app.use("/api/v1", attachRequestUser, routes);
 app.use(notFound);
 app.use(errorHandler);

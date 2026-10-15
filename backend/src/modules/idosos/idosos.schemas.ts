@@ -49,7 +49,7 @@ const sexoSchema = z.preprocess(
 );
 
 export const idosoParamsSchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
 });
 
 export const listarIdososQuerySchema = z.object({

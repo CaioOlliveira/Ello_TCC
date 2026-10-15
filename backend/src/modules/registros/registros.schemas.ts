@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const comum = {
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   registradoPorId: z.string().uuid().optional(),
   observacoes: z.string().optional(),
 };

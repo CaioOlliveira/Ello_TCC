@@ -5,7 +5,7 @@ import { asyncHandler } from "../../common/utils/async-handler.js";
 import { dashboardService } from "./dashboard.service.js";
 
 const paramsSchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
 });
 
 export const obterDashboardIdoso: RequestHandler = asyncHandler(

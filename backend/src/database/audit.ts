@@ -1,5 +1,5 @@
-import { resolverUsuarioRegistroId } from "./usuario-demo.js";
 import { getPool, isDatabaseEnabled } from "./pool.js";
+import { getRequestUserId } from "../common/auth/request-user.js";
 
 type RegistrarHistoricoInput = {
   usuarioId?: string;
@@ -10,6 +10,20 @@ type RegistrarHistoricoInput = {
   dadosAnteriores?: unknown;
   dadosNovos?: unknown;
 };
+
+// Usado por todas as consultas de histórico para descartar atribuições antigas
+// a pessoas que não pertencem à ficha.
+export const autorFichaHistoricoSql = `
+  (h.usuario_id is null or exists (
+    select 1 from fichas_idosos f
+    where f.id::text = h.idoso_id::text
+      and (f.criado_por_id::text = h.usuario_id::text or exists (
+        select 1 from membros_ficha mf
+        where mf.idoso_id = f.id and mf.usuario_id::text = h.usuario_id::text
+          and mf.status = 'ativo'
+      ))
+  ))
+`;
 
 export const registrarHistorico = async ({
   usuarioId,
@@ -22,7 +36,8 @@ export const registrarHistorico = async ({
 }: RegistrarHistoricoInput): Promise<void> => {
   if (!isDatabaseEnabled) return;
 
-  const registroUsuarioId = await resolverUsuarioRegistroId(usuarioId);
+  // Um registro sem autor não deve receber o nome de outro usuário.
+  const registroUsuarioId = getRequestUserId() ?? usuarioId ?? null;
 
   await getPool().query(
     `

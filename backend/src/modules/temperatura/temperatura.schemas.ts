@@ -16,7 +16,7 @@ const valorTemperaturaSchema = z
   .max(45, "Valor máximo permitido é 45°C.");
 
 export const criarTemperaturaSchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
   temperatura: valorTemperaturaSchema,
   medidoEm: dataNaoFuturaSchema,
   observacoes: z.string().optional(),
@@ -26,7 +26,7 @@ export const criarTemperaturaSchema = z.object({
 export const atualizarTemperaturaSchema = criarTemperaturaSchema.partial();
 
 export const resumoTemperaturaQuerySchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
   dataReferencia: z.string().date().optional(),
   periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
 });

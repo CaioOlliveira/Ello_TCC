@@ -21,7 +21,7 @@ describe("API Ello", () => {
 
     expect(response.body).toEqual({
       codigo: "IDOSO_NAO_ENCONTRADO",
-      mensagem: "Idoso não encontrado.",
+      mensagem: "Paciente não encontrado.",
     });
   });
 

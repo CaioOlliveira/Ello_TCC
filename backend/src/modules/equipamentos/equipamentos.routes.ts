@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireFichaAccessFromQuery } from "../../common/auth/ficha-access.js";
 
 import {
   atualizarEquipamento,
@@ -14,7 +15,7 @@ import {
 export const equipamentosRoutes = Router();
 
 equipamentosRoutes.get("/", listarEquipamentos);
-equipamentosRoutes.get("/historico", listarHistoricoEquipamentos);
+equipamentosRoutes.get("/historico", requireFichaAccessFromQuery, listarHistoricoEquipamentos);
 equipamentosRoutes.post("/", criarEquipamento);
 equipamentosRoutes.get("/:id", buscarEquipamento);
 equipamentosRoutes.patch("/:id", atualizarEquipamento);

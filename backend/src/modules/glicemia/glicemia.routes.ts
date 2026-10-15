@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireFichaAccessFromQuery } from "../../common/auth/ficha-access.js";
 
 import {
   atualizarGlicemia,
@@ -16,7 +17,7 @@ export const glicemiaRoutes = Router();
 
 glicemiaRoutes.get("/", listarGlicemias);
 glicemiaRoutes.get("/resumo", obterResumoGlicemia);
-glicemiaRoutes.get("/historico", obterHistoricoGlicemia);
+glicemiaRoutes.get("/historico", requireFichaAccessFromQuery, obterHistoricoGlicemia);
 glicemiaRoutes.get("/insulinas", listarInsulinas);
 glicemiaRoutes.post("/", criarGlicemia);
 glicemiaRoutes.post("/insulinas", criarInsulina);

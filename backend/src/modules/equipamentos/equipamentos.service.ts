@@ -54,7 +54,17 @@ export const equipamentosService = {
 
   async listarHistorico(limit: number, offset: number, idosoId?: string) {
     const params: unknown[] = ["equipamentos", "manutencoes_equipamentos"];
-    const filters = ["h.tipo_entidade in ($1, $2)"];
+    const filters = ["h.tipo_entidade in ($1, $2)", `(
+      h.usuario_id is null or exists (
+        select 1 from fichas_idosos f
+        where f.id::text = h.idoso_id::text
+          and (f.criado_por_id::text = h.usuario_id::text or exists (
+            select 1 from membros_ficha mf
+            where mf.idoso_id = f.id and mf.usuario_id::text = h.usuario_id::text
+              and mf.status = 'ativo'
+          ))
+      )
+    )`];
 
     if (idosoId) {
       params.push(idosoId);

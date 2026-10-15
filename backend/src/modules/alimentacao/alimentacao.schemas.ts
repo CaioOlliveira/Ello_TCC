@@ -7,7 +7,7 @@ export const alimentoConsumidoSchema = z.object({
 });
 
 export const criarRefeicaoSchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
   tipoRefeicao: z.enum([
     "Cafe da manha",
     "Café da manhã",

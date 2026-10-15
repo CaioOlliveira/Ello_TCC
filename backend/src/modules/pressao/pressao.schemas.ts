@@ -23,7 +23,7 @@ const valorDiastolicaSchema = z
   .max(200, "Valor máximo permitido é 200 mmHg.");
 
 export const criarPressaoSchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
   sistolica: valorSistolicaSchema,
   diastolica: valorDiastolicaSchema,
   batimentos: z.number().int().min(20).max(250).optional(),
@@ -35,7 +35,7 @@ export const criarPressaoSchema = z.object({
 export const atualizarPressaoSchema = criarPressaoSchema.partial();
 
 export const resumoPressaoQuerySchema = z.object({
-  idosoId: z.string().min(1, "Idoso é obrigatório."),
+  idosoId: z.string().min(1, "Paciente é obrigatório."),
   dataReferencia: z.string().date().optional(),
   periodo: z.enum(["dia", "semanal", "mes"]).default("dia"),
 });

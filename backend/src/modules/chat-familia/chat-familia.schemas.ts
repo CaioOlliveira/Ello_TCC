@@ -10,7 +10,7 @@ const imagemSchema = z.object({
 
 export const listarMensagensFamiliaSchema = z
   .object({
-    idosoId: z.string().uuid("Idoso invalido."),
+    idosoId: z.string().uuid("Paciente inválido."),
     outroUsuarioId: z.string().uuid("Contato invalido."),
     limite: z.coerce.number().int().min(1).max(100).default(50),
     antesDe: z.string().datetime({ offset: true }).optional(),
@@ -22,12 +22,12 @@ export const listarMensagensFamiliaSchema = z
   });
 
 export const listarConversasFamiliaSchema = z.object({
-  idosoId: z.string().uuid("Idoso invalido."),
+  idosoId: z.string().uuid("Paciente inválido."),
 });
 
 export const criarMensagemFamiliaSchema = z
   .object({
-    idosoId: z.string().uuid("Idoso invalido."),
+    idosoId: z.string().uuid("Paciente inválido."),
     destinatarioId: z.string().uuid("Contato invalido."),
     mensagem: z.string().trim().max(2000, "Mensagem muito longa.").optional(),
     anexo: imagemSchema.optional(),
@@ -43,12 +43,12 @@ export const criarMensagemFamiliaSchema = z
   );
 
 export const marcarMensagensLidasSchema = z.object({
-  idosoId: z.string().uuid("Idoso invalido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   outroUsuarioId: z.string().uuid("Contato invalido."),
 });
 
 export const buscarFotoContatoChatSchema = z.object({
-  idosoId: z.string().uuid("Idoso invalido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   contatoId: z.string().uuid("Contato invalido."),
 });
 

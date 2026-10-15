@@ -471,7 +471,7 @@ export const idososService = {
       if (!isUuid(idosoId)) {
         throw new AppError(
           "IDOSO_NAO_ENCONTRADO",
-          "Idoso não encontrado.",
+          "Paciente não encontrado.",
           404,
         );
       }
@@ -532,7 +532,7 @@ export const idososService = {
       if (!idosoBanco) {
         throw new AppError(
           "IDOSO_NAO_ENCONTRADO",
-          "Idoso não encontrado.",
+          "Paciente não encontrado.",
           404,
         );
       }
@@ -543,7 +543,7 @@ export const idososService = {
     const idoso = idosos.find((item) => item.id === idosoId);
 
     if (!idoso) {
-      throw new AppError("IDOSO_NAO_ENCONTRADO", "Idoso não encontrado.", 404);
+      throw new AppError("IDOSO_NAO_ENCONTRADO", "Paciente não encontrado.", 404);
     }
 
     return idoso;
@@ -589,7 +589,7 @@ export const idososService = {
       "fichas_idosos",
       idosoId,
       "IDOSO_NAO_ENCONTRADO",
-      "Idoso não encontrado.",
+      "Paciente não encontrado.",
     );
     const atualizado = await updateRow<
       AtualizarIdosoInput,
@@ -600,7 +600,7 @@ export const idososService = {
       inputSemCriador,
       fields,
       "IDOSO_NAO_ENCONTRADO",
-      "Idoso não encontrado.",
+      "Paciente não encontrado.",
     );
 
     await salvarObservacaoGeral(
@@ -629,7 +629,7 @@ export const idososService = {
       "fichas_idosos",
       idosoId,
       "IDOSO_NAO_ENCONTRADO",
-      "Idoso nao encontrado.",
+      "Paciente não encontrado.",
     );
     const donoId = await buscarDonoEfetivo(idosoId, anterior.criado_por_id);
 
@@ -676,7 +676,7 @@ export const idososService = {
       "fichas_idosos",
       idosoId,
       "IDOSO_NAO_ENCONTRADO",
-      "Idoso nao encontrado.",
+      "Paciente não encontrado.",
     );
     const donoId = await buscarDonoEfetivo(idosoId, anterior.criado_por_id);
 
@@ -696,7 +696,7 @@ export const idososService = {
       "fichas_idosos",
       idosoId,
       "IDOSO_NAO_ENCONTRADO",
-      "Idoso nao encontrado.",
+      "Paciente não encontrado.",
     );
     await registrarHistorico({
       usuarioId,

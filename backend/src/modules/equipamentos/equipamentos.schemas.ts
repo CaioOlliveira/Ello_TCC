@@ -68,7 +68,7 @@ const normalizarManutencao = (value: unknown) => {
 };
 
 const equipamentoSchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   nome: z.string().min(1, "Nome é obrigatório."),
   tipo: textoOpcional,
   marca: textoOpcional,

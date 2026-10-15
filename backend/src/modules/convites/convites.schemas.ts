@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const criarConviteSchema = z.object({
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
   convidadoPorId: z.string().uuid("Usuário que convidou inválido.").optional(),
   codigo: z.string().min(4).optional(),
   funcaoInicial: z.string().min(1).default("cuidador"),

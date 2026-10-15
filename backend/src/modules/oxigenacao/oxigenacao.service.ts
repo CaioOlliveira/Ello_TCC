@@ -1,4 +1,4 @@
-import { registrarHistorico } from "../../database/audit.js";
+import { autorFichaHistoricoSql, registrarHistorico } from "../../database/audit.js";
 import { getPool, isDatabaseEnabled } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
 import {
@@ -618,6 +618,7 @@ export const oxigenacaoService = {
         left join usuarios u on u.id = h.usuario_id
         where h.idoso_id = $1
           and h.tipo_entidade = $2
+          and ${autorFichaHistoricoSql}
           and h.criado_em >= $3
           and h.criado_em < $4
         order by h.criado_em desc

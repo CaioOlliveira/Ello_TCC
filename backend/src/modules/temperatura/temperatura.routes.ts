@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireFichaAccessFromQuery } from "../../common/auth/ficha-access.js";
 
 import {
   atualizarTemperatura,
@@ -14,7 +15,7 @@ export const temperaturaRoutes = Router();
 
 temperaturaRoutes.get("/", listarTemperaturas);
 temperaturaRoutes.get("/resumo", obterResumoTemperatura);
-temperaturaRoutes.get("/historico", obterHistoricoTemperatura);
+temperaturaRoutes.get("/historico", requireFichaAccessFromQuery, obterHistoricoTemperatura);
 temperaturaRoutes.post("/", criarTemperatura);
 temperaturaRoutes.get("/:id", buscarTemperatura);
 temperaturaRoutes.patch("/:id", atualizarTemperatura);

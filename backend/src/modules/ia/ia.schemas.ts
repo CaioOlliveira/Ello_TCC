@@ -4,7 +4,7 @@ export const perguntarIaSchema = z
   .object({
     usuarioId: z.string().uuid("Usuário inválido."),
     conversaId: z.string().uuid("Conversa inválida.").optional(),
-    idosoId: z.string().uuid("Idoso inválido.").nullable().optional(),
+    idosoId: z.string().uuid("Paciente inválido.").nullable().optional(),
     anexos: z
       .array(
         z.object({
@@ -28,23 +28,23 @@ export const perguntarIaSchema = z
 
 export const listarConversasIaSchema = z.object({
   usuarioId: z.string().uuid("Usuário inválido."),
-  idosoId: z.string().uuid("Idoso inválido.").optional(),
+  idosoId: z.string().uuid("Paciente inválido.").optional(),
 });
 
 export const criarConversaIaSchema = z.object({
   usuarioId: z.string().uuid("Usuário inválido."),
-  idosoId: z.string().uuid("Idoso inválido.").nullable().optional(),
+  idosoId: z.string().uuid("Paciente inválido.").nullable().optional(),
   titulo: z.string().trim().min(1).max(80).default("Novo chat"),
 });
 
 export const listarMensagensIaSchema = z.object({
   usuarioId: z.string().uuid("Usuário inválido."),
-  idosoId: z.string().uuid("Idoso inválido.").optional(),
+  idosoId: z.string().uuid("Paciente inválido.").optional(),
 });
 
 export const relatorioInicialIaSchema = z.object({
   usuarioId: z.string().uuid("Usuário inválido."),
-  idosoId: z.string().uuid("Idoso inválido."),
+  idosoId: z.string().uuid("Paciente inválido."),
 });
 
 export type PerguntarIaInput = z.infer<typeof perguntarIaSchema>;
