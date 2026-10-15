@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuthenticatedUser } from "../../common/middlewares/authenticated-user.js";
 
 import {
   aceitarConvite,
@@ -13,7 +14,7 @@ export const convitesRoutes = Router();
 
 convitesRoutes.get("/", listarConvites);
 convitesRoutes.post("/", criarConvite);
-convitesRoutes.post("/aceitar", aceitarConvite);
+convitesRoutes.post("/aceitar", requireAuthenticatedUser, aceitarConvite);
 convitesRoutes.get("/:id", buscarConvite);
 convitesRoutes.patch("/:id", atualizarConvite);
 convitesRoutes.post("/:id/revogar", revogarConvite);

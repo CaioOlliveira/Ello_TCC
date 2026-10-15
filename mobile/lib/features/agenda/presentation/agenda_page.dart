@@ -33,6 +33,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   var _visibleMonth = DateTime(DateTime.now().year, DateTime.now().month);
   var _loading = true;
   var _saving = false;
+  var _loadVersion = 0;
   List<AgendaCompromisso> _items = [];
 
   static const _accent = Color(0xFF34A4B7);
@@ -44,6 +45,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
   }
 
   Future<void> _load() async {
+    final version = ++_loadVersion;
     final idoso = ref.read(selectedIdosoProvider);
     if (idoso == null) {
       if (mounted) {
@@ -57,7 +59,7 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       final data = await ref
           .read(apiClientProvider)
           .listarCompromissos(idosoId: idoso.id);
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       final items = data.map(AgendaCompromisso.fromJson).toList();
       unawaited(_syncReminders(idoso.id, items));
       setState(() {
@@ -69,16 +71,14 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
           }
         }
       });
-      ref
-          .read(apiClientProvider)
-          .listarHistoricoAgenda(idosoId: idoso.id)
-          .catchError((_) => const <Map<String, dynamic>>[]);
     } on ApiException {
       if (!mounted) return;
     } catch (_) {
       if (!mounted) return;
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && version == _loadVersion) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -154,6 +154,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     );
 
     setState(() {
+      _loadVersion++;
+      _loading = false;
       _saving = true;
       _upsertItem(localItem, replaceId: item?.id);
     });
@@ -173,13 +175,30 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
       if (serverItem != null) {
         setState(() => _upsertItem(serverItem, replaceId: localId));
       }
+      if (response['dados'] is Map &&
+          (response['dados'] as Map)['lembreteErro'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Compromisso salvo. Não foi possível criar o lembrete.'),
+          ),
+        );
+      }
       await _syncReminders(idoso.id, _items);
-    } on ApiException {
+    } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _items = previousItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+      await _load();
     } catch (_) {
       if (!mounted) return;
       setState(() => _items = previousItems);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível salvar o compromisso.')),
+      );
+      await _load();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -216,6 +235,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
 
     final previousItems = List<AgendaCompromisso>.from(_items);
     setState(() {
+      _loadVersion++;
+      _loading = false;
       _saving = true;
       _items = _items.where((current) => current.id != item.id).toList();
     });
@@ -257,6 +278,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     }
 
     setState(() {
+      _loadVersion++;
+      _loading = false;
       _saving = true;
       _upsertItem(sourceItem.copyWith(ocorrenciasStatus: optimisticStatuses));
     });
@@ -326,6 +349,8 @@ class _AgendaPageState extends ConsumerState<AgendaPage> {
     }
     final previousItems = List<AgendaCompromisso>.from(_items);
     setState(() {
+      _loadVersion++;
+      _loading = false;
       _saving = true;
       _upsertItem(item.copyWith(status: nextStatus));
     });
@@ -920,69 +945,75 @@ class _TimelineItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 34,
-                        height: 34,
-                        child: Checkbox(
-                          value: done,
-                          onChanged: (_) => onStatusChanged(),
-                          activeColor: const Color(0xFF34A4B7),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          item.titulo,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: adaptive(context, Colors.black,
-                                AppDarkColors.textPrimary),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            height: 0.95,
-                            decoration:
-                                done ? TextDecoration.lineThrough : null,
-                          ),
-                        ),
-                      ),
-                      _TagPill(label: item.tag),
-                      PopupMenuButton<String>(
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.more_vert_rounded, size: 20),
-                        onSelected: (value) {
-                          if (value == 'editar') onEdit();
-                          if (value == 'status') onStatusChanged();
-                          if (value == 'cancelar') onCancel();
-                          if (value == 'excluir') onDelete();
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'editar',
-                            child: Text('Editar'),
-                          ),
-                          PopupMenuItem(
-                            value: 'status',
-                            child: Text(
-                              done ? 'Reabrir' : 'Concluir',
+                  SizedBox(
+                    height: 48,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 34,
+                          height: 34,
+                          child: Checkbox(
+                            value: done,
+                            onChanged: (_) => onStatusChanged(),
+                            activeColor: const Color(0xFF34A4B7),
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
                             ),
                           ),
-                          const PopupMenuItem(
-                            value: 'cancelar',
-                            child: Text('Cancelar'),
+                        ),
+                        Expanded(
+                          child: Text(
+                            item.titulo,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: adaptive(context, Colors.black,
+                                  AppDarkColors.textPrimary),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              height: 0.95,
+                              decoration:
+                                  done ? TextDecoration.lineThrough : null,
+                            ),
                           ),
-                          const PopupMenuItem(
-                            value: 'excluir',
-                            child: Text('Excluir'),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        _TagPill(label: item.tag),
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.more_vert_rounded, size: 20),
+                          onSelected: (value) {
+                            if (value == 'editar') onEdit();
+                            if (value == 'status') onStatusChanged();
+                            if (value == 'cancelar') onCancel();
+                            if (value == 'excluir') onDelete();
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'editar',
+                              child: Text('Editar'),
+                            ),
+                            PopupMenuItem(
+                              value: 'status',
+                              child: Text(
+                                done ? 'Reabrir' : 'Concluir',
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'cancelar',
+                              child: Text('Cancelar'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'excluir',
+                              child: Text('Excluir'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(

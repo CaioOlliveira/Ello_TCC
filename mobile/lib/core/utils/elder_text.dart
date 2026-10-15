@@ -21,45 +21,36 @@ class ElderText {
   bool get isMale => gender == ElderGender.male;
 
   String get singular {
-    if (isFemale) return 'idosa';
-    if (isMale) return 'idoso';
-    return 'pessoa idosa';
+    return 'paciente';
   }
 
   String get singularCapitalized {
-    if (isFemale) return 'Idosa';
-    if (isMale) return 'Idoso';
-    return 'Pessoa idosa';
+    return 'Paciente';
   }
 
   String get withArticle {
-    if (isFemale) return 'a idosa';
-    if (isMale) return 'o idoso';
-    return 'a pessoa idosa';
+    if (isFemale) return 'a paciente';
+    return 'o paciente';
   }
 
   String get selectedWithArticle {
-    if (isFemale) return 'a idosa selecionada';
-    if (isMale) return 'o idoso selecionado';
-    return 'a pessoa idosa selecionada';
+    if (isFemale) return 'a paciente selecionada';
+    return 'o paciente selecionado';
   }
 
   String get of {
-    if (isFemale) return 'da idosa';
-    if (isMale) return 'do idoso';
-    return 'da pessoa idosa';
+    if (isFemale) return 'da paciente';
+    return 'do paciente';
   }
 
   String get to {
-    if (isFemale) return 'à idosa';
-    if (isMale) return 'ao idoso';
-    return 'à pessoa idosa';
+    if (isFemale) return 'à paciente';
+    return 'ao paciente';
   }
 
   String get one {
-    if (isFemale) return 'uma idosa';
-    if (isMale) return 'um idoso';
-    return 'uma pessoa idosa';
+    if (isFemale) return 'uma paciente';
+    return 'um paciente';
   }
 
   String howFeeling() => 'Como $withArticle está se sentindo?';

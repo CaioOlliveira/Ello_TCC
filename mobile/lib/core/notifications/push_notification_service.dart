@@ -56,6 +56,34 @@ class MedicationCancellationPushPayload {
   bool get isValid => idosoId.isNotEmpty && requestId.isNotEmpty;
 }
 
+class AccessRequestPushPayload {
+  const AccessRequestPushPayload({
+    required this.idosoId,
+    required this.requestId,
+    required this.title,
+    required this.body,
+  });
+
+  factory AccessRequestPushPayload.fromMessage(RemoteMessage message) {
+    return AccessRequestPushPayload(
+      idosoId: message.data['idosoId']?.toString() ?? '',
+      requestId: message.data['solicitacaoId']?.toString() ?? '',
+      title: message.notification?.title ?? 'Solicitação de acesso à ficha',
+      body: message.notification?.body ??
+          'Uma pessoa pediu acesso à ficha de um paciente.',
+    );
+  }
+
+  final String idosoId;
+  final String requestId;
+  final String title;
+  final String body;
+
+  bool get isValid => idosoId.isNotEmpty && requestId.isNotEmpty;
+
+  String get localPayload => 'access:$idosoId:$requestId';
+}
+
 class PushNotificationService {
   PushNotificationService._();
 
@@ -67,6 +95,10 @@ class PushNotificationService {
       StreamController<MedicationCancellationPushPayload>.broadcast();
   final _openedMedicationMessages =
       StreamController<MedicationCancellationPushPayload>.broadcast();
+  final _foregroundAccessRequests =
+      StreamController<AccessRequestPushPayload>.broadcast();
+  final _openedAccessRequests =
+      StreamController<AccessRequestPushPayload>.broadcast();
 
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
@@ -83,6 +115,10 @@ class PushNotificationService {
       _foregroundMedicationMessages.stream;
   Stream<MedicationCancellationPushPayload> get openedMedicationMessages =>
       _openedMedicationMessages.stream;
+  Stream<AccessRequestPushPayload> get foregroundAccessRequests =>
+      _foregroundAccessRequests.stream;
+  Stream<AccessRequestPushPayload> get openedAccessRequests =>
+      _openedAccessRequests.stream;
 
   Future<void> configure({
     required ApiClient api,
@@ -133,6 +169,11 @@ class PushNotificationService {
   }
 
   void _emitForeground(RemoteMessage message) {
+    if (message.data['type'] == 'solicitacao_acesso') {
+      final payload = AccessRequestPushPayload.fromMessage(message);
+      if (payload.isValid) _foregroundAccessRequests.add(payload);
+      return;
+    }
     if (message.data['type'] == 'medicamento_cancelamento') {
       final payload = MedicationCancellationPushPayload.fromMessage(message);
       if (payload.isValid) _foregroundMedicationMessages.add(payload);
@@ -143,6 +184,11 @@ class PushNotificationService {
   }
 
   void _emitOpened(RemoteMessage message) {
+    if (message.data['type'] == 'solicitacao_acesso') {
+      final payload = AccessRequestPushPayload.fromMessage(message);
+      if (payload.isValid) _openedAccessRequests.add(payload);
+      return;
+    }
     if (message.data['type'] == 'medicamento_cancelamento') {
       final payload = MedicationCancellationPushPayload.fromMessage(message);
       if (payload.isValid) _openedMedicationMessages.add(payload);
@@ -191,5 +237,7 @@ class PushNotificationService {
     unawaited(_openedMessages.close());
     unawaited(_foregroundMedicationMessages.close());
     unawaited(_openedMedicationMessages.close());
+    unawaited(_foregroundAccessRequests.close());
+    unawaited(_openedAccessRequests.close());
   }
 }

@@ -187,7 +187,8 @@ final appConfigProvider = Provider<AppConfig>((ref) => const AppConfig());
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final config = ref.watch(appConfigProvider);
-  return ApiClient(baseUrl: config.apiBaseUrl);
+  final accessToken = ref.watch(authSessionProvider)?.accessToken;
+  return ApiClient(baseUrl: config.apiBaseUrl, accessToken: accessToken);
 });
 
 final chatInboxProvider =

@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import { getAuthenticatedUserId } from "../../common/middlewares/authenticated-user.js";
 
 import { asyncHandler } from "../../common/utils/async-handler.js";
 import {
@@ -43,5 +44,10 @@ export const revogarConvite: RequestHandler = asyncHandler(async (req, res) => {
 
 export const aceitarConvite: RequestHandler = asyncHandler(async (req, res) => {
   const input = aceitarConviteSchema.parse(req.body);
-  res.json({ dados: await convitesService.aceitar(input) });
+  res.json({
+    dados: await convitesService.aceitar({
+      ...input,
+      usadoPorId: getAuthenticatedUserId(req),
+    }),
+  });
 });

@@ -21,7 +21,7 @@ class _ModuloPermissao {
 }
 
 final _modulosPermissao = [
-  const _ModuloPermissao(id: 'Ficha', titulo: 'Ficha da pessoa idosa'),
+  const _ModuloPermissao(id: 'Ficha', titulo: 'Ficha do paciente'),
   for (final option in monitoramentoOptions)
     if (option.id != 'Gastos')
       _ModuloPermissao(id: option.id, titulo: option.title),

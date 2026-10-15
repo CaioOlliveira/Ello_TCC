@@ -380,7 +380,7 @@ class _EquipamentosPageState extends ConsumerState<EquipamentosPage> {
             ? _EquipamentosList(
                 loading: _loading,
                 equipamentos: _equipamentos,
-                personOf: idoso?.elderText.of ?? 'da pessoa idosa',
+                personOf: idoso?.elderText.of ?? 'do paciente',
                 onAdd: () {
                   if (!_canEditEquipamentos()) {
                     _showNoEditPermission();

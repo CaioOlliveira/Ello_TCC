@@ -1811,7 +1811,7 @@ class _NoIdosoState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Selecione uma pessoa idosa para registrar a pressão arterial.',
+            'Selecione um paciente para registrar a pressão arterial.',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: adaptive(context, const Color(0xFF607178),

@@ -905,7 +905,7 @@ class _WaterCardState extends State<_WaterCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Peso ${widget.idoso?.elderText.of ?? 'da pessoa idosa'}',
+              'Peso ${widget.idoso?.elderText.of ?? 'do paciente'}',
               style: TextStyle(
                 color: adaptive(context, const Color(0xFF073248),
                     AppDarkColors.textPrimary),

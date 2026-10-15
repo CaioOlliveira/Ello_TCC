@@ -242,7 +242,7 @@ class _InsumosPageState extends ConsumerState<InsumosPage> {
               style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 4),
-            pw.Text('Idoso monitorado: ${idoso.nome}'),
+            pw.Text('Paciente monitorado: ${idoso.nome}'),
             pw.Text('Gerado em: ${_formatBrazilianDate(DateTime.now())}'),
             pw.SizedBox(height: 18),
             pw.TableHelper.fromTextArray(

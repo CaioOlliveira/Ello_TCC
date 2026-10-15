@@ -459,10 +459,43 @@ class _HistoricoConfig {
     return switch (tipo) {
       'alimentacao' => _alimentacao,
       'humor' => _humor,
-      _ => _insumos,
+      'insumos' => _insumos,
+      'agenda' => _genericHistory('Histórico da agenda', '/agenda'),
+      'medicamentos' =>
+        _genericHistory('Histórico dos medicamentos', '/medicamentos'),
+      'glicemia' => _genericHistory('Histórico da glicemia', '/glicemia'),
+      'pressao' => _genericHistory('Histórico da pressão', '/pressao'),
+      'oxigenacao' => _genericHistory('Histórico da oxigenação', '/oxigenacao'),
+      'temperatura' =>
+        _genericHistory('Histórico da temperatura', '/temperatura'),
+      _ => _genericHistory('Histórico', '/dashboard'),
     };
   }
 }
+
+_HistoricoConfig _genericHistory(String title, String backRoute) =>
+    _HistoricoConfig(
+      title: title,
+      backRoute: backRoute,
+      emptyMessage: 'Nenhuma alteração encontrada neste período.',
+      icon: (registro) => registro.acao == 'remover'
+          ? Icons.delete_outline_rounded
+          : registro.acao == 'criar'
+              ? Icons.add_circle_outline_rounded
+              : Icons.edit_outlined,
+      actionLabel: (registro) => switch (registro.acao) {
+        'criar' => 'adicionou',
+        'remover' => 'removeu',
+        _ => 'atualizou',
+      },
+      detail: (registro) => registro.itemNome,
+      tag: (registro) => (
+        registro.acao == 'remover' ? 'Removido' : 'Registrado',
+        registro.acao == 'remover'
+            ? const Color(0xFFE85D75)
+            : const Color(0xFF4E88C7),
+      ),
+    );
 
 final _insumos = _HistoricoConfig(
   title: 'Histórico dos insumos',

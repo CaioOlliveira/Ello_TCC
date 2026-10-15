@@ -44,6 +44,13 @@ class LocalNotificationService {
     return payload;
   }
 
+  String? takeLaunchPayloadWhere(bool Function(String) matches) {
+    final payload = _launchPayload;
+    if (payload == null || !matches(payload)) return null;
+    _launchPayload = null;
+    return payload;
+  }
+
   Future<void> initialize() async {
     if (_initialized || kIsWeb) return;
 

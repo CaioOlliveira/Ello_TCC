@@ -1259,7 +1259,7 @@ class _RegistrarTemperaturaView extends StatelessWidget {
             _ObservationCard(
               controller: observacoesController,
               title: 'Observações',
-              hintText: 'Como o idoso está se sentindo?',
+              hintText: 'Como o paciente está se sentindo?',
             ),
             const SizedBox(height: 22),
             _SaveCancelButtons(
@@ -1670,7 +1670,7 @@ class _NoIdosoState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Selecione um idoso para registrar a temperatura.',
+            'Selecione um paciente para registrar a temperatura.',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: adaptive(context, const Color(0xFF607178),

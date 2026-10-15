@@ -13,9 +13,10 @@ import '../../../shared/widgets/app_page_header.dart';
 import '../../../shared/widgets/staggered_entry.dart';
 
 class AcessosFichaPage extends ConsumerStatefulWidget {
-  const AcessosFichaPage({super.key, this.idosoId});
+  const AcessosFichaPage({super.key, this.idosoId, this.solicitacaoId});
 
   final String? idosoId;
+  final String? solicitacaoId;
 
   @override
   ConsumerState<AcessosFichaPage> createState() => _AcessosFichaPageState();
@@ -29,6 +30,7 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
   List<MembroFicha> _participantes = const [];
   List<SolicitacaoPendente> _pendentes = const [];
   String? _acaoEmAndamentoId;
+  final _solicitacaoKey = GlobalKey();
 
   String? get _idosoId => widget.idosoId ?? ref.read(selectedIdosoProvider)?.id;
 
@@ -68,9 +70,25 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
         _idoso = resultados[0] as IdosoResumo;
         _convite = resultados[1] as ConviteFicha;
         _participantes = resultados[2] as List<MembroFicha>;
-        _pendentes = resultados[3] as List<SolicitacaoPendente>;
+        final pendentes = resultados[3] as List<SolicitacaoPendente>;
+        _pendentes = [
+          ...pendentes.where((item) => item.id == widget.solicitacaoId),
+          ...pendentes.where((item) => item.id != widget.solicitacaoId),
+        ];
         _loading = false;
       });
+      if (widget.solicitacaoId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final target = _solicitacaoKey.currentContext;
+          if (target != null) {
+            Scrollable.ensureVisible(
+              target,
+              duration: const Duration(milliseconds: 350),
+              alignment: 0.15,
+            );
+          }
+        });
+      }
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -288,6 +306,13 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 28),
         children: [
+          if (widget.solicitacaoId != null &&
+              !_pendentes.any((item) => item.id == widget.solicitacaoId)) ...[
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text('Esta solicitação já foi respondida.'),
+            ),
+          ],
           StaggeredEntry(
             index: 0,
             child: _FichaResumoCard(
@@ -317,11 +342,15 @@ class _AcessosFichaPageState extends ConsumerState<AcessosFichaPage> {
             const SizedBox(height: 8),
             for (var i = 0; i < _pendentes.length; i++)
               Padding(
+                key: _pendentes[i].id == widget.solicitacaoId
+                    ? _solicitacaoKey
+                    : null,
                 padding: const EdgeInsets.only(bottom: 10),
                 child: StaggeredEntry(
                   index: 4 + i,
                   child: _PendenteCard(
                     solicitacao: _pendentes[i],
+                    highlighted: _pendentes[i].id == widget.solicitacaoId,
                     loading: _acaoEmAndamentoId == _pendentes[i].id,
                     onAceitar: () => _aprovar(_pendentes[i]),
                     onNegar: () => _negar(_pendentes[i]),
@@ -622,12 +651,14 @@ class _CompartilharCard extends StatelessWidget {
 class _PendenteCard extends StatelessWidget {
   const _PendenteCard({
     required this.solicitacao,
+    required this.highlighted,
     required this.loading,
     required this.onAceitar,
     required this.onNegar,
   });
 
   final SolicitacaoPendente solicitacao;
+  final bool highlighted;
   final bool loading;
   final VoidCallback onAceitar;
   final VoidCallback onNegar;
@@ -643,8 +674,11 @@ class _PendenteCard extends StatelessWidget {
         color: adaptive(context, Colors.white, AppDarkColors.surface),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color:
-              adaptive(context, const Color(0xFFE4EFF1), AppDarkColors.border),
+          color: highlighted
+              ? const Color(0xFF2BA8BA)
+              : adaptive(
+                  context, const Color(0xFFE4EFF1), AppDarkColors.border),
+          width: highlighted ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(

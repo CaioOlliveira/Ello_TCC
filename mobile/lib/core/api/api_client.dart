@@ -2280,7 +2280,7 @@ class _ApiMemoryCache<T> {
 class ApiClient {
   static const Object _omit = Object();
 
-  ApiClient({required String baseUrl})
+  ApiClient({required String baseUrl, String? accessToken})
       : _dio = Dio(
           BaseOptions(
             baseUrl: baseUrl,
@@ -2291,6 +2291,15 @@ class ApiClient {
         ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (accessToken != null && accessToken.isNotEmpty) {
+            options.headers.putIfAbsent(
+              'Authorization',
+              () => 'Bearer $accessToken',
+            );
+          }
+          handler.next(options);
+        },
         onResponse: (response, handler) {
           final shouldKeepInviteCache =
               response.requestOptions.path == ApiEndpoints.convites;
@@ -2309,6 +2318,7 @@ class ApiClient {
   final _inFlightReads = <String, Future<Object?>>{};
   var _cacheEpoch = 0;
   final _agendaCache = <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
+  var _agendaCacheVersion = 0;
   final _agendaHistoryCache =
       <String, _ApiMemoryCache<List<Map<String, dynamic>>>>{};
   final _equipmentsCache =
@@ -2409,6 +2419,7 @@ class ApiClient {
   }
 
   void _clearAgendaCaches() {
+    _agendaCacheVersion++;
     _agendaCache.clear();
     _agendaHistoryCache.clear();
   }
@@ -3921,6 +3932,7 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> listarCompromissos({
     String? idosoId,
   }) async {
+    final version = _agendaCacheVersion;
     final cacheKey = idosoId ?? '';
     final cached = _agendaCache[cacheKey];
     if (cached != null && cached.isFresh(_agendaCacheTtl)) {
@@ -3939,10 +3951,12 @@ class ApiClient {
 
       if (data is List) {
         final result = data.whereType<Map<String, dynamic>>().toList();
-        _agendaCache[cacheKey] = _ApiMemoryCache(
-          value: result,
-          createdAt: DateTime.now(),
-        );
+        if (version == _agendaCacheVersion) {
+          _agendaCache[cacheKey] = _ApiMemoryCache(
+            value: result,
+            createdAt: DateTime.now(),
+          );
+        }
         return List<Map<String, dynamic>>.from(result);
       }
 
@@ -3955,6 +3969,7 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> listarHistoricoAgenda({
     String? idosoId,
   }) async {
+    final version = _agendaCacheVersion;
     final cacheKey = idosoId ?? '';
     final cached = _agendaHistoryCache[cacheKey];
     if (cached != null && cached.isFresh(_agendaCacheTtl)) {
@@ -3973,10 +3988,12 @@ class ApiClient {
 
       if (data is List) {
         final result = data.whereType<Map<String, dynamic>>().toList();
-        _agendaHistoryCache[cacheKey] = _ApiMemoryCache(
-          value: result,
-          createdAt: DateTime.now(),
-        );
+        if (version == _agendaCacheVersion) {
+          _agendaHistoryCache[cacheKey] = _ApiMemoryCache(
+            value: result,
+            createdAt: DateTime.now(),
+          );
+        }
         return List<Map<String, dynamic>>.from(result);
       }
 

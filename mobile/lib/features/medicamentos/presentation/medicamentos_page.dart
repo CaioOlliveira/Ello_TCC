@@ -2159,6 +2159,7 @@ class _ChipsField extends StatelessWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         for (var i = 0; i < values.length; i++)
           Chip(
@@ -3042,7 +3043,7 @@ class _NoIdosoState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Selecione uma pessoa idosa para gerenciar os medicamentos.',
+            'Selecione um paciente para gerenciar os medicamentos.',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: adaptive(context, const Color(0xFF607178),

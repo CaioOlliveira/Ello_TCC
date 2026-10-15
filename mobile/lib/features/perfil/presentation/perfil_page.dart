@@ -650,7 +650,7 @@ class SobreAppPage extends StatelessWidget {
                       icon: Icons.favorite_border_rounded,
                       title: 'Para que serve',
                       body:
-                          'O app ajuda familiares e cuidadores a acompanhar a rotina de uma pessoa idosa com mais clareza. Ele reúne monitoramentos de saúde, alimentação, remédios, agenda, gastos, insumos, equipamentos, contatos de emergência e conversas em família.',
+                          'O app ajuda familiares e cuidadores a acompanhar a rotina de um paciente com mais clareza. Ele reúne monitoramentos de saúde, alimentação, remédios, agenda, gastos, insumos, equipamentos, contatos de emergência e conversas em família.',
                     ),
                     const SizedBox(height: 12),
                     const _SobreSection(

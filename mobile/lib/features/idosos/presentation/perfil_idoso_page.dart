@@ -27,7 +27,7 @@ class PerfilIdosoPage extends ConsumerWidget {
         body: Center(
           child: FilledButton(
             onPressed: () => context.go('/idosos'),
-            child: const Text('Selecionar pessoa idosa'),
+            child: const Text('Selecionar paciente'),
           ),
         ),
       );
@@ -46,7 +46,7 @@ class PerfilIdosoPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
               children: [
                 AppPageHeader(
-                  title: 'Perfil da pessoa idosa',
+                  title: 'Perfil ${personText.of}',
                   trailing: PopupMenuButton<_PerfilIdosoMenuAction>(
                     tooltip: 'Opcoes da ficha',
                     icon: const Icon(

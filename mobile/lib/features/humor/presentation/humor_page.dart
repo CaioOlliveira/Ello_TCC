@@ -721,13 +721,13 @@ bool _isMale(IdosoResumo? idoso) {
 
 String _firstName(String nome) {
   final trimmed = nome.trim();
-  if (trimmed.isEmpty) return 'Pessoa idosa';
+  if (trimmed.isEmpty) return 'Paciente';
   return trimmed.split(RegExp(r'\s+')).first;
 }
 
 String _moodTarget(IdosoResumo? idoso) {
   if (idoso == null || idoso.nome.trim().isEmpty) {
-    return idoso?.elderText.withArticle ?? 'a pessoa idosa';
+    return idoso?.elderText.withArticle ?? 'o paciente';
   }
   return _firstName(idoso.nome);
 }

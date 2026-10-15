@@ -540,11 +540,9 @@ class _AgendaHistoryItem {
     return _AgendaHistoryItem(
       action: json['acao']?.toString() ?? 'atualizar',
       createdAt: createdAt,
-      userName: _firstText([
-        json['usuario_nome'],
-        data['criado_por_nome'],
-        data['criadoPorNome'],
-      ]),
+      // The event creator can differ from the person who completed or
+      // reopened it. Never use criado_por_nome as the audit actor.
+      userName: _firstText([json['usuario_nome']]),
       eventTitle: _firstText([
         data['titulo'],
         oldData['titulo'],

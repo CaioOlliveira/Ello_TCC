@@ -4,6 +4,7 @@ import { AppError } from "../../common/errors/app-error.js";
 import { registrarHistorico } from "../../database/audit.js";
 import { getPool } from "../../database/pool.js";
 import { resolverUsuarioRegistroId } from "../../database/usuario-demo.js";
+import { enviarPushSolicitacaoAcesso } from "../chat-familia/chat-push.service.js";
 import {
   getRowById,
   insertRow,
@@ -239,6 +240,62 @@ export const convitesService = {
       entidadeId: String(membro.id),
       dadosNovos: membro,
     });
+
+    // A solicitação já foi gravada. Uma falha no serviço de avisos não deve
+    // obrigar a pessoa a pedir acesso novamente.
+    try {
+      const destinatarios = await getPool().query<{
+        usuario_id: string;
+        solicitante_nome: string;
+        paciente_nome: string;
+      }>(
+        `
+          select distinct destinatario.usuario_id,
+                 solicitante.nome as solicitante_nome,
+                 f.nome_completo as paciente_nome
+          from fichas_idosos f
+          join usuarios solicitante on solicitante.id = $2
+          cross join lateral (
+            select coalesce(
+              (select h.usuario_id from historico_alteracoes h
+               where h.tipo_entidade = 'fichas_idosos'
+                 and h.acao = 'criar'
+                 and h.entidade_id::text = f.id::text
+                 and h.usuario_id is not null
+               order by h.criado_em asc limit 1),
+              f.criado_por_id
+            ) as usuario_id
+            union
+            select mf.usuario_id from membros_ficha mf
+            where mf.idoso_id = f.id and mf.status = 'ativo'
+              and mf.e_administrador = true
+          ) destinatario
+          where f.id = $1 and destinatario.usuario_id <> $2
+        `,
+        [convite.idoso_id, input.usadoPorId],
+      );
+      const titulo = "Solicitação de acesso à ficha";
+      for (const destinatario of destinatarios.rows) {
+        const mensagem = `${destinatario.solicitante_nome} pediu acesso à ficha de ${destinatario.paciente_nome}.`;
+        await getPool().query(
+          `insert into notificacoes
+             (idoso_id, usuario_id, titulo, mensagem, tipo_notificacao,
+              tipo_entidade_relacionada, entidade_relacionada_id, programado_para)
+           values ($1, $2, $3, $4, 'solicitacao_acesso',
+                   'membros_ficha', $5, now())`,
+          [convite.idoso_id, destinatario.usuario_id, titulo, mensagem, membro.id],
+        );
+        void enviarPushSolicitacaoAcesso({
+          destinatarioId: destinatario.usuario_id,
+          titulo,
+          mensagem,
+          idosoId: String(convite.idoso_id),
+          solicitacaoId: String(membro.id),
+        }).catch(() => undefined);
+      }
+    } catch (error) {
+      console.error("Falha ao avisar sobre solicitação de acesso:", error);
+    }
 
     return { convite, membro, status: "pendente" as const };
   },

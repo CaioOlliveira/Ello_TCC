@@ -1,4 +1,6 @@
 import type { RequestHandler } from "express";
+import { validarAdministracaoFicha } from "../../common/auth/ficha-access.js";
+import { getAuthenticatedUserId } from "../../common/middlewares/authenticated-user.js";
 
 import { asyncHandler } from "../../common/utils/async-handler.js";
 import {
@@ -32,6 +34,7 @@ export const listarParticipantes: RequestHandler = asyncHandler(
 export const listarPendentes: RequestHandler = asyncHandler(
   async (req, res) => {
     const { idosoId } = listarParticipantesQuerySchema.parse(req.query);
+    await validarAdministracaoFicha(idosoId, getAuthenticatedUserId(req));
     const dados = await membrosService.listarPendentes(idosoId);
     res.json({ dados, meta: { total: dados.length } });
   },
@@ -64,12 +67,18 @@ export const atualizarMembro: RequestHandler = asyncHandler(
 
 export const aprovarMembro: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = idParamSchema.parse(req.params);
-  res.json({ dados: await membrosService.aprovar(id, req.body?.usuarioId) });
+  const membro = await membrosService.buscarPorId(id);
+  const usuarioId = getAuthenticatedUserId(req);
+  await validarAdministracaoFicha(String(membro.idoso_id), usuarioId);
+  res.json({ dados: await membrosService.aprovar(id, usuarioId) });
 });
 
 export const negarMembro: RequestHandler = asyncHandler(async (req, res) => {
   const { id } = idParamSchema.parse(req.params);
-  res.json({ dados: await membrosService.negar(id, req.body?.usuarioId) });
+  const membro = await membrosService.buscarPorId(id);
+  const usuarioId = getAuthenticatedUserId(req);
+  await validarAdministracaoFicha(String(membro.idoso_id), usuarioId);
+  res.json({ dados: await membrosService.negar(id, usuarioId) });
 });
 
 export const revogarMembro: RequestHandler = asyncHandler(async (req, res) => {

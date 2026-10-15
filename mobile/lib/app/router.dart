@@ -6,10 +6,12 @@ import 'package:go_router/go_router.dart';
 
 import 'providers.dart';
 import '../core/api/api_client.dart';
+import '../core/navigation/app_back_navigation.dart';
 import '../core/notifications/local_notification_service.dart';
 import '../core/notifications/push_notification_service.dart';
 import '../features/chat/application/chat_inbox_controller.dart';
 import '../features/agenda/presentation/agenda_page.dart';
+import '../features/agenda/presentation/agenda_history_page.dart';
 import '../features/alimentacao/presentation/alimentacao_page.dart';
 import '../features/autenticacao/presentation/login_page.dart';
 import '../features/chat/presentation/familia_chat_page.dart';
@@ -60,6 +62,7 @@ String? _moduleIdFromHistorico(String tipo) {
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
+    navigatorKey: AppBackNavigation.rootNavigatorKey,
     restorationScopeId: 'ello_router',
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashPage()),
@@ -75,7 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/agenda/historico',
         builder: (context, state) => const _ModuleAccessGate(
           moduleId: 'Agenda',
-          child: HistoricoPage(tipo: 'agenda'),
+          child: AgendaHistoryPage(),
         ),
       ),
       GoRoute(
@@ -165,9 +168,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/idoso/acessos',
         builder: (context, state) => AcessosFichaPage(
           idosoId: state.uri.queryParameters['idosoId'],
+          solicitacaoId: state.uri.queryParameters['solicitacaoId'],
         ),
       ),
       ShellRoute(
+        navigatorKey: AppBackNavigation.shellNavigatorKey,
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(

@@ -5,7 +5,7 @@ import 'local_notification_service.dart';
 
 /// Mantém os lembretes de medicamentos no agendador do sistema operacional.
 ///
-/// O agendamento é recalculado sempre que os dados do idoso são carregados,
+/// O agendamento é recalculado sempre que os dados do paciente são carregados,
 /// para que ele não dependa de a pessoa abrir a tela de medicamentos.
 class MedicationReminderScheduler {
   static const _disabledKey = 'ello_disabled_medication_reminders';

@@ -33,6 +33,37 @@ export async function validarAcessoFicha(idosoId: string, usuarioId: string) {
   }
 }
 
+export async function validarAdministracaoFicha(
+  idosoId: string,
+  usuarioId: string,
+) {
+  const result = await getPool().query(
+    `select 1 from fichas_idosos f
+     where f.id = $1
+       and (
+         f.criado_por_id = $2
+         or exists (
+           select 1 from historico_alteracoes h
+           where h.tipo_entidade = 'fichas_idosos' and h.acao = 'criar'
+             and h.entidade_id::text = f.id::text and h.usuario_id = $2
+         )
+         or exists (
+           select 1 from membros_ficha m
+           where m.idoso_id = f.id and m.usuario_id = $2
+             and m.status = 'ativo' and m.e_administrador = true
+         )
+       ) limit 1`,
+    [idosoId, usuarioId],
+  );
+  if (result.rowCount === 0) {
+    throw new AppError(
+      "ADMINISTRACAO_FICHA_NEGADA",
+      "Você não pode gerenciar os acessos desta ficha.",
+      403,
+    );
+  }
+}
+
 export const requireFichaAccessFromQuery: RequestHandler[] = [
   requireAuthenticatedUser,
   asyncHandler(async (req, _res, next) => {

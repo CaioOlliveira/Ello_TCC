@@ -345,7 +345,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
       return;
     }
     if (idoso == null || idoso.id.isEmpty) {
-      _addErrorMessage('Selecione uma pessoa idosa para gerar o relatório.');
+      _addErrorMessage('Selecione um paciente para gerar o relatório.');
       return;
     }
 
@@ -485,7 +485,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
                         ? _InitialAnalysisPrompt(
                             idosoName: idoso?.nome,
                             idosoLabel: idoso?.elderText.selectedWithArticle ??
-                                'a pessoa idosa selecionada',
+                                'o paciente selecionado',
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -566,7 +566,7 @@ class _CorgiaPageState extends ConsumerState<CorgiaPage> {
   String _initialPromptText() {
     final idoso = ref.read(selectedIdosoProvider);
     final name = idoso == null || idoso.nome.trim().isEmpty
-        ? idoso?.elderText.selectedWithArticle ?? 'a pessoa idosa selecionada'
+        ? idoso?.elderText.selectedWithArticle ?? 'o paciente selecionado'
         : idoso.nome.trim();
     return 'Olá, cuidador! Analisei os dados de $name nos últimos dias e preparei o relatório de saúde geral. Quer dar uma olhada?';
   }

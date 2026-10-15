@@ -48,7 +48,7 @@ class SelecionarIdosoPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 9),
                     Text(
-                      'Selecione a ficha da pessoa idosa que deseja\nacompanhar agora',
+                      'Selecione a ficha do paciente que deseja\nacompanhar agora',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: adaptive(context, const Color(0xFF4C4C4C),
