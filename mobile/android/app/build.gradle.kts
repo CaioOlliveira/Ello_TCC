@@ -6,7 +6,7 @@ plugins {
 }
 
 val expectedGoogleWebClientId =
-    "318821887059-iukcc2mai6klc7ml1a1h121ev37rvsvm.apps.googleusercontent.com"
+    "301144381543-gq4k0torscv89l971lvea6hop3g3lkp6.apps.googleusercontent.com"
 val expectedGoogleAndroidPackage = "com.example.ello_mobile"
 
 if (file("google-services.json").exists()) {

@@ -33,6 +33,8 @@ type UsuarioAuthRow = {
 const senhaPrefixo = "scrypt";
 const googleClient = new OAuth2Client();
 const defaultGoogleClientIds = [
+  "301144381543-gq4k0torscv89l971lvea6hop3g3lkp6.apps.googleusercontent.com",
+  "301144381543-ut7p16nmeu36pj3cbpjprk6islgfhma9.apps.googleusercontent.com",
   "318821887059-iukcc2mai6klc7ml1a1h121ev37rvsvm.apps.googleusercontent.com",
   "318821887059-5s73kv24r25eg92265lc7anm68t7s21r.apps.googleusercontent.com",
 ];
